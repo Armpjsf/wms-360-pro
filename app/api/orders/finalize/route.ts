@@ -321,40 +321,51 @@ export async function POST(req: Request) {
     // --- NEW: Record 'OUT' Transaction for Profit Analytics ---
     console.log('[Finalize] Recording transactions for Profit Analysis...');
     try {
-        // Read items before clearing (D=Item, G=Qty)
-        // Range: D10:G25
-        const itemData = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!D10:G25`);
+        // ** IDEMPOTENCY CHECK: Prevent duplicate recording **
+        // Check if transactions for this docNum already exist
+        const TX_SHEET = '💰 Transactions';
+        const existingTxData = await getSheetData(PO_SPREADSHEET_ID, `'${TX_SHEET}'!L:L`); // Column L = docRef
+        const existingDocRefs = existingTxData?.map((r: any) => r[0]?.toString() || '') || [];
+        const alreadyRecorded = existingDocRefs.some((ref: string) => ref.includes(docNum));
         
-        if (itemData && itemData.length > 0) {
-            // Fetch products to look up standard selling price
-            const products = await getProducts();
+        if (alreadyRecorded) {
+            console.log(`[Finalize] Transactions for ${docNum} already recorded. Skipping to avoid duplicates.`);
+        } else {
+            // Read items before clearing (D=Item, G=Qty)
+            // Range: D10:G25
+            const itemData = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!D10:G25`);
             
-            // Process in parallel
-            const txPromises = itemData.map(async (row) => {
-                const sku = row[0]; // Col D (index 0)
-                const qtyStr = row[3]; // Col G (index 3)
+            if (itemData && itemData.length > 0) {
+                // Fetch products to look up standard selling price
+                const products = await getProducts();
                 
-                if (!sku || !qtyStr) return;
-                
-                const qty = parseFloat(qtyStr.replace(/,/g, ''));
-                if (isNaN(qty) || qty <= 0) return;
+                // Process in parallel
+                const txPromises = itemData.map(async (row) => {
+                    const sku = row[0]; // Col D (index 0)
+                    const qtyStr = row[3]; // Col G (index 3)
+                    
+                    if (!sku || !qtyStr) return;
+                    
+                    const qty = parseFloat(qtyStr.replace(/,/g, ''));
+                    if (isNaN(qty) || qty <= 0) return;
 
-                // Find standard price
-                const product = products.find(p => p.name === sku);
-                const price = product ? product.price : 0;
+                    // Find standard price
+                    const product = products.find(p => p.name === sku);
+                    const price = product ? product.price : 0;
 
-                await addTransaction('OUT', {
-                    date: getThaiDate(), // Use the signature date
-                    sku: sku,
-                    qty: qty,
-                    price: price, // Standard Sell Price
-                    docRef: `Order: ${docNum}`, // Log the Order/Doc Num
-                    unit: row[2] || 'unit' // Col F (index 2)
+                    await addTransaction('OUT', {
+                        date: getThaiDate(), // Use the signature date
+                        sku: sku,
+                        qty: qty,
+                        price: price, // Standard Sell Price
+                        docRef: `Order: ${docNum}`, // Log the Order/Doc Num
+                        unit: row[2] || 'unit' // Col F (index 2)
+                    });
                 });
-            });
 
-            await Promise.all(txPromises);
-            console.log(`[Finalize] Recorded ${txPromises.length} transactions.`);
+                await Promise.all(txPromises);
+                console.log(`[Finalize] Recorded ${txPromises.length} transactions.`);
+            }
         }
     } catch (txError) {
         console.error('[Finalize] Failed to record transactions:', txError);
