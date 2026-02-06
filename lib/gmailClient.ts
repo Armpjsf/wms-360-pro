@@ -44,15 +44,25 @@ export async function getGmailClient() {
 
   // 0. PRIORITY: Environment Variable (Serverless/Vercel Support)
   // This bypasses filesystem issues entirely.
-  if (process.env.GMAIL_TOKEN_JSON && credPath) {
+  const envCredentials = process.env.GOOGLE_CREDENTIALS_JSON;
+  const envToken = process.env.GMAIL_TOKEN_JSON;
+
+  if (envToken && (credPath || envCredentials)) {
       try {
           console.log("Using GMAIL_TOKEN_JSON from Environment Variables");
-          const content = fs.readFileSync(credPath, 'utf-8');
-          const credentials = JSON.parse(content);
+          
+          let credentials;
+          if (envCredentials) {
+              credentials = JSON.parse(envCredentials);
+          } else {
+              const content = fs.readFileSync(credPath, 'utf-8');
+              credentials = JSON.parse(content);
+          }
+
           const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web;
           
           const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-          const token = JSON.parse(process.env.GMAIL_TOKEN_JSON);
+          const token = JSON.parse(envToken);
           oAuth2Client.setCredentials(token);
           
           return google.gmail({ version: 'v1', auth: oAuth2Client });
