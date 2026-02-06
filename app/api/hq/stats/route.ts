@@ -8,7 +8,7 @@ export async function GET() {
         const branches = await getBranchesFromSheet();
         const statsPromises = branches.map(async (branch) => {
             try {
-                const products = await getProducts(branch.id);
+                const products = await getProducts(branch.spreadsheetId);
                 
                 const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
                 const totalValue = products.reduce((sum, p) => sum + (p.stock * p.price), 0);
