@@ -146,7 +146,8 @@ export const PRODUCT_SHEET_GID = 1511150723;
 export const PRODUCT_SPREADSHEET_ID = cleanSpreadsheetId(process.env.PRODUCT_SPREADSHEET_ID) || '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
 
 // ID 2: Documents, PO Logs, Users, Config, Roll Tags
-export const DOC_SPREADSHEET_ID = cleanSpreadsheetId(process.env.DOC_SPREADSHEET_ID) || '1rdTdtzGvW0bF8bLF-KLjqn3_kKTFDnBdEEpXtegCPbg';
+// ID 2: Documents, PO Logs, Users, Config, Roll Tags -> MIGRATED TO MAIN SHEET (Validation: User confirmed copy)
+export const DOC_SPREADSHEET_ID = PRODUCT_SPREADSHEET_ID; // Was: '1rd...' now consolidated to '1nI...'
 
 // Legacy Fallback (Default to Product ID for core operations if mixed)
 export const SPREADSHEET_ID = PRODUCT_SPREADSHEET_ID;
@@ -612,7 +613,8 @@ export async function writeRollTagData(spreadsheetId: string, sheetName: string,
 // export const INVENTORY_SPREADSHEET_ID = ... (Removed duplicate)
 
 // 2. User Management (New Sheet)
-export const USER_SPREADSHEET_ID = "1rdTdtzGvW0bF8bLF-KLjqn3_kKTFDnBdEEpXtegCPbg";
+// ID 3: Users (Authentication) -> MIGRATED TO MAIN SHEET
+export const USER_SPREADSHEET_ID = PRODUCT_SPREADSHEET_ID; // Was: "1rd..." now consolidated
 
 // 3. PO Logs (Check which sheet contains 'คลังข้อมูล')
 // If uncertain, we often check both in getPOLogs, but let's default to Main if that's where it was.
