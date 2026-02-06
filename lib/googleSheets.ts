@@ -241,11 +241,18 @@ export async function getSheetPdfBlob(
                 `&sheetnames=false` +
                 `&top_margin=0.75&bottom_margin=0.75&left_margin=0.75&right_margin=0.75`;
 
+    console.log(`[PDF Export] URL: ${url.slice(0, 80)}...`);
+
     const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error(`PDF Export Failed: ${res.statusText}`);
+    if (!res.ok) {
+        // Enhanced error logging
+        const errorBody = await res.text();
+        console.error(`[PDF Export] Failed! Status: ${res.status}, Body: ${errorBody.slice(0, 500)}`);
+        throw new Error(`PDF Export Failed: ${res.statusText}`);
+    }
     return await res.arrayBuffer();
 }
 
