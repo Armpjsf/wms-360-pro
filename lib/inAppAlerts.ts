@@ -55,11 +55,15 @@ export function generateLowStockAlerts(products: any[]): InAppAlert[] {
 }
 
 // Generate Pending Damage Alerts
-export function generateDamageAlerts(damageRecords: any[]): InAppAlert[] {
+export function generateDamageAlerts(damageRecords: any[], products: any[]): InAppAlert[] {
   const alerts: InAppAlert[] = [];
 
+  // Create Set of allowed product names for fast lookup
+  const allowedProductNames = new Set(products.map(p => p.name?.trim().toLowerCase()));
+
   const pendingDamage = damageRecords.filter(
-    (d) => d.status === "Pending" || d.status === "รอดำเนินการ",
+    (d) => (d.status === "Pending" || d.status === "รอดำเนินการ") &&
+           (allowedProductNames.has(d.product_name?.trim().toLowerCase()))
   );
 
   if (pendingDamage.length > 0) {
@@ -141,7 +145,7 @@ export function getAllAlerts(
   damageRecords: any[],
 ): InAppAlert[] {
   const lowStockAlerts = generateLowStockAlerts(products);
-  const damageAlerts = generateDamageAlerts(damageRecords);
+  const damageAlerts = generateDamageAlerts(damageRecords, products);
 
   // Sort by severity (critical first) then by date
   return [...lowStockAlerts, ...damageAlerts].sort((a, b) => {

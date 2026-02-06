@@ -86,10 +86,10 @@ export async function POST(req: Request) {
 
 export async function DELETE() {
   try {
-    const { clearSheetRange, SPREADSHEET_ID } = await import('@/lib/googleSheets');
+    const { clearSheetRange, PRODUCT_SPREADSHEET_ID } = await import('@/lib/googleSheets');
     
     // Clear everything from A2 (keep headers) down to J2000
-    await clearSheetRange(SPREADSHEET_ID, "'CycleCount_Log'!A2:J2000"); // Note: Single quotes for sheet name in range if it has underscore? Google Sheets handles it, but safety is good.
+    await clearSheetRange(PRODUCT_SPREADSHEET_ID, "'CycleCount_Log'!A2:J2000"); // Note: Single quotes for sheet name in range if it has underscore? Google Sheets handles it, but safety is good.
     // 'CycleCount_Log' does not strictly typically need quotes unless spaces, but good practice.
     // Wait, in lib/googleSheets.ts it uses SPREADSHEET_ID from process.env usually, but also exports a constant. 
     // The export in lib/googleSheets.ts line 408 is what I should rely on or the helper's internal logic.

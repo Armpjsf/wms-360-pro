@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getProducts, addProduct, editProduct } from '@/lib/googleSheets';
 
 export async function GET(request: Request) {
+    const session = await getServerSession(authOptions);
+    const allowedOwners = (session?.user as any)?.allowedOwners;
+    
     const { searchParams } = new URL(request.url);
     const branchId = searchParams.get('branchId') || undefined;
-    const products = await getProducts(branchId);
+    
+    // Pass allowedOwners to filtered fetcher
+    const products = await getProducts(branchId, allowedOwners);
     return NextResponse.json(products);
 }
 

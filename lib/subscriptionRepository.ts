@@ -1,9 +1,7 @@
-import { getSheetData, appendSheetRow, getGoogleSheets } from './googleSheets';
+import { getSheetData, appendSheetRow, getGoogleSheets, SPREADSHEET_ID } from './googleSheets';
 
-// We reuse the PO Spreadsheet or define a new one. 
-// For simplicity, let's use the one in .env.local or hardcoded if needed.
-// Ideally, we put everything in one "Database" sheet.
-const SPREADSHEET_ID = process.env.NEXT_PUBLIC_PO_SPREADSHEET_ID || '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
+// We reuse the Main Spreadsheet
+// const SPREADSHEET_ID is imported from googleSheets
 const SHEET_NAME = '🔔 Subscriptions';
 
 export interface PushSubscription {

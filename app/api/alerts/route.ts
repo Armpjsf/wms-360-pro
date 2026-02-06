@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getProducts, getDamageRecords } from '@/lib/googleSheets';
 import { getAllAlerts, getAlertSummary } from '@/lib/inAppAlerts';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    // Fetch products and damage records in parallel
+    const session = await getServerSession(authOptions);
+    const allowedOwners = (session?.user as any)?.allowedOwners;
+    
+    // Fetch products (Filtered) and damage records (All) in parallel
     const [products, damageRecords] = await Promise.all([
-      getProducts(),
+      getProducts(undefined, allowedOwners),
       getDamageRecords()
     ]);
 

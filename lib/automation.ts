@@ -80,8 +80,22 @@ async function executeAction(rule: AutomationRule, context: any) {
         const updatedRule = { ...rule, lastTriggered: new Date().toISOString() };
         await saveRule(updatedRule);
 
-        // TODO: Implement actual side-effects (LINE Notify / Email)
-        // For now, we assume LOG_ALERT is handled by the Dashboard's "Recent Activity" or similar.
+        // TRIGGER PUSH NOTIFICATION
+        // For now, we map LOG_ALERT and LINE_NOTIFY to Web Push as well
+        if (action.type === 'LOG_ALERT' || action.type === 'LINE_NOTIFY') {
+             try {
+                 const { sendWebPush } = await import('./webPushSender');
+                 const message = action.payload.message || `Rule '${rule.name}' matched!`;
+                 
+                 await sendWebPush({
+                     title: "📢 แจ้งเตือนคลังสินค้า",
+                     body: `${message} (${context.sku})`,
+                     url: '/inventory?status=LOW'
+                 });
+             } catch (pushErr) {
+                 console.error("[Automation] Push Failed:", pushErr);
+             }
+        }
         
     } catch (e) {
         console.error(`[Automation] Action failed for rule ${rule.name}`, e);

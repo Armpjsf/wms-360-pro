@@ -628,6 +628,10 @@ export const DELIVERY_FOLDER_ID = "1QGOYQUX8eDxmzuZ6pbiXJH5iuKAZG8s3"; // Folder
 // CORE DATA FUNCTIONS (REAL)
 // ============================================================================
 
+import { filterByOwner } from './ownerFilter';
+
+// ... (existing imports)
+
 export interface Product {
     id: string;
     name: string;
@@ -639,10 +643,11 @@ export interface Product {
     status: string;
     minStock: number;
     location: string;
+    owner: string; // New Field
 }
 
 // Internal fetcher (uncached) - Exported for Data Quality Check
-export async function getProductsUncached(targetSheetId: string = PRODUCT_SPREADSHEET_ID): Promise<Product[]> {
+export async function getProductsUncached(targetSheetId: string = PRODUCT_SPREADSHEET_ID, allowedOwners?: string[]): Promise<Product[]> {
     try {
         // Try '📊 รายงานสินค้าคงเหลือ' first (User specific)
         let rawData = await getSheetData(targetSheetId, "'📊 รายงานสินค้าคงเหลือ'!A1:Z1000");
@@ -674,13 +679,14 @@ export async function getProductsUncached(targetSheetId: string = PRODUCT_SPREAD
         const idxStatus = getColIndex(['Status', 'status', 'สถานะ', 'สถานะการเติมสินค้า', 'สถานะสินค้า']);
         const idxMin = getColIndex(['จำนวนขั้นต่ำ', 'min', 'safety_stock']);
         let idxLocation = getColIndex(['Location', 'location', 'ที่เก็บ', 'ตำแหน่ง', 'Shelf', 'shelf', 'Zone', 'zone']);
+        const idxOwner = getColIndex(['Owner', 'owner', 'เจ้าของ', 'Customer', 'customer', 'Client']);
         
         if (idxLocation === -1) {
             // console.log("Location header not found, defaulting to Column Q");
             idxLocation = 16;
         }
 
-        return rows.map((row: string[], i: number) => {
+        const products = rows.map((row: string[], i: number) => {
             if (!row[idxName]) return null; // Skip empty names
             
             // Resolve Image
@@ -704,9 +710,13 @@ export async function getProductsUncached(targetSheetId: string = PRODUCT_SPREAD
                 image: imgVal,
                 status: idxStatus > -1 ? row[idxStatus] : "Active",
                 minStock: idxMin > -1 ? parseFloat(row[idxMin]?.replace(/,/g, '') || "0") : 0,
-                location: idxLocation > -1 ? row[idxLocation] : "-"
+                location: idxLocation > -1 ? row[idxLocation] : "-",
+                owner: idxOwner > -1 ? row[idxOwner] : "" // Map Owner
             };
         }).filter(p => p !== null) as Product[];
+
+        // Apply Owner Filter
+        return filterByOwner(products, allowedOwners);
 
     } catch (error) {
         console.error("Error fetching products:", error);
@@ -715,11 +725,11 @@ export async function getProductsUncached(targetSheetId: string = PRODUCT_SPREAD
 }
 
 // -------------------------------------------------------------
-// CACHED WRAPPER (Now supports Branch ID)
+// CACHED WRAPPER (Now supports Branch ID + Owner)
 // -------------------------------------------------------------
 export const getProducts = unstable_cache(
-    async (branchSheetId?: string) => {
-        return getProductsUncached(branchSheetId || PRODUCT_SPREADSHEET_ID);
+    async (branchSheetId?: string, allowedOwners?: string[]) => {
+        return getProductsUncached(branchSheetId || PRODUCT_SPREADSHEET_ID, allowedOwners);
     },
     ['products-list'], 
     { revalidate: 300, tags: ['products'] }
@@ -1138,7 +1148,7 @@ function parseDate(dateStr: string): string {
 }
 
 // Internal fetcher (uncached) - Exported for Data Quality Check
-export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId: string = PRODUCT_SPREADSHEET_ID) {
+export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId: string = PRODUCT_SPREADSHEET_ID, allowedOwners?: string[]) {
     // Legacy Sheet Names often include emojis
     const sheetName = type === 'IN' ? '💸 Transaction รับ' : '💰 Transaction จ่าย';
     console.log(`[getTransactions] Fetching ${type} from sheet: ${sheetName}`);
@@ -1191,7 +1201,7 @@ export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId:
         return [];
     }
     
-    return rows.map((r, i) => {
+    const transactions = rows.map((r, i) => {
         const qtyRaw = r[idxQty];
         const val = parseFloat(qtyRaw?.replace(/,/g, '') || '0');
         // Validation: If no product name, skip
@@ -1218,11 +1228,13 @@ export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId:
         } as Transaction;
     }).filter((t): t is Transaction => t !== null && t.qty !== 0);
 
+    return filterByOwner(transactions, allowedOwners);
+
 }
 // Export Cached Version
 export const getTransactions = unstable_cache(
-    async (type: 'IN' | 'OUT', branchSheetId?: string) => {
-        return getTransactionsUncached(type, branchSheetId || PRODUCT_SPREADSHEET_ID);
+    async (type: 'IN' | 'OUT', branchSheetId?: string, allowedOwners?: string[]) => {
+        return getTransactionsUncached(type, branchSheetId || PRODUCT_SPREADSHEET_ID, allowedOwners);
     },
     ['transactions-data'],
     {

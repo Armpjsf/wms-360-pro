@@ -17,8 +17,8 @@ export interface User {
 
 export async function getUsers(): Promise<User[]> {
     try {
-        // Fetch up to Column G (Index 6) for AllowedBranches
-        const raw = await getSheetData(USER_SPREADSHEET_ID, "'Users'!A:G");
+        // Fetch up to Column H (Index 7) for AllowedOwners
+        const raw = await getSheetData(USER_SPREADSHEET_ID, "'Users'!A:H");
         if (!raw || raw.length < 2) return [];
 
         return raw.slice(1).map((r, i) => ({
@@ -28,7 +28,8 @@ export async function getUsers(): Promise<User[]> {
              status: r[3] || "Active",
              lastLogin: r[4] || "-",
              // Password at r[5]
-             allowedBranches: r[6] ? r[6].split(',').map((s: string) => s.trim()) : ['*'] // Default: All Access
+             allowedBranches: r[6] ? r[6].split(',').map((s: string) => s.trim()) : ['*'], // Default: All Access
+             allowedOwners: r[7] ? r[7].split(',').map((s: string) => s.trim()) : ['*']    // New: Owner Access
         }));
     } catch (e) {
         console.error("Fetch Users Error:", e);
@@ -38,11 +39,19 @@ export async function getUsers(): Promise<User[]> {
 
 export async function verifyUser(username: string, password: string): Promise<User | null> {
     try {
-        const raw = await getSheetData(USER_SPREADSHEET_ID, "'Users'!A:G");
+        const raw = await getSheetData(USER_SPREADSHEET_ID, "'Users'!A:H");
         if (!raw || raw.length < 2) {
              // Default Admin Backdoor
              if (username === 'admin' && password === 'admin') {
-                 return { id: 'admin', username: 'admin', role: 'Super Admin', status: 'Active', lastLogin: new Date().toISOString(), allowedBranches: ['*'] };
+                 return { 
+                     id: 'admin', 
+                     username: 'admin', 
+                     role: 'Super Admin', 
+                     status: 'Active', 
+                     lastLogin: new Date().toISOString(), 
+                     allowedBranches: ['*'],
+                     allowedOwners: ['*']
+                 };
              }
              return null;
         }
@@ -51,7 +60,15 @@ export async function verifyUser(username: string, password: string): Promise<Us
         
         if (!userRow) {
              if (username === 'admin' && password === 'admin') {
-                 return { id: 'admin', username: 'admin', role: 'Super Admin', status: 'Active', lastLogin: new Date().toISOString(), allowedBranches: ['*'] };
+                 return { 
+                     id: 'admin', 
+                     username: 'admin', 
+                     role: 'Super Admin', 
+                     status: 'Active', 
+                     lastLogin: new Date().toISOString(), 
+                     allowedBranches: ['*'],
+                     allowedOwners: ['*']
+                 };
              }
              return null;
         }
@@ -73,7 +90,8 @@ export async function verifyUser(username: string, password: string): Promise<Us
                 role: userRow[2],
                 status: userRow[3],
                 lastLogin: new Date().toISOString(),
-                allowedBranches: userRow[6] ? userRow[6].split(',').map((s: string) => s.trim()) : ['*']
+                allowedBranches: userRow[6] ? userRow[6].split(',').map((s: string) => s.trim()) : ['*'],
+                allowedOwners: userRow[7] ? userRow[7].split(',').map((s: string) => s.trim()) : ['*']
             };
         }
 
@@ -88,16 +106,19 @@ export async function verifyUser(username: string, password: string): Promise<Us
 export async function addUser(user: any) {
     const hashedPassword = await bcrypt.hash(user.password || '123456', 10);
     const branches = user.allowedBranches ? user.allowedBranches.join(',') : '*';
+    const owners = user.allowedOwners ? user.allowedOwners.join(',') : '*';
+    
     const row = [
         `U-${Date.now()}`,
         user.username,
         user.role,
         "Active",
         new Date().toISOString().split('T')[0],
-        hashedPassword, // Column F
-        branches        // Column G
+        hashedPassword, // Column F (5)
+        branches,       // Column G (6)
+        owners          // Column H (7)
     ];
-    await appendSheetRow(USER_SPREADSHEET_ID, "'Users'!A:G", row);
+    await appendSheetRow(USER_SPREADSHEET_ID, "'Users'!A:H", row);
     return true;
 }
 
@@ -108,32 +129,22 @@ export async function updateUser(userId: string, data: any) {
     const idx = raw.findIndex(r => r[0] === userId);
     if (idx === -1) return false;
     
-    // Update basic info (B:D)
-    // We ideally should update everything if we have clean data, but partial updates are tricky with sheets if we don't have full row.
-    // For now, let's assume 'data' generally has everything we care to update in the admin UI.
-    // Admin UI currently passes: role, status, allowedBranches? (We will add that)
-    
-    // If we want to update ONLY specific fields, it's harder with basic range updates unless we send nulls?
-    // Let's execute separate updates or one block if contiguous.
-    // B:D is contiguous. G is separate (col 6).
-    // Let's update B:D first.
-    
-    if (data.username || data.role || data.status) {
-         // This assumes we have original values for others if we want to preserve? 
-         // Actually, safer to fetch row first.
-         const fullRow = (await getSheetData(USER_SPREADSHEET_ID, `'Users'!A${idx+1}:G${idx+1}`))[0];
+    if (data.username || data.role || data.status || data.allowedBranches || data.allowedOwners) {
+         // Fetch existing row to preserve values
+         const fullRow = (await getSheetData(USER_SPREADSHEET_ID, `'Users'!A${idx+1}:H${idx+1}`))[0];
          if (!fullRow) return false;
 
          const newUsername = data.username || fullRow[1];
          const newRole = data.role || fullRow[2];
          const newStatus = data.status || fullRow[3];
          const newBranches = data.allowedBranches ? data.allowedBranches.join(',') : (fullRow[6] || '*');
+         const newOwners = data.allowedOwners ? data.allowedOwners.join(',') : (fullRow[7] || '*');
 
-         // Update B:D
+         // Update B:D (Basic Info)
          await updateSheetData(USER_SPREADSHEET_ID, `'Users'!B${idx + 1}:D${idx + 1}`, [[newUsername, newRole, newStatus]]);
          
-         // Update G
-         await updateSheetData(USER_SPREADSHEET_ID, `'Users'!G${idx + 1}:G${idx + 1}`, [[newBranches]]);
+         // Update G:H (Permissions)
+         await updateSheetData(USER_SPREADSHEET_ID, `'Users'!G${idx + 1}:H${idx + 1}`, [[newBranches, newOwners]]);
     }
 
     return true;

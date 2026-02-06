@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getTransactions, Transaction } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     try {
+        const session = await getServerSession(authOptions);
+        const allowedOwners = (session?.user as any)?.allowedOwners;
+
         const { searchParams } = new URL(request.url);
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
@@ -12,10 +17,10 @@ export async function GET(request: Request) {
         const owner = searchParams.get('owner');
         const search = searchParams.get('search')?.toLowerCase();
 
-        // 1. Fetch ALL transactions (Parallel)
+        // 1. Fetch ALL transactions (Parallel) - Filtered by User's Allowed Owners
         const [inbound, outbound] = await Promise.all([
-            getTransactions('IN'),
-            getTransactions('OUT')
+            getTransactions('IN', undefined, allowedOwners),
+            getTransactions('OUT', undefined, allowedOwners)
         ]);
 
         // 2. Normalize and Combine
@@ -49,7 +54,7 @@ export async function GET(request: Request) {
 
             // Search (Product Name, ID)
             if (search) {
-                const searchContent = `${t.product_name} ${t.transaction_id} ${t.location}`.toLowerCase();
+                const searchContent = `${t.product || ''} ${t.sku || ''} ${t.docRef || ''}`.toLowerCase();
                 if (!searchContent.includes(search)) return false;
             }
 
