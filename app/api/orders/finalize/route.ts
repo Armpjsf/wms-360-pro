@@ -204,7 +204,7 @@ export async function POST(req: Request) {
 
     // 1. Generate Raw PDF (Without waiting for Sheets signature)
     console.log('[Finalize] Generating base PDF...');
-    const gid = 1859605775; // ส่งสินค้า sheet GID (Updated 2026-02-06)
+    const gid = 1427637725; // ส่งสินค้า form sheet with signature (Updated 2026-02-06)
     const rawPdfBuffer = await getSheetPdfBlob(PO_SPREADSHEET_ID, gid, 'B1:H36', false);
     
     // 2. Post-Process PDF if Signature exists
