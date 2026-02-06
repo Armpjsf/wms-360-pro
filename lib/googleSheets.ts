@@ -75,12 +75,14 @@ export function cleanSpreadsheetId(id: string | undefined): string {
 export const PRODUCT_SHEET_GID = 1511150723;
 
 // SPLIT SPREADSHEET CONFIGURATION
-// ID 1: Product Data (Inventory, Master)
+// ID 1: Inventory, Transactions, Damage, Cycle Count, Audit
 export const PRODUCT_SPREADSHEET_ID = cleanSpreadsheetId(process.env.PRODUCT_SPREADSHEET_ID) || '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
-// ID 2: Documents & Logs (Transactions, POs)
-export const DOC_SPREADSHEET_ID = cleanSpreadsheetId(process.env.DOC_SPREADSHEET_ID) || cleanSpreadsheetId(process.env.NEXT_PUBLIC_SPREADSHEET_ID) || '';
-// Legacy Fallback (defaults to Doc ID)
-export const SPREADSHEET_ID = DOC_SPREADSHEET_ID;
+
+// ID 2: Documents, PO Logs, Users, Config, Roll Tags
+export const DOC_SPREADSHEET_ID = cleanSpreadsheetId(process.env.DOC_SPREADSHEET_ID) || '1rdTdtzGvW0bF8bLF-KLjqn3_kKTFDnBdEEpXtegCPbg';
+
+// Legacy Fallback (Default to Product ID for core operations if mixed)
+export const SPREADSHEET_ID = PRODUCT_SPREADSHEET_ID;
 
 // Helper to get Sheet Name by GID (Cached)
 export const getProductSheetName = unstable_cache(
@@ -391,7 +393,7 @@ interface POLogEntry {
 
 export async function getPOLog(): Promise<POLogEntry[]> {
     try {
-        const SPREADSHEET_ID = cleanSpreadsheetId(process.env.NEXT_PUBLIC_PO_SPREADSHEET_ID);
+        const SPREADSHEET_ID = DOC_SPREADSHEET_ID || cleanSpreadsheetId(process.env.NEXT_PUBLIC_PO_SPREADSHEET_ID);
         if (!SPREADSHEET_ID) {
             console.error("SPREADSHEET_ID not configured");
             return [];
@@ -549,7 +551,7 @@ export const USER_SPREADSHEET_ID = "1rdTdtzGvW0bF8bLF-KLjqn3_kKTFDnBdEEpXtegCPbg
 // If uncertain, we often check both in getPOLogs, but let's default to Main if that's where it was.
 // The comment previously linked it to the NEW ID, but let's be careful. 
 // If 'คลังข้อมูล' was in the original sheet, use SPREADSHEET_ID.
-export const PO_SPREADSHEET_ID = USER_SPREADSHEET_ID; // The "Form Link Mail" sheet contains "คลังข้อมูล" 
+export const PO_SPREADSHEET_ID = DOC_SPREADSHEET_ID; // The "Form Link Mail" sheet contains "คลังข้อมูล" 
 
 export const DELIVERY_FOLDER_ID = "1QGOYQUX8eDxmzuZ6pbiXJH5iuKAZG8s3"; // Folder for Delivery PDFs
 
@@ -733,8 +735,8 @@ async function resolveTransactionSheetName(type: 'IN' | 'OUT'): Promise<string> 
     const cleanName = type === 'IN' ? 'Transaction รับ' : 'Transaction จ่าย';
     
     // Check Emoji First (Lightweight check)
-    // Uses DOC_SPREADSHEET_ID because Transactions are in the Doc Sheet
-    const test = await getSheetData(DOC_SPREADSHEET_ID, `'${emojiName}'!A1`);
+    // Uses PRODUCT_SPREADSHEET_ID because Transactions are in Sheet ID 1
+    const test = await getSheetData(PRODUCT_SPREADSHEET_ID, `'${emojiName}'!A1`);
     if (test !== null) return emojiName; // Exists
     
     return cleanName; // Fallback
@@ -1067,7 +1069,7 @@ function parseDate(dateStr: string): string {
 }
 
 // Internal fetcher (uncached) - Exported for Data Quality Check
-export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId: string = DOC_SPREADSHEET_ID) {
+export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId: string = PRODUCT_SPREADSHEET_ID) {
     // Legacy Sheet Names often include emojis
     const sheetName = type === 'IN' ? '💸 Transaction รับ' : '💰 Transaction จ่าย';
     console.log(`[getTransactions] Fetching ${type} from sheet: ${sheetName}`);
@@ -1151,7 +1153,7 @@ export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId:
 // Export Cached Version
 export const getTransactions = unstable_cache(
     async (type: 'IN' | 'OUT', branchSheetId?: string) => {
-        return getTransactionsUncached(type, branchSheetId || DOC_SPREADSHEET_ID);
+        return getTransactionsUncached(type, branchSheetId || PRODUCT_SPREADSHEET_ID);
     },
     ['transactions-data'],
     {
@@ -1617,7 +1619,7 @@ export async function addCycleCountEntry(data: CycleCountRecord) {
         data.variance,
         data.status
     ];
-    await appendSheetRow(SPREADSHEET_ID, "'CycleCount_Log'!A:J", row);
+    await appendSheetRow(PRODUCT_SPREADSHEET_ID, "'CycleCount_Log'!A:J", row);
     return true;
 }
 

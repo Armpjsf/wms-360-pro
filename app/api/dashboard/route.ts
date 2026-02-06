@@ -59,14 +59,14 @@ export async function GET(req: Request) {
     // 1. Inventory (From Product Sheet - ID 1)
     const invRaw = await getSheetData(PRODUCT_SPREADSHEET_ID, "'📊 รายงานสินค้าคงเหลือ'!A:Z");
     
-    // 2. Transactions (From Doc Sheet - ID 2)
-    const receiveRawFullData = await getSheetData(DOC_SPREADSHEET_ID, "'💸 Transaction รับ'!A:J");
-    const issueRawFullData = await getSheetData(DOC_SPREADSHEET_ID, "'💰 Transaction จ่าย'!A:M");
+    // 2. Transactions (From Product Sheet - ID 1)
+    const receiveRawFullData = await getSheetData(PRODUCT_SPREADSHEET_ID, "'💸 Transaction รับ'!A:J");
+    const issueRawFullData = await getSheetData(PRODUCT_SPREADSHEET_ID, "'💰 Transaction จ่าย'!A:M");
     
-    // 3. Damage (From Doc Sheet - ID 2)
-    let damageRawFull = await getSheetData(DOC_SPREADSHEET_ID, "'Damage'!A:F");
+    // 3. Damage (From Product Sheet - ID 1)
+    let damageRawFull = await getSheetData(PRODUCT_SPREADSHEET_ID, "'Damage'!A:F");
     if (!damageRawFull || damageRawFull.length === 0) {
-        damageRawFull = await getSheetData(DOC_SPREADSHEET_ID, "'เสียหาย'!A:F");
+        damageRawFull = await getSheetData(PRODUCT_SPREADSHEET_ID, "'เสียหาย'!A:F");
     }
     
     // 4. PO Logs (Internally uses env or fallback, likely DOC_ID)
