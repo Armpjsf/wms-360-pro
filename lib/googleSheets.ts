@@ -571,7 +571,7 @@ export interface Product {
 }
 
 // Internal fetcher (uncached) - Exported for Data Quality Check
-export async function getProductsUncached(targetSheetId: string = SPREADSHEET_ID): Promise<Product[]> {
+export async function getProductsUncached(targetSheetId: string = PRODUCT_SPREADSHEET_ID): Promise<Product[]> {
     try {
         // Try '📊 รายงานสินค้าคงเหลือ' first (User specific)
         let rawData = await getSheetData(targetSheetId, "'📊 รายงานสินค้าคงเหลือ'!A1:Z1000");
@@ -648,7 +648,7 @@ export async function getProductsUncached(targetSheetId: string = SPREADSHEET_ID
 // -------------------------------------------------------------
 export const getProducts = unstable_cache(
     async (branchSheetId?: string) => {
-        return getProductsUncached(branchSheetId || SPREADSHEET_ID);
+        return getProductsUncached(branchSheetId || PRODUCT_SPREADSHEET_ID);
     },
     ['products-list'], 
     { revalidate: 300, tags: ['products'] }
@@ -656,7 +656,7 @@ export const getProducts = unstable_cache(
 
 export async function editProduct(oldName: string, updates: any) {
     const sheetName = await getProductSheetName();
-    const data = await getSheetData(SPREADSHEET_ID, `'${sheetName}'!A1:Z2000`);
+    const data = await getSheetData(PRODUCT_SPREADSHEET_ID, `'${sheetName}'!A1:Z2000`);
     if (!data || data.length < 2) return false;
 
     const headers = data[0];
@@ -733,7 +733,8 @@ async function resolveTransactionSheetName(type: 'IN' | 'OUT'): Promise<string> 
     const cleanName = type === 'IN' ? 'Transaction รับ' : 'Transaction จ่าย';
     
     // Check Emoji First (Lightweight check)
-    const test = await getSheetData(SPREADSHEET_ID, `'${emojiName}'!A1`);
+    // Uses DOC_SPREADSHEET_ID because Transactions are in the Doc Sheet
+    const test = await getSheetData(DOC_SPREADSHEET_ID, `'${emojiName}'!A1`);
     if (test !== null) return emojiName; // Exists
     
     return cleanName; // Fallback
@@ -1066,7 +1067,7 @@ function parseDate(dateStr: string): string {
 }
 
 // Internal fetcher (uncached) - Exported for Data Quality Check
-export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId: string = SPREADSHEET_ID) {
+export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId: string = DOC_SPREADSHEET_ID) {
     // Legacy Sheet Names often include emojis
     const sheetName = type === 'IN' ? '💸 Transaction รับ' : '💰 Transaction จ่าย';
     console.log(`[getTransactions] Fetching ${type} from sheet: ${sheetName}`);
@@ -1150,7 +1151,7 @@ export async function getTransactionsUncached(type: 'IN' | 'OUT', targetSheetId:
 // Export Cached Version
 export const getTransactions = unstable_cache(
     async (type: 'IN' | 'OUT', branchSheetId?: string) => {
-        return getTransactionsUncached(type, branchSheetId || SPREADSHEET_ID);
+        return getTransactionsUncached(type, branchSheetId || DOC_SPREADSHEET_ID);
     },
     ['transactions-data'],
     {
