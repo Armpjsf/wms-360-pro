@@ -23,7 +23,11 @@ interface AlertSummary {
   totalUnread: number;
 }
 
-export default function NotificationCenter() {
+interface NotificationCenterProps {
+  align?: 'left' | 'right';
+}
+
+export default function NotificationCenter({ align = 'left' }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [dismissed, setDismissed] = useState<string[]>([]);
@@ -124,7 +128,10 @@ export default function NotificationCenter() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-[100]">
+        <div className={cn(
+          "absolute top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-[100]",
+          align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left'
+        )}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">

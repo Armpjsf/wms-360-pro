@@ -37,6 +37,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import InstallPWA from './InstallPWA';
 import NotificationManager from './NotificationManager';
+import NotificationCenter from './NotificationCenter';
 
 import BranchSelector from './BranchSelector';
 
@@ -99,6 +100,11 @@ export default function Sidebar() {
       >
         <Menu className="w-6 h-6 text-slate-700" />
       </button>
+
+      {/* Mobile Notification Bell */}
+      <div className="md:hidden fixed top-4 right-4 z-50 bg-white rounded-xl shadow-md p-1">
+         <NotificationCenter />
+      </div>
 
       <AnimatePresence>
         {mobileOpen && (
@@ -180,7 +186,14 @@ export default function Sidebar() {
         {/* Language & Notification Toggle */}
         {!collapsed && (
             <div className="px-4 pb-2 space-y-2">
-                <NotificationToggle />
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                     {/* Desktop Notification Center */}
+                    <div className="flex-1 flex justify-center">
+                        <NotificationCenter />
+                    </div>
+                </div>
+                
+                <NotificationManager />
                 
                 <button 
                     onClick={() => setLanguage(language === 'en' ? 'th' : 'en')}
@@ -243,21 +256,4 @@ export default function Sidebar() {
       </aside>
     </>
   );
-}
-
-function NotificationToggle() {
-    const { permission, requestPermission } = useNotification();
-    const { t } = useLanguage();
-    
-    if (permission === 'granted') return null; // Hide if already granted
-    
-    return (
-        <button 
-            onClick={requestPermission}
-            className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors"
-        >
-            <Bell className="w-3 h-3" />
-            {t('enable_alerts')}
-        </button>
-    );
 }
