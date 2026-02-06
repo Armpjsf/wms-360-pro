@@ -538,8 +538,9 @@ export async function writeRollTagData(spreadsheetId: string, sheetName: string,
 // ⚠️ IMPORTANT: Spreadsheet IDs Configuration ⚠️
 
 // 1. Main Inventory & Transactions (Original Data)
-export const SPREADSHEET_ID = "1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM"; 
-export const INVENTORY_SPREADSHEET_ID = SPREADSHEET_ID;
+// 1. Data Source Configured at Top of File
+// export const SPREADSHEET_ID = ... (Removed duplicate)
+// export const INVENTORY_SPREADSHEET_ID = ... (Removed duplicate)
 
 // 2. User Management (New Sheet)
 export const USER_SPREADSHEET_ID = "1rdTdtzGvW0bF8bLF-KLjqn3_kKTFDnBdEEpXtegCPbg";
