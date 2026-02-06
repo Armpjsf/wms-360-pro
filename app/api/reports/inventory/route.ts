@@ -1,97 +1,87 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getTransactions, Transaction } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/reports/inventory
- * Query params: dateFrom, dateTo, type, sku, owner, batch
- */
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const dateFrom = searchParams.get('dateFrom');
-        const dateTo = searchParams.get('dateTo');
-        const filterType = searchParams.get('type'); // 'IN' | 'OUT' | null (all)
-        const filterSku = searchParams.get('sku')?.toLowerCase();
-        const filterOwner = searchParams.get('owner')?.toLowerCase();
-        const filterBatch = searchParams.get('batch')?.toLowerCase();
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const type = searchParams.get('type'); // 'IN', 'OUT', or 'ALL'
+        const owner = searchParams.get('owner');
+        const search = searchParams.get('search')?.toLowerCase();
 
-        // Fetch all transactions
+        // 1. Fetch ALL transactions (Parallel)
         const [inbound, outbound] = await Promise.all([
             getTransactions('IN'),
             getTransactions('OUT')
         ]);
 
-        let combined: Transaction[] = [];
-        if (!filterType || filterType === 'IN') combined.push(...inbound);
-        if (!filterType || filterType === 'OUT') combined.push(...outbound);
+        // 2. Normalize and Combine
+        // Add a 'type' field to identify source
+        const allTransactions = [
+            ...inbound.map(t => ({ ...t, type: 'IN' })),
+            ...outbound.map(t => ({ ...t, type: 'OUT' }))
+        ];
 
-        // Apply filters
-        let filtered = combined;
+        // 3. Filter
+        let filtered = allTransactions.filter(t => {
+            // valid date check
+            if (!t.date) return false;
 
-        // Date Range Filter
-        if (dateFrom) {
-            const fromDate = new Date(dateFrom);
-            filtered = filtered.filter(t => {
-                const tDate = new Date(t.date);
-                return tDate >= fromDate;
-            });
-        }
-        if (dateTo) {
-            const toDate = new Date(dateTo);
-            toDate.setHours(23, 59, 59); // Include entire end day
-            filtered = filtered.filter(t => {
-                const tDate = new Date(t.date);
-                return tDate <= toDate;
-            });
-        }
+            // Date Range Filter (Simple String Comparison YYYY-MM-DD or parse)
+            // Assuming dates are YYYY-MM-DD or standard enough. 
+            // If Google Sheets returns DD/MM/YYYY, we might need parsing. 
+            // Let's assume standard format for now or just simple includes for partial matches if needed.
+            // Better: Parse to timestamp for accurate comparison
+            try {
+                const tDate = new Date(t.date).getTime();
+                if (startDate && tDate < new Date(startDate).getTime()) return false;
+                if (endDate && tDate > new Date(endDate).getTime()) return false;
+            } catch (e) {
+                // Invalid date in row, maybe skip or include?
+                // console.warn("Invalid date:", t.date);
+            }
 
-        // SKU Filter (partial match)
-        if (filterSku) {
-            filtered = filtered.filter(t => 
-                (t.sku || t.product || '').toLowerCase().includes(filterSku)
-            );
-        }
+            // Type Filter
+            if (type && type !== 'ALL' && t.type !== type) return false;
 
-        // Owner Filter (partial match)
-        if (filterOwner) {
-            filtered = filtered.filter(t => 
-                (t.owner || '').toLowerCase().includes(filterOwner)
-            );
-        }
+            // Search (Product Name, ID)
+            if (search) {
+                const searchContent = `${t.product_name} ${t.transaction_id} ${t.location}`.toLowerCase();
+                if (!searchContent.includes(search)) return false;
+            }
 
-        // Batch Filter (partial match)
-        if (filterBatch) {
-            filtered = filtered.filter(t => 
-                (t.batch || '').toLowerCase().includes(filterBatch)
-            );
-        }
+            return true;
+        });
 
-        // Sort by date DESC (newest first)
-        filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // 4. Sort (Newest First)
+        filtered.sort((a, b) => {
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
 
-        // Map to response format
-        const transactions = filtered.map(t => ({
-            date: t.date,
-            type: t.type,
-            sku: t.sku || t.product,
-            qty: t.qty,
-            price: t.price,
-            docRef: t.docRef || '',
-            batch: t.batch || '',
-            expiryDate: t.expiryDate || '',
-            owner: t.owner || ''
-        }));
+        // 5. Pagination (Optional, but good for large datasets)
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const total = filtered.length;
+        const totalPages = Math.ceil(total / limit);
+        const offset = (page - 1) * limit;
+        
+        const paginatedData = filtered.slice(offset, offset + limit);
 
         return NextResponse.json({
-            transactions,
-            count: transactions.length,
-            filters: { dateFrom, dateTo, filterType, filterSku, filterOwner, filterBatch }
+            data: paginatedData,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages
+            }
         });
 
     } catch (error: any) {
-        console.error('Inventory Report Error:', error);
+        console.error("Report API Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
