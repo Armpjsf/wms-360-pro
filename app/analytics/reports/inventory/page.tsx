@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiDownload, FiFilter, FiSearch, FiCalendar } from 'react-icons/fi';
-import AmbientBackground from '@/components/ui/AmbientBackground';
+import { Download, Filter, Search, Calendar } from 'lucide-react';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 interface Transaction {
     transaction_id: string;
@@ -106,7 +106,7 @@ export default function InventoryReportPage() {
                         onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20"
                     >
-                        <FiDownload /> Export CSV
+                        <Download className="w-4 h-4" /> Export CSV
                     </button>
                 </div>
 
@@ -118,7 +118,7 @@ export default function InventoryReportPage() {
                         <div className="space-y-1">
                             <label className="text-xs text-slate-500 font-medium ml-1">Start Date</label>
                             <div className="relative">
-                                <FiCalendar className="absolute left-3 top-3 text-slate-400" />
+                                <Calendar className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                                 <input 
                                     type="date"
                                     value={filters.startDate}
@@ -130,7 +130,7 @@ export default function InventoryReportPage() {
                         <div className="space-y-1">
                             <label className="text-xs text-slate-500 font-medium ml-1">End Date</label>
                             <div className="relative">
-                                <FiCalendar className="absolute left-3 top-3 text-slate-400" />
+                                <Calendar className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                                 <input 
                                     type="date"
                                     value={filters.endDate}
@@ -159,7 +159,7 @@ export default function InventoryReportPage() {
                     <div className="flex-1 space-y-1 w-full">
                          <label className="text-xs text-slate-500 font-medium ml-1">Search</label>
                          <div className="relative">
-                            <FiSearch className="absolute left-3 top-3 text-slate-400" />
+                            <Search className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                             <input 
                                 type="text"
                                 placeholder="Search Product, ID, Location..."
