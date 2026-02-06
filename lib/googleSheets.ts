@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import path from "path";
+import fs from "fs";
 import stream from "stream";
 import { getOAuth2Client } from './oauthClient';
 import { unstable_cache, revalidateTag } from 'next/cache';
@@ -56,6 +57,72 @@ export async function getServiceAccountEmail(): Promise<string> {
 }
 
 export async function getGoogleDrive() {
+    // 0. PRIORITY: Environment Variable (Serverless/Vercel Support) - User OAuth
+    // This allows uploading files as the "User" (who has storage quota) instead of the Service Account (0 bytes).
+    const envCredentials = process.env.GOOGLE_CREDENTIALS_JSON;
+    const envToken = process.env.GMAIL_TOKEN_JSON; // Re-use the Gmail token which has 'drive' scope
+
+    // Helper to find first existing file
+    const findFirst = (paths: string[]) => paths.find(p => fs.existsSync(p));
+    const tokenPath = findFirst([
+       path.join(process.cwd(), 'gmail_token.json'), 
+       path.join(process.cwd(), 'token.json'),
+       path.join(process.cwd(), '..', 'gmail_token.json'),
+       path.join(process.cwd(), '..', 'token.json')
+    ]) || "";
+
+    const credPath = findFirst([
+        path.join(process.cwd(), 'credentials.json'), 
+        path.join(process.cwd(), '..', 'client_secret.json'), 
+        path.join(process.cwd(), '..', 'credentials.json')
+    ]) || "";
+
+    // A. Env Var Path
+    if (envToken && (credPath || envCredentials)) {
+        try {
+            console.log("Using User OAuth (Env) for Drive Client");
+            
+            let credentials;
+            if (envCredentials) {
+                credentials = JSON.parse(envCredentials);
+            } else {
+                const content = fs.readFileSync(credPath, 'utf-8');
+                credentials = JSON.parse(content);
+            }
+            const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web;
+            
+            const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+            const token = JSON.parse(envToken);
+            oAuth2Client.setCredentials(token);
+            
+            const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+            return { drive, auth: oAuth2Client };
+        } catch (error) {
+            console.error("Env Drive Init Failed:", error);
+        }
+    }
+
+    // B. Legacy File Path (Local Dev)
+    if (tokenPath && credPath) {
+        try {
+            console.log("Using User OAuth (File) for Drive Client");
+            const content = fs.readFileSync(credPath, 'utf-8');
+            const credentials = JSON.parse(content);
+            const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web;
+            
+            const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+            const token = fs.readFileSync(tokenPath, 'utf-8');
+            oAuth2Client.setCredentials(JSON.parse(token));
+            
+            const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+            return { drive, auth: oAuth2Client };
+        } catch (error) {
+            console.error("File Drive Init Failed:", error);
+        }
+    }
+
+    // C. Service Account Fallback (Read-Only usually, or 0 Quota)
+    console.log("Using Service Account for Drive Client (Fallback)");
     const { auth, client } = await getGoogleSheets();
     const drive = google.drive({ version: 'v3', auth: client as any });
     return { drive, auth };
