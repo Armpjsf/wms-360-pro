@@ -164,6 +164,15 @@ export async function POST() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Email Scan API Error:", error);
+    
+    // Specifically handle OAuth2 'invalid_grant'
+    if (error.message?.includes('invalid_grant') || error.code === 'invalid_grant') {
+      return NextResponse.json({ 
+        success: false,
+        error: "Google Authentication Expired (invalid_grant). Please run 'node scripts/auth-gmail.js' in the project directory to re-authenticate." 
+      }, { status: 401 });
+    }
+
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

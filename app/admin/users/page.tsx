@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Shield, UserPlus, MoreVertical, CheckCircle, XCircle } from 'lucide-react';
+import { User, Shield, UserPlus, MoreVertical, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function UserManagerPage() {
@@ -112,6 +113,9 @@ export default function UserManagerPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
+      <Link href="/admin" className="text-slate-500 hover:text-blue-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+        <ArrowLeft className="w-4 h-4" /> {t('back_to_admin')}
+      </Link>
       <div className="flex justify-between items-center mb-8">
         <div>
            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">

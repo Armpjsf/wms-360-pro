@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Search, Calendar, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, TrendingDown, Clock, ArrowRight, AlertTriangle, Printer } from 'lucide-react';
+import { Package, Search, Calendar, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, History, TrendingUp, TrendingDown, Clock, ArrowRight, AlertTriangle, Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ProductSelector from '@/components/ProductSelector';
 import LabelDesigner from '@/components/label/LabelDesigner';
@@ -109,6 +109,9 @@ function StockCardContent() {
       <AmbientBackground />
       
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+         <Link href="/inventory" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+             <ArrowLeft className="w-4 h-4" /> {t('back_to_inventory')}
+         </Link>
          {/* Header */}
          <motion.div 
             initial={{ opacity: 0, y: -20 }}

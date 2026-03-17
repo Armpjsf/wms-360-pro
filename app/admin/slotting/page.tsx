@@ -8,8 +8,10 @@ import {
   ArrowDownCircle, 
   Box, 
   Zap,
-  Warehouse
+  Warehouse,
+  ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface SlottingInsight {
@@ -41,6 +43,9 @@ export default function SlottingPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
+       <Link href="/admin" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+         <ArrowLeft className="w-4 h-4" /> {t('back_to_admin')}
+       </Link>
        {/* Header */}
        <header>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">

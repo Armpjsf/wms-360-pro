@@ -170,8 +170,8 @@ export default function InboundPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
         >
-           <Link href="/ops" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
-              <ArrowLeft className="w-4 h-4" /> {t('back_to_ops')}
+           <Link href="/dashboard" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+              <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
            </Link>
            <div className="flex items-center gap-4">
                <div className="p-4 bg-emerald-100 rounded-3xl border border-emerald-200 shadow-lg shadow-emerald-900/10">

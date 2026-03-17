@@ -3,6 +3,7 @@ export interface Branch {
     id: string;
     name: string;
     spreadsheetId: string;
+    inventorySpreadsheetId: string;
     color: string;
 }
 
@@ -14,13 +15,15 @@ export const BRANCHES: Branch[] = [
     {
         id: 'hq',
         name: 'สำนักงานใหญ่ (HQ)',
-        spreadsheetId: process.env.SPREADSHEET_ID || '', // Configured in .env
+        spreadsheetId: process.env.SPREADSHEET_ID || '', 
+        inventorySpreadsheetId: process.env.PRODUCT_SPREADSHEET_ID || process.env.SPREADSHEET_ID || '',
         color: 'indigo'
     },
     {
         id: 'branch-2',
         name: 'สาขา 2 (Rangsit)',
-        spreadsheetId: process.env.SPREADSHEET_ID || '', // Using same ID for demo
+        spreadsheetId: process.env.SPREADSHEET_ID || '',
+        inventorySpreadsheetId: process.env.PRODUCT_SPREADSHEET_ID || process.env.SPREADSHEET_ID || '',
         color: 'rose'
     }
 ];

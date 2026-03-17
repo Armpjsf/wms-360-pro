@@ -20,13 +20,14 @@ const corsHeaders = {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tagId } = body; // 'RT1' or 'RT2'
-    // ... logic continues ...
+    const { tagId, branchId } = body; // 'RT1' or 'RT2'
 
-    // 0. Define Constants
-    // IMPORTANT: Use PO_SPREADSHEET_ID
-    const ssId = PO_SPREADSHEET_ID; 
-    console.log(`[Process] Starting for Tag: ${tagId}, SS_ID: ${ssId || 'UNDEFINED'}`);
+    // Resolver for Multi-Branch Isolation
+    const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+    const ssId = await resolveSpreadsheetId(branchId, 'doc');
+    const invSSID = await resolveSpreadsheetId(branchId, 'inventory');
+
+    console.log(`[Process] Starting for Tag: ${tagId}, Branch: ${branchId || 'HQ'}, SS_ID: ${ssId}`);
     
     // 1. Determine Source Sheet
     const sourceSheet = tagId === 'RT1' ? ROLL_TAG_1 : ROLL_TAG_2;
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         console.log(`[Process] Form Busy (Doc: ${formCheck[0][0]}). Auto-Archiving...`);
         // Form is busy -> Auto-Archive to "Waiting" list
         const { archiveCurrentForm } = await import('@/lib/orderUtils');
-        const archiveRes = await archiveCurrentForm();
+        const archiveRes = await archiveCurrentForm(undefined, undefined, ssId);
         if (!archiveRes.success) {
              throw new Error("Failed to auto-archive current job: " + archiveRes.error);
         }
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     console.log(`[Process] Read Data - Cust: ${custName}, Items: ${itemsData?.length || 0}`);
 
     // 4. Generate Doc Number
-    const newDocId = await generateNewDocNumber();
+    const newDocId = await generateNewDocNumber(ssId);
     console.log(`[Process] Generated DocId: ${newDocId}`);
 
     // 5. Prepare Data
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
             dataToArchive.push([
                 newDocId, custName, currentSequence, 
                 lastValidOrderNo, itemCode, qtyVal, 
-                "รอลูกค้า", "", today
+                "กำลังดำเนินการ", "", today
             ]);
             
             // Form Data
@@ -192,8 +193,8 @@ export async function POST(request: Request) {
             }
             
             if (transactionItems.length > 0) {
-                 console.log(`[Process] Writing ${transactionItems.length} rows to Transaction...`);
-                 await writeTransactionData(transactionItems);
+                 console.log(`[Process] Writing ${transactionItems.length} rows to Transaction (SSID: ${invSSID})...`);
+                 await writeTransactionData(transactionItems, invSSID);
                  console.log(`[Process] ✅ Transaction write successful`);
             }
         }

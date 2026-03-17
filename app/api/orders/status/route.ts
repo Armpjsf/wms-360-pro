@@ -18,9 +18,16 @@ const FORM_SHEET = "ส่งสินค้า";
 let lastGoodResponse: any = null;
 let lastFetchTime = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    console.log("[Status] Fetching Roll Tags and Data Sheet...");
+    const { searchParams } = new URL(req.url);
+    const branchId = searchParams.get('branchId');
+
+    // Resolver for Multi-Branch Isolation
+    const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+    const ssid = await resolveSpreadsheetId(branchId, 'doc');
+
+    console.log(`[Status] Fetching Roll Tags and Data Sheet for Branch: ${branchId || 'HQ'} (SSID: ${ssid})...`);
 
     const { googleSheets } = await getGoogleSheets();
 
@@ -28,7 +35,7 @@ export async function GET() {
     let userSheetTitles: string[] = [];
     try {
         const meta = await googleSheets.spreadsheets.get({
-            spreadsheetId: PO_SPREADSHEET_ID,
+            spreadsheetId: ssid,
             fields: 'sheets.properties.title'
         });
         userSheetTitles = meta.data.sheets?.map((s: any) => s.properties.title) || [];
@@ -53,16 +60,15 @@ export async function GET() {
 
     const fetchDynamic = async (keywords: string[], range: string, defaultName: string) => {
         const resolvedName = findSheetName(keywords) || defaultName;
-        // console.log(`[Status] Searching [${keywords}] -> Found: '${resolvedName}'`);
         try {
-             return await getSheetData(PO_SPREADSHEET_ID, `'${resolvedName}'!${range}`);
+             return await getSheetData(ssid, `'${resolvedName}'!${range}`);
         } catch (e) {
              console.warn(`[Status] Failed to fetch dynamic '${resolvedName}':`, e);
              return [];
         }
     };
     
-    // 1. Check Pending Tasks (Roll Tags) - FROM USER SPREADSHEET
+    // 1. Check Pending Tasks (Roll Tags) - FROM BRANCH SPREADSHEET
     const [rt1Data, rt2Data, formCheck] = await Promise.all([
         fetchDynamic(['Roll Tag', '1'], 'A4:F17', 'Roll Tag1'),
         fetchDynamic(['Roll Tag', '2'], 'A4:F17', 'Roll Tag2'),
@@ -130,8 +136,8 @@ export async function GET() {
     };
 
     const pendingTasks = [];
-    const rt1 = parseRollTag('RT1', ROLL_TAG_1, rt1Data);
-    const rt2 = parseRollTag('RT2', ROLL_TAG_2, rt2Data);
+    const rt1 = parseRollTag('RT1', ROLL_TAG_1, rt1Data || []);
+    const rt2 = parseRollTag('RT2', ROLL_TAG_2, rt2Data || []);
     
     if (rt1) pendingTasks.push(rt1);
     if (rt2) pendingTasks.push(rt2);
@@ -142,38 +148,40 @@ export async function GET() {
     
     if (docNumRaw && docNumRaw.trim() !== "") {
         // Fetch full form data (Extended to H35 to include G33 Signature)
-        const formFullData = await getSheetData(PO_SPREADSHEET_ID, `${FORM_SHEET}!A1:H35`);
+        const formFullData = await getSheetData(ssid, `${FORM_SHEET}!A1:H35`);
         
         const docNum = docNumRaw;
-        const custName = formFullData[5] ? formFullData[5][5] : ""; // F6
-        const refDate = formFullData[3] ? formFullData[3][5] : ""; // F4
-        const shippingDate = formFullData[4] ? formFullData[4][5] : ""; // F5
+        const custName = (formFullData && formFullData[5]) ? formFullData[5][5] : ""; // F6
+        const refDate = (formFullData && formFullData[3]) ? formFullData[3][5] : ""; // F4
+        const shippingDate = (formFullData && formFullData[4]) ? formFullData[4][5] : ""; // F5
 
         // Extract Items from Rows 10-25 (Indices 9-24)
         const items = [];
         // Scan rows 9 to 24 (total 16 rows)
-        for (let i = 9; i < 25; i++) {
-            const row = formFullData[i];
-            if (row) {
-                const itemCode = row[3]; // Col D
-                if (itemCode && itemCode.trim() !== "") {
-                    items.push({
-                        orderNo: row[2] || "", // Col C
-                        itemCode: itemCode,
-                        qty: row[6] || 0 // Col G
-                    });
+        if (formFullData) {
+            for (let i = 9; i < 25; i++) {
+                const row = formFullData[i];
+                if (row) {
+                    const itemCode = row[3]; // Col D
+                    if (itemCode && itemCode.trim() !== "") {
+                        items.push({
+                            orderNo: row[2] || "", // Col C
+                            itemCode: itemCode,
+                            qty: row[6] || 0 // Col G
+                        });
+                    }
                 }
             }
         }
         
         // Check for Signature in H33 (Col H = Index 7, Row 33 = Index 32)
         // We store the RAW URL in H33 because reading G33 (IMAGE formula) returns empty value.
-        let signatureVal = formFullData[32] ? formFullData[32][7] : null;
+        let signatureVal = (formFullData && formFullData[32]) ? formFullData[32][7] : null;
 
         // Fallback: If H33 is empty, check if G33 has an IMAGE formula (Old logic or partial write)
         if (!signatureVal) {
              try {
-                 const g33Formula = await getSheetFormula(PO_SPREADSHEET_ID, `${FORM_SHEET}!G33`);
+                 const g33Formula = await getSheetFormula(ssid, `${FORM_SHEET}!G33`);
                  if (g33Formula && g33Formula[0] && g33Formula[0][0]) {
                      const formula = g33Formula[0][0].toString();
                      // Parse =IMAGE("https://...")
@@ -204,7 +212,7 @@ export async function GET() {
     let recentPendingPdf: any[] = [];
 
     try {
-        const dataSheetRaw = await getSheetData(PO_SPREADSHEET_ID, "'คลังข้อมูล'!A:I");
+        const dataSheetRaw = await getSheetData(ssid, "'คลังข้อมูล'!A:I");
         
         if (dataSheetRaw && dataSheetRaw.length > 1) {
             const waitingMap = new Map();
@@ -222,8 +230,8 @@ export async function GET() {
                 const link = row[7]; // Col H (PDF Link)
                 const dateStr = row[8] || "";
                 
-                // Active / Waiting for Customer (Use existing logic or adjusted)
-                if (status === "รอลูกค้า" && docNum) {
+                // Active / Waiting for Loading / Waiting for Customer (Unify visibility)
+                if ((status === "กำลังดำเนินการ" || status === "รอลูกค้า") && docNum) {
                     if (!waitingMap.has(docNum)) {
                         waitingMap.set(docNum, {
                             docNum,

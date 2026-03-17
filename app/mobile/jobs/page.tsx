@@ -3,7 +3,7 @@
 import { getApiUrl } from "@/lib/config";
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Package, User, RefreshCw, X, Check, Wifi, WifiOff } from 'lucide-react';
+import { MapPin, Package, User, RefreshCw, X, Check, Wifi, WifiOff, Play } from 'lucide-react';
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,6 +22,7 @@ export default function MobileJobsPage() {
   const { t } = useLanguage();
   const [activeJob, setActiveJob] = useState<any>(null);
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
+  const [waitingJobs, setWaitingJobs] = useState<any[]>([]); // New State
   const [loading, setLoading] = useState(true);
   const [productDetails, setProductDetails] = useState<Map<string, {location: string, image: string}>>(new Map());
   
@@ -76,9 +77,9 @@ export default function MobileJobsPage() {
               setActiveJob(null);
           }
           
-          if (data.pending) {
-              setPendingJobs(data.pending);
-          }
+          if (data.pending) setPendingJobs(data.pending);
+          if (data.waiting) setWaitingJobs(data.waiting); // New: Waiting Jobs
+          
       } catch (e) {
           console.error("Job Fetch Error", e);
           setIsConnected(false);
@@ -117,6 +118,34 @@ export default function MobileJobsPage() {
   const handleSignClick = (docId: string) => {
       setSigningDoc(docId);
       setShowSigModal(true);
+  };
+
+  // --- Restore/Start Job Logic ---
+  const handleStartJob = async (docNum: string) => {
+      if (!confirm(`Switch to job ${docNum}? Current form will be archived.`)) return;
+      
+      try {
+          setLoading(true);
+          const res = await fetch(getApiUrl('/api/jobs/restore'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ docNum })
+          });
+          
+          if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || "Failed to start job");
+          }
+          
+          // Refresh to see new active job
+          await fetchJobs();
+          // Scroll to top
+          window.scrollTo(0, 0);
+          
+      } catch (e: any) {
+          alert("Error: " + e.message);
+          setLoading(false);
+      }
   };
 
   const [successData, setSuccessData] = useState<{ pdfLink: string, docNum: string } | null>(null);
@@ -165,6 +194,13 @@ export default function MobileJobsPage() {
   };
 
   if (successData) {
+      // Determine next job (Priority: Waiting (Oldest) -> Pending)
+      // Waiting Jobs are usually sorted by latest first in API, so we might want the last one (oldest)?
+      // Actually API calls them 'waitingJobs', let's assume index 0 is most relevant or recently added.
+      // Usually LIFO (Last In First Out) for stacks, FIFO for queues.
+      // Let's just pick the first one visible.
+      const nextJob = waitingJobs.length > 0 ? waitingJobs[0] : (pendingJobs.length > 0 ? pendingJobs[0] : null);
+
       return (
           <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-emerald-950 text-white text-center relative overflow-hidden">
                <AmbientBackground />
@@ -177,9 +213,21 @@ export default function MobileJobsPage() {
                   <span className="text-sm opacity-75">PDF sent to dashboard automatically.</span>
               </p>
               
+              {nextJob && (
+                  <button 
+                      onClick={() => {
+                          setSuccessData(null);
+                          if (nextJob.docNum) handleStartJob(nextJob.docNum);
+                      }}
+                      className="w-full bg-white text-emerald-900 font-bold py-5 rounded-3xl flex items-center justify-center gap-2 shadow-xl hover:bg-emerald-50 transition-colors relative z-10 mb-4 active:scale-95"
+                  >
+                      <span>Start Next: {nextJob.docNum || nextJob.name}</span> <Play className="w-5 h-5 fill-emerald-900" />
+                  </button>
+              )}
+              
               <button 
                   onClick={handleDismissSuccess}
-                  className="w-full bg-white text-emerald-900 font-bold py-5 rounded-3xl flex items-center justify-center gap-2 shadow-xl hover:bg-emerald-50 transition-colors relative z-10 active:scale-95"
+                  className="w-full bg-emerald-900/50 border border-emerald-500/30 text-emerald-100 font-bold py-4 rounded-3xl flex items-center justify-center gap-2 relative z-10"
               >
                   {t('mobile_close_next')}
               </button>
@@ -197,7 +245,7 @@ export default function MobileJobsPage() {
             <div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                     {t('mobile_my_jobs')}
-                    <span className="text-xs bg-slate-900 text-white px-2 py-1 rounded-full font-bold">{pendingJobs.length + (activeJob ? 1 : 0)}</span>
+                    <span className="text-xs bg-slate-900 text-white px-2 py-1 rounded-full font-bold">{pendingJobs.length + (activeJob ? 1 : 0) + waitingJobs.length}</span>
                 </h1>
                 
                 <div className="flex items-center gap-2 mt-1">
@@ -318,7 +366,36 @@ export default function MobileJobsPage() {
             </motion.div>
         )}
 
-        {/* --- Pending Queue --- */}
+        {/* --- Waiting/Paused Queue (From Archive) --- */}
+        {waitingJobs.length > 0 && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mb-6"
+            >
+                <h2 className="text-slate-400 font-bold uppercase tracking-wider text-xs mb-4 px-2">Ready to Process ({waitingJobs.length})</h2>
+                <div className="space-y-3">
+                    {waitingJobs.map((job) => (
+                        <div key={job.docNum} className="bg-white border-l-4 border-l-orange-400 border-y border-r border-slate-200 rounded-r-2xl p-4 shadow-sm flex justify-between items-center">
+                            <div>
+                                <div className="font-bold text-slate-800 text-sm">{job.docNum}</div>
+                                <div className="text-xs text-slate-500 flex items-center gap-1">
+                                    <User className="w-3 h-3" /> {job.customer}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => handleStartJob(job.docNum)}
+                                className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                            >
+                                Start
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
+        )}
+
+        {/* --- Pending Queue (Roll Tags) --- */}
         {pendingJobs.length > 0 && (
             <motion.div
                 initial={{ opacity: 0 }}

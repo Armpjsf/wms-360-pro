@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Download, Calendar, Filter, ArrowRight, BarChart, Table } from 'lucide-react';
+import { FileText, Download, Calendar, Filter, ArrowRight, BarChart, Table, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '@/lib/config';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface ReportConfig {
   id: string;
@@ -63,6 +65,7 @@ function PackageIcon({ className }: { className?: string }) {
 }
 
 export default function ReportsPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -101,6 +104,9 @@ export default function ReportsPage() {
       <AmbientBackground />
 
       <div className="max-w-6xl mx-auto space-y-8 relative z-10">
+        <Link href="/dashboard" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+          <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
+        </Link>
         <div>
           <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
             <span className="p-2 bg-indigo-600 rounded-xl text-white">

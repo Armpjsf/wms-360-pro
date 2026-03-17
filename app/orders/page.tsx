@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock } from 'lucide-react';
+import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2 } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 import SignatureModal from '@/components/SignatureModal';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -105,7 +105,10 @@ function OrderManagement() {
     if (isManual) setLoadingAction('refresh');
 
     try {
-      const res = await fetch(getApiUrl(`/api/orders/status?t=${Date.now()}`), {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
+      const res = await fetch(getApiUrl(`/api/orders/status?branchId=${branchId}&t=${Date.now()}`), {
         cache: 'no-store'
       });
       
@@ -155,10 +158,13 @@ function OrderManagement() {
     
     setLoadingAction('process');
     try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
       const res = await fetch(getApiUrl('/api/orders/process'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tagId })
+        body: JSON.stringify({ tagId, branchId })
       });
 
       if (res.ok) {
@@ -249,12 +255,16 @@ function OrderManagement() {
 
     setLoadingAction('finalize');
     try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
       const res = await fetch(getApiUrl('/api/orders/finalize'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           docNum: status.activeForm.docNum,
-          signature: signatureData
+          signature: signatureData,
+          branchId
         })
       });
 
@@ -279,10 +289,13 @@ function OrderManagement() {
 
     setLoadingAction('recall');
     try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
       const res = await fetch(getApiUrl('/api/orders/recall'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docNum })
+        body: JSON.stringify({ docNum, branchId })
       });
 
       if (res.ok) {
@@ -301,16 +314,22 @@ function OrderManagement() {
   };
 
   const handleClear = async () => {
-    if (!confirm(t('confirm_prompt') + ' clear?')) return;
-
+    if (!status.activeForm) return;
+    if (!confirm(t('confirm_prep_finished'))) return;
+    
     setLoadingAction('clear');
     try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
       const res = await fetch(getApiUrl('/api/orders/archive'), {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchId })
       });
 
       if (res.ok) {
-        alert('Cleared');
+        alert(t('clear_btn') + ' ' + (t('success_inbound') || 'Success'));
         setSignatureData(null);
         await fetchStatus();
       } else {
@@ -696,9 +715,9 @@ function ActiveJobCard({
             <button
               onClick={onClear}
               disabled={isLoading}
-              className="bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1 border border-emerald-100"
             >
-              {isClearing ? <Loader2 className="w-3 h-3 animate-spin"/> : <X className="w-3 h-3" />}
+              {isClearing ? <Loader2 className="w-3 h-3 animate-spin"/> : <CheckCircle2 className="w-3 h-3" />}
               {isClearing ? t('processing') : t('clear_btn')}
             </button>
           </div>

@@ -63,11 +63,15 @@ export default function Dashboard() {
       try {
         setLoading(true); // Show loading state on refetch
         
+        const urlParams = new URLSearchParams(window.location.search);
+        const branchId = urlParams.get('branchId') || 'hq';
+        
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         params.append('year1', selectedYear1);
         params.append('year2', selectedYear2);
+        params.append('branchId', branchId);
         
         const url = getApiUrl(`/api/dashboard?${params.toString()}`);
         setDebugInfo(url);
@@ -276,10 +280,10 @@ export default function Dashboard() {
                           <KpiCard label={t('kpi_total_value')} value={`฿${(data?.summary?.totalValue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={DollarSign} bg="bg-green-50" color="text-green-600" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.2 }}>
-                          <KpiCard label={t('kpi_inbound_total')} value={data?.summary?.inboundPeriod || 0} icon={ArrowDownRight} bg="bg-indigo-50" color="text-indigo-500" href="/inventory/inbound" />
+                          <KpiCard label={t('kpi_inbound_total')} value={data?.summary?.inboundPeriod || 0} icon={ArrowDownRight} bg="bg-indigo-50" color="text-indigo-500" href="/ops/inbound" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.25 }}>
-                           <KpiCard label={t('kpi_outbound_total')} value={data?.summary?.outboundPeriod || 0} icon={ArrowUpRight} bg="bg-emerald-50" color="text-emerald-500" href="/inventory/outbound" />
+                           <KpiCard label={t('kpi_outbound_total')} value={data?.summary?.outboundPeriod || 0} icon={ArrowUpRight} bg="bg-emerald-50" color="text-emerald-500" href="/ops/outbound" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.3 }}>
                           <KpiCard label={t('kpi_dead_stock')} value={data?.summary?.deadStockCount || 0} icon={Clock} bg="bg-slate-100" color="text-slate-500" href="/inventory?movement=Deadstock" />

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { X, Check, Trash2 } from 'lucide-react';
 
@@ -16,8 +17,44 @@ interface SignatureModalProps {
 export default function SignatureModal({ isOpen, onClose, onSave, docNum }: SignatureModalProps) {
     const sigCanvasRef = useRef<any>(null);
     const [saving, setSaving] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
-    if (!isOpen) return null;
+    // Set mounted on client
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Handle Resize & DPI Scaling
+    useEffect(() => {
+        if (!isOpen || !mounted) return;
+
+        const resizeCanvas = () => {
+            const canvas = sigCanvasRef.current?.getCanvas();
+            if (canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                const width = canvas.offsetWidth * ratio;
+                const height = canvas.offsetHeight * ratio;
+                
+                if (canvas.width !== width || canvas.height !== height) {
+                    canvas.width = width;
+                    canvas.height = height;
+                    canvas.getContext('2d')?.scale(ratio, ratio);
+                    sigCanvasRef.current?.clear(); // Reset on resize to prevent distortion
+                }
+            }
+        };
+
+        // Delay slightly to ensure DOM is ready
+        const timeoutId = setTimeout(resizeCanvas, 100);
+        window.addEventListener('resize', resizeCanvas);
+        
+        return () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener('resize', resizeCanvas);
+        };
+    }, [isOpen, mounted]);
+
+    if (!isOpen || !mounted) return null;
 
     const handleClear = () => {
         sigCanvasRef.current?.clear();
@@ -43,8 +80,8 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col pt-safe-area backdrop-blur-sm animate-in fade-in duration-200">
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col pt-safe-area backdrop-blur-sm animate-in fade-in duration-200">
             {/* Header */}
             <div className="flex justify-between items-center px-4 py-4 md:px-6">
                 <div>
@@ -61,11 +98,19 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
             </div>
             
             {/* Canvas Container - Constrained Height for Landscape Signature */}
-            <div className="h-64 bg-white mx-4 mb-4 rounded-2xl overflow-hidden border-4 border-slate-700 relative shadow-2xl shrink-0">
-                 <SignatureCanvas 
+            <div className="h-72 bg-white mx-4 mb-4 rounded-2xl overflow-hidden border-4 border-slate-700 relative shadow-2xl shrink-0">
+                <SignatureCanvas 
                     ref={sigCanvasRef}
                     penColor="black"
-                    canvasProps={{ className: 'w-full h-full cursor-crosshair' }}
+                    velocityFilterWeight={0.7}
+                    minWidth={1.5}
+                    maxWidth={4}
+                    minDistance={2}
+                    throttle={16}
+                    canvasProps={{ 
+                        className: 'w-full h-full cursor-crosshair touch-none',
+                        style: { touchAction: 'none' }
+                    }}
                  />
                  
                  {/* Watermark / Guide */}
@@ -103,4 +148,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }
+

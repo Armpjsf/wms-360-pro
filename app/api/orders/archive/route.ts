@@ -11,19 +11,25 @@ const corsHeaders = {
 
 export async function POST(request: Request) {
   try {
+    const { branchId } = await request.json().catch(() => ({}));
+    
+    // Resolver for Multi-Branch Isolation
+    const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+    const ssid = await resolveSpreadsheetId(branchId, 'doc');
+
     const { clearFormSheet } = await import('@/lib/orderUtils');
-    await clearFormSheet();
+    await clearFormSheet(ssid);
 
     // Also clear Roll Tags
-    const { clearSheetRange, PO_SPREADSHEET_ID } = await import('@/lib/googleSheets');
+    const { clearSheetRange } = await import('@/lib/googleSheets');
     await Promise.all([
-         clearSheetRange(PO_SPREADSHEET_ID, "Roll Tag1!B4"),
-         clearSheetRange(PO_SPREADSHEET_ID, "Roll Tag1!B6"),
-         clearSheetRange(PO_SPREADSHEET_ID, "Roll Tag1!A9:E17"),
+         clearSheetRange(ssid, "Roll Tag1!B4"),
+         clearSheetRange(ssid, "Roll Tag1!B6"),
+         clearSheetRange(ssid, "Roll Tag1!A9:E17"),
          
-         clearSheetRange(PO_SPREADSHEET_ID, "Roll Tag2!B4"),
-         clearSheetRange(PO_SPREADSHEET_ID, "Roll Tag2!B6"),
-         clearSheetRange(PO_SPREADSHEET_ID, "Roll Tag2!A9:E17"),
+         clearSheetRange(ssid, "Roll Tag2!B4"),
+         clearSheetRange(ssid, "Roll Tag2!B6"),
+         clearSheetRange(ssid, "Roll Tag2!A9:E17"),
     ]);
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });

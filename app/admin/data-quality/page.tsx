@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShieldAlert, AlertTriangle, CheckCircle, Search } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle, Search, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface Issue {
@@ -59,6 +60,9 @@ export default function DataQualityPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
+       <Link href="/admin" className="text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+         <ArrowLeft className="w-4 h-4" /> {t('back_to_admin')}
+       </Link>
        <header>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
              <div className="p-2 bg-rose-500/10 rounded-lg">

@@ -11,7 +11,9 @@ import {
   Filter,
   Truck,
   Download,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -107,8 +109,9 @@ export default function POLogPage() {
     acc[cust].shipments.add(log.orderNo);
     acc[cust].qty += log.qty;
 
-    // Check for Waiting Status (Thai or English)
-    if (log.status?.includes('รอ') || log.status?.toLowerCase().includes('wait')) {
+    // Check for Waiting Status (Thai or English) - Unify with "กำลังดำเนินการ"
+    const statusLower = log.status?.toLowerCase() || "";
+    if (statusLower.includes('รอ') || statusLower.includes('wait') || statusLower.includes('กำลังดำเนินการ')) {
         acc[cust].waitingCount += 1;
         acc[cust].waitingQty += log.qty;
     }
@@ -164,6 +167,9 @@ export default function POLogPage() {
       <AmbientBackground />
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+        <Link href="/dashboard" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+          <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
+        </Link>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

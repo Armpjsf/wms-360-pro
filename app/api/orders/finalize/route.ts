@@ -32,19 +32,23 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { docNum: rawDocNum, signature } = await req.json();
+    const { docNum: rawDocNum, signature, branchId } = await req.json();
     const docNum = rawDocNum ? String(rawDocNum).trim() : null;
 
     if (!docNum) {
         return NextResponse.json({ error: 'Missing DocNum' }, { status: 400, headers: corsHeaders });
     }
 
+    // Resolver for Multi-Branch Isolation
+    const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+    const ssid = await resolveSpreadsheetId(branchId, 'doc');
+
     // --- NEW: Multi-Active Job Logic (Promote from Pending) ---
     // 0. Check if this docNum is ALREADY the active one in 'ส่งสินค้า'
     //    If NOT, we must find it in Roll Tag 1/2 and "Promote" it to Active first.
     
     // Read current Active DocNum from G3
-    const activeCheck = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!G3:G3`);
+    const activeCheck = await getSheetData(ssid, `'${FORM_SHEET}'!G3:G3`);
     const currentActiveDoc = activeCheck?.[0]?.[0];
 
     if (currentActiveDoc !== docNum) {
@@ -52,7 +56,7 @@ export async function POST(req: Request) {
         
         // Helper to find and parse Roll Tag Data
         const findInRollTag = async (sheetName: string) => {
-            const data = await getSheetData(PO_SPREADSHEET_ID, `'${sheetName}'!A4:F17`);
+            const data = await getSheetData(ssid, `'${sheetName}'!A4:F17`);
             if (!data || data.length === 0) return null;
             
             // In Roll Tag, matches are usually just items. But where is the DocNum stored?
@@ -200,12 +204,12 @@ export async function POST(req: Request) {
     // 1.5 Update "Delivery Date" (F5) to TODAY (Signature Date)
     // This allows "Load Date" (F4) to remain as "Creation Date" while "Delivery Date" is "Signature Date".
     console.log('[Finalize] Updating Delivery Date (F5) to today...');
-    await updateSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!F5`, [[getThaiDate()]]);
+    await updateSheetData(ssid, `'${FORM_SHEET}'!F5`, [[getThaiDate()]]);
 
     // 1. Generate Raw PDF (Without waiting for Sheets signature)
     console.log('[Finalize] Generating base PDF...');
     const gid = 1427637725; // ส่งสินค้า form sheet with signature (Updated 2026-02-06)
-    const rawPdfBuffer = await getSheetPdfBlob(PO_SPREADSHEET_ID, gid, 'B1:H36', false);
+    const rawPdfBuffer = await getSheetPdfBlob(ssid, gid, 'B1:H36', false);
     
     // 2. Post-Process PDF if Signature exists
     let finalPdfBytes: Uint8Array;
@@ -260,7 +264,7 @@ export async function POST(req: Request) {
 
     // 2.5 Construct Filename (Match Legacy Python: "ใบส่งสินค้า {OrderNos}.pdf")
     // Fetch Order Numbers from C10:C25
-    const orderData = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!C10:C25`);
+    const orderData = await getSheetData(ssid, `'${FORM_SHEET}'!C10:C25`);
     const uniqueOrders = Array.from(new Set(
         orderData?.map((r: any) => r[0]?.toString().trim()).filter((x: any) => x) || []
     ));
@@ -303,7 +307,7 @@ export async function POST(req: Request) {
 
     // 4. Update "Archive" (Status=เสร็จสิ้น, Link=pdfLink)
     console.log(`[Finalize] Searching for DocNum: "${docNum}" to update status...`);
-    const rowIndices = await findAllRowIndices(PO_SPREADSHEET_ID, DATA_SHEET, 0, docNum);
+    const rowIndices = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum);
     console.log(`[Finalize] Found ${rowIndices.length} rows to update:`, rowIndices);
     
     if (rowIndices.length > 0) {
@@ -312,76 +316,24 @@ export async function POST(req: Request) {
             updates.push({ range: `'${DATA_SHEET}'!G${row}`, values: [['เสร็จสิ้น']] });
             updates.push({ range: `'${DATA_SHEET}'!H${row}`, values: [[pdfLink]] });
         }
-        await Promise.all(updates.map(u => updateSheetData(PO_SPREADSHEET_ID, u.range, u.values)));
+        await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
         console.log('[Finalize] Archive updated');
     }
 
     // 5. Clear Form
     
-    // --- NEW: Record 'OUT' Transaction for Profit Analytics ---
-    console.log('[Finalize] Recording transactions for Profit Analysis...');
-    try {
-        // ** IDEMPOTENCY CHECK: Prevent duplicate recording **
-        // Check if transactions for this docNum already exist
-        const TX_SHEET = '💰 Transactions';
-        const existingTxData = await getSheetData(PO_SPREADSHEET_ID, `'${TX_SHEET}'!L:L`); // Column L = docRef
-        const existingDocRefs = existingTxData?.map((r: any) => r[0]?.toString() || '') || [];
-        const alreadyRecorded = existingDocRefs.some((ref: string) => ref.includes(docNum));
-        
-        if (alreadyRecorded) {
-            console.log(`[Finalize] Transactions for ${docNum} already recorded. Skipping to avoid duplicates.`);
-        } else {
-            // Read items before clearing (D=Item, G=Qty)
-            // Range: D10:G25
-            const itemData = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!D10:G25`);
-            
-            if (itemData && itemData.length > 0) {
-                // Fetch products to look up standard selling price
-                const products = await getProducts();
-                
-                // Process in parallel
-                const txPromises = itemData.map(async (row) => {
-                    const sku = row[0]; // Col D (index 0)
-                    const qtyStr = row[3]; // Col G (index 3)
-                    
-                    if (!sku || !qtyStr) return;
-                    
-                    const qty = parseFloat(qtyStr.replace(/,/g, ''));
-                    if (isNaN(qty) || qty <= 0) return;
-
-                    // Find standard price
-                    const product = products.find(p => p.name === sku);
-                    const price = product ? product.price : 0;
-
-                    await addTransaction('OUT', {
-                        date: getThaiDate(), // Use the signature date
-                        sku: sku,
-                        qty: qty,
-                        price: price, // Standard Sell Price
-                        docRef: `Order: ${docNum}`, // Log the Order/Doc Num
-                        unit: row[2] || 'unit' // Col F (index 2)
-                    });
-                });
-
-                await Promise.all(txPromises);
-                console.log(`[Finalize] Recorded ${txPromises.length} transactions.`);
-            }
-        }
-    } catch (txError) {
-        console.error('[Finalize] Failed to record transactions:', txError);
-        // Continue to clear form even if recording fails to avoid blocking the user flow
-    }
-    // -----------------------------------------------------
-
+    // 5. Clear Form
+    // (Transaction recording removed as it is already done in 'process' step)
+    
     await Promise.all([
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!G3`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!F4:F5`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!D6`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!F6`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!B10:D25`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!G10:G25`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!${SIG_CELL}`),
-        clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!H33`) // Clear Secret Signature URL
+        clearSheetRange(ssid, `'${FORM_SHEET}'!G3`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!F4:F5`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!D6`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!F6`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!B10:D25`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!G10:G25`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!${SIG_CELL}`),
+        clearSheetRange(ssid, `'${FORM_SHEET}'!H33`) // Clear Secret Signature URL
     ]);
 
     // 6. Return PDF Blob

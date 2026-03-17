@@ -1,9 +1,10 @@
 import { getSheetData, updateSheetData, PO_SPREADSHEET_ID } from './googleSheets';
 
-export async function generateNewDocNumber() {
+export async function generateNewDocNumber(spreadsheetId?: string) {
     try {
-        // Read 'เลขที่เอกสาร' from PO Spreadsheet
-        const allValues = await getSheetData(PO_SPREADSHEET_ID, "'เลขที่เอกสาร'!A:A");
+        const targetSSID = spreadsheetId || PO_SPREADSHEET_ID;
+        // Read 'เลขที่เอกสาร' from target Spreadsheet
+        const allValues = await getSheetData(targetSSID, "'เลขที่เอกสาร'!A:A");
         
         // Find last doc num
         let lastDocNum = "20250101-000";
@@ -47,7 +48,7 @@ export async function generateNewDocNumber() {
         const newDocNum = `${todayStr}-${String(newSeq).padStart(3, '0')}`;
         
         // Write to next row in 'เลขที่เอกสาร'
-        await updateSheetData(PO_SPREADSHEET_ID, `'เลขที่เอกสาร'!A${lastRowIndex + 1}`, [[newDocNum]]);
+        await updateSheetData(targetSSID, `'เลขที่เอกสาร'!A${lastRowIndex + 1}`, [[newDocNum]]);
 
         return newDocNum;
 

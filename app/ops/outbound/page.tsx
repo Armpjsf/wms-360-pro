@@ -187,8 +187,8 @@ export default function OutboundPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
         >
-           <Link href="/ops" className="text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-4 transition-colors font-medium">
-              <ArrowLeft className="w-4 h-4" /> {t('back_to_ops')}
+           <Link href="/dashboard" className="text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+              <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
            </Link>
            <div className="flex items-center gap-4">
                <div className="p-4 bg-rose-100 rounded-3xl border border-rose-200 shadow-lg shadow-rose-900/10">

@@ -80,28 +80,46 @@ function InventoryContent() {
 
   const fetchData = () => {
     setLoading(true);
-    const branchId = searchParams.get('branchId'); // Get selected branch
-    // Append branchId if exists
-    const url = getApiUrl(`/api/products${branchId ? `?branchId=${branchId}` : ''}`);
+    const urlParams = new URLSearchParams(window.location.search);
+    const branchId = urlParams.get('branchId') || 'hq';
+    const url = getApiUrl(`/api/products?branchId=${branchId}`);
     
     fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        setProducts(data);
-        setLoading(false);
-
-        // Check for Low Stock and Notify
-        const lowStockItems = data.filter((p: any) => p.stock <= p.minStock && p.status !== 'Inactive');
-        if (lowStockItems.length > 0) {
-            sendNotification(`Warning: Low Stock Detected`, {
-                body: `${lowStockItems.length} items are below minimum stock level. Click to view.`,
-                tag: 'low-stock-alert' // Prevent spamming
-            });
+      .then(async (res) => {
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `HTTP Error: ${res.status}`);
         }
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+            console.log("Inventory Page Data:", data);
+            if (data.length > 0) {
+                console.log("Sample Item:", {
+                    name: data[0].name,
+                    movementStatus: data[0].movementStatus
+                });
+            }
+            setProducts(data);
+            
+            // Check for Low Stock and Notify
+            const lowStockItems = data.filter((p: any) => p.stock <= p.minStock);
+            if (lowStockItems.length > 0) {
+                // In a real app, you might want to debounce this or check if already notified
+                // For now, we rely on the backend pushed/polled notifications or user manual trigger
+                // But we can show a toast here if desired.
+            }
+        } else {
+            console.error("API returned non-array data:", data);
+            setProducts([]);
+        }
+        setLoading(false);
       })
       .catch(err => {
-         console.error(err);
-         setLoading(false);
+        console.error("Failed to fetch products:", err);
+        setProducts([]);
+        setLoading(false);
       });
   };
 
@@ -127,9 +145,22 @@ function InventoryContent() {
                         normalize(p.location).includes(term);
     const stockStatus = p.stock <= p.minStock ? 'LOW' : 'OK'; 
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'LOW' && stockStatus === 'LOW') || (filterStatus === 'OK' && stockStatus === 'OK');
-    const matchMovement = filterMovement === 'ALL' || p.movementStatus === filterMovement;
+    
+    // Robust movement matching (Trim + Case Insensitive + Handle Empty)
+    const pMovement = (p.movementStatus || '').trim().toLowerCase();
+    const filterVal = filterMovement.trim().toLowerCase();
+    const matchMovement = filterMovement === 'ALL' || pMovement === filterVal;
+    
     return matchSearch && matchStatus && matchMovement;
   });
+
+  // Debug Filtering
+  useEffect(() => {
+    if (products.length > 0) {
+        console.log(`[FilterDebug] Filter: ${filterMovement}, First Item Status: '${products[0].movementStatus}' -> Parsed: '${(products[0].movementStatus || '').trim()}'`);
+        console.log(`[FilterDebug] Visible Items: ${filtered.length} / ${products.length}`);
+    }
+  }, [filterMovement, products, filtered.length]);
 
   // Calculate Status dynamically for display
   const getStatus = (p: any) => {
@@ -162,7 +193,7 @@ function InventoryContent() {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05
+        staggerChildren: 0.01
       }
     }
   };

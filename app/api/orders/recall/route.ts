@@ -21,19 +21,23 @@ const corsHeaders = {
 
 export async function POST(request: Request) {
   try {
-      const { docNum } = await request.json();
+      const { docNum, branchId } = await request.json();
       if (!docNum) return NextResponse.json({ error: "Missing DocNum" }, { status: 400, headers: corsHeaders });
 
+      // Resolver for Multi-Branch Isolation
+      const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+      const ssid = await resolveSpreadsheetId(branchId, 'doc');
+
       // 1. Check if Form is Busy
-      const formCheck = await getSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!G3:G3`);
+      const formCheck = await getSheetData(ssid, `${ACTIVE_FORM_SHEET}!G3:G3`);
       if (formCheck && formCheck[0] && formCheck[0][0]) {
            // Auto-Archive current job first
-           await archiveCurrentForm();
+           await archiveCurrentForm(undefined, undefined, ssid);
       }
 
       // 2. Find Waiting Job Data
       console.log(`[Recall] Searching for DocNum: ${docNum} in ${ARCHIVE_SHEET}`);
-      const rows = await findAllRowIndices(PO_SPREADSHEET_ID, ARCHIVE_SHEET, 0, docNum);
+      const rows = await findAllRowIndices(ssid, ARCHIVE_SHEET, 0, docNum);
       console.log(`[Recall] Found rows: ${rows.length}`);
       
       if (rows.length === 0) {
@@ -43,7 +47,7 @@ export async function POST(request: Request) {
       // 3. Read Data from Archive Rows
       const archiveData = [];
       for (const r of rows) {
-          const rowVals = await getSheetData(PO_SPREADSHEET_ID, `${ARCHIVE_SHEET}!A${r}:I${r}`);
+          const rowVals = await getSheetData(ssid, `${ARCHIVE_SHEET}!A${r}:I${r}`);
           if (rowVals && rowVals[0]) {
               archiveData.push(rowVals[0]);
           }
@@ -61,17 +65,17 @@ export async function POST(request: Request) {
       
       // Update Header
       const updates = [
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!G3`, [[docNum]]),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!F4`, [[today]]),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!F5`, [[today]]),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!F6`, [[custName]])
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!G3`, [[docNum]]),
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!F4`, [[today]]),
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!F5`, [[today]]),
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!F6`, [[custName]])
       ];
       
       // RESTORE SIGNATURE if available (Assume anything with http in Col H is relevant)
       if (potentialSigLink && potentialSigLink.startsWith('http')) {
            // We write it as an IMAGE formula so the sheet displays it (and our status API picks it up in G33)
            updates.push(
-               updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!G33`, [[`=IMAGE("${potentialSigLink}")`]])
+               updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!G33`, [[`=IMAGE("${potentialSigLink}")`]])
            );
       }
 
@@ -124,10 +128,10 @@ export async function POST(request: Request) {
       }
 
     await Promise.all([
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!B10:B18`, formSequences),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!C10:C18`, formOrders),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!D10:D18`, formItems),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!G10:G18`, formQty)
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!B10:B18`, formSequences),
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!C10:C18`, formOrders),
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!D10:D18`, formItems),
+        updateSheetData(ssid, `${ACTIVE_FORM_SHEET}!G10:G18`, formQty)
     ]);
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });

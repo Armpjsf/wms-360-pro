@@ -18,10 +18,11 @@ interface TransactionItem {
  * Lookup price for an item from ชื่อสินค้า sheet
  * Item Code is in Column B, Price is in Column D
  */
-async function lookupItemPrice(itemCode: string): Promise<number> {
+async function lookupItemPrice(itemCode: string, spreadsheetId?: string): Promise<number> {
     try {
+        const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
         // Read columns B:D from ชื่อสินค้า sheet
-        const data = await getSheetData(TRANSACTION_SPREADSHEET_ID, `${PRODUCT_SHEET_NAME}!B:D`);
+        const data = await getSheetData(ssid, `${PRODUCT_SHEET_NAME}!B:D`);
         
         if (!data || data.length === 0) {
             console.warn(`No data found in ${PRODUCT_SHEET_NAME} sheet`);
@@ -49,8 +50,9 @@ async function lookupItemPrice(itemCode: string): Promise<number> {
  * Write transaction data to 💰 Transaction sheet
  * 1 Item = 1 Row
  */
-export async function writeTransactionData(items: TransactionItem[]): Promise<void> {
+export async function writeTransactionData(items: TransactionItem[], spreadsheetId?: string): Promise<void> {
     try {
+        const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
         console.log(`[Transaction] Starting write for ${items?.length || 0} items...`);
         if (!items || items.length === 0) {
             console.log('[Transaction] No items to write to Transaction sheet');
@@ -62,7 +64,7 @@ export async function writeTransactionData(items: TransactionItem[]): Promise<vo
         const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
 
         // Find next empty row
-        const existingData = await getSheetData(TRANSACTION_SPREADSHEET_ID, `${TRANSACTION_SHEET_NAME}!A:A`);
+        const existingData = await getSheetData(ssid, `${TRANSACTION_SHEET_NAME}!A:A`);
         const nextRow = (existingData?.length || 0) + 1;
         console.log(`[Transaction] Next empty row: ${nextRow}`);
 
@@ -119,13 +121,13 @@ export async function writeTransactionData(items: TransactionItem[]): Promise<vo
         
         try {
             console.log(`[Transaction] Attempting write to ${targetSheetName}...`);
-            await updateSheetData(TRANSACTION_SPREADSHEET_ID, range, rows);
+            await updateSheetData(ssid, range, rows);
         } catch (primaryErr) {
             console.warn(`[Transaction] Failed to write to ${targetSheetName}. Trying fallback...`, primaryErr);
             // Fallback: Try without emoji
             targetSheetName = '💰 Transaction จ่าย';
             range = `${targetSheetName}!A${nextRow}:L${nextRow + rows.length - 1}`;
-            await updateSheetData(TRANSACTION_SPREADSHEET_ID, range, rows);
+            await updateSheetData(ssid, range, rows);
         }
 
         console.log(`Successfully wrote ${rows.length} items to Transaction sheet`);
@@ -140,10 +142,11 @@ export async function writeTransactionData(items: TransactionItem[]): Promise<vo
  * Lookup Cost Price from ชื่อสินค้า sheet
  * Item Code is in Column B, Cost is in Column C
  */
-async function lookupItemCost(itemCode: string): Promise<number> {
+async function lookupItemCost(itemCode: string, spreadsheetId?: string): Promise<number> {
     try {
+        const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
         // Read columns B:C from ชื่อสินค้า sheet
-        const data = await getSheetData(TRANSACTION_SPREADSHEET_ID, `${PRODUCT_SHEET_NAME}!B:C`);
+        const data = await getSheetData(ssid, `${PRODUCT_SHEET_NAME}!B:C`);
         
         if (!data || data.length === 0) return 0;
 
@@ -167,8 +170,9 @@ export const INBOUND_SHEET_NAME_EMOJI = '💸 Transaction รับ';
 /**
  * Write inbound transaction data to Transaction รับ sheet
  */
-export async function writeInboundData(items: TransactionItem[]): Promise<void> {
+export async function writeInboundData(items: TransactionItem[], spreadsheetId?: string): Promise<void> {
     try {
+        const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
         console.log(`[Inbound] Starting write for ${items?.length || 0} items...`);
         if (!items || items.length === 0) {
             return;
@@ -212,10 +216,10 @@ export async function writeInboundData(items: TransactionItem[]): Promise<void> 
         // Try Append to Emoji Sheet first
         try {
             console.log(`[Inbound] Appending to ${INBOUND_SHEET_NAME_EMOJI}`);
-            await appendSheetData(TRANSACTION_SPREADSHEET_ID, `${INBOUND_SHEET_NAME_EMOJI}!A:I`, rows);
+            await appendSheetData(ssid, `${INBOUND_SHEET_NAME_EMOJI}!A:I`, rows);
         } catch (err) {
              console.warn(`[Inbound] Append to emoji sheet failed, trying clean name...`);
-             await appendSheetData(TRANSACTION_SPREADSHEET_ID, `${INBOUND_SHEET_NAME_CLEAN}!A:I`, rows);
+             await appendSheetData(ssid, `${INBOUND_SHEET_NAME_CLEAN}!A:I`, rows);
         }
 
         console.log(`Successfully appended ${rows.length} items to Inbound sheet`);

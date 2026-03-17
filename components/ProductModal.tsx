@@ -81,8 +81,12 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
         e.preventDefault();
         setLoading(true);
         try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const branchId = urlParams.get('branchId') || 'hq';
+
             const method = isEdit ? 'PUT' : 'POST';
             const body = isEdit ? {
+                branchId,
                 oldName: product.name,
                 updates: {
                     name: formData.name,
@@ -97,6 +101,7 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
             } : {
                 // Add New
                 ...formData,
+                branchId,
                 price: parseFloat(formData.price) || 0,
                 cost: parseFloat(formData.cost) || 0,
                 minStock: parseFloat(formData.minStock) || 0,

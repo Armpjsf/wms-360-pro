@@ -24,6 +24,7 @@ export const translations = {
     menu_jobs: "Jobs",
     menu_signout: "Sign Out",
     menu_slotting: "Smart Slotting (ABC)",
+    menu_cycle_count: "Cycle Count",
 
     // Common
     loading: "Loading...",
@@ -32,6 +33,8 @@ export const translations = {
     delete: "Delete",
     edit: "Edit",
     search: "Search...",
+    back_to_dashboard: "Back to Dashboard",
+    back_to_admin: "Back to Admin",
 
     // Notifications
     enable_alerts: "Enable Alerts",
@@ -122,6 +125,7 @@ export const translations = {
     confirm_inbound: "Confirm Inbound",
     confirm_outbound: "Confirm Outbound",
     confirm_prompt: "Confirm action for",
+    confirm_prep_finished: "Are you sure preparation is finished?",
     success_inbound: "Inbound Recorded",
     success_outbound: "Outbound Recorded",
 
@@ -206,14 +210,14 @@ export const translations = {
     copy_line: "Copy LINE",
     sign_btn: "Sign",
     signed_status: "Signed",
-    finalize_print: "Finalize & Print PDF",
+    finalize_print: "Finish & Print PDF",
     waiting_loading: "Waiting for Loading",
     no_waiting_jobs: "No waiting jobs",
     completed_jobs: "Completed Jobs",
     process_btn: "Process",
     recall_btn: "Recall",
     print_btn: "Print",
-    clear_btn: "Clear",
+    clear_btn: "Finish Prep",
 
     // Barcode & Labels
     barcode_title: "Barcode / QR Generator",
@@ -342,6 +346,7 @@ export const translations = {
     menu_jobs: "งานขนส่ง (Jobs)",
     menu_signout: "ออกจากระบบ",
     menu_slotting: "จัดวางสินค้า (Slotting)",
+    menu_cycle_count: "ตรวจนับสต็อก (Cycle Count)",
 
     // Common
     loading: "กำลังโหลด...",
@@ -350,6 +355,8 @@ export const translations = {
     delete: "ลบ",
     edit: "แก้ไข",
     search: "ค้นหา...",
+    back_to_dashboard: "กลับไปยังหน้าแรก",
+    back_to_admin: "กลับไปยังเมนูหลักแอดมิน",
 
     // Notifications
     enable_alerts: "เปิดแจ้งเตือน",
@@ -440,6 +447,7 @@ export const translations = {
     confirm_inbound: "ยืนยันรับเข้า",
     confirm_outbound: "ยืนยันเบิกจ่าย",
     confirm_prompt: "ยืนยันการทำรายการจำนวน",
+    confirm_prep_finished: "คุณจัดเตรียมสินค้าเสร็จแล้วใช่ไหม?",
     success_inbound: "บันทึกรับเข้าสำเร็จ!",
     success_outbound: "บันทึกเบิกจ่ายสำเร็จ!",
 
@@ -588,7 +596,7 @@ export const translations = {
     ai_min_stock: "จุดสั่งซื้อ",
     ai_add_to_cart: "เพิ่มลงตะกร้า",
     ai_ignore: "ข้าม",
-    clear_btn: "ล้าง",
+    clear_btn: "จัดเตรียมสินค้าเสร็จ",
 
     // Barcode & Labels
     barcode_title: "สร้างบาร์โค้ด (Generator)",

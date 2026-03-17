@@ -34,6 +34,7 @@ export async function POST(request: Request) {
             id: body.id,
             name: body.name,
             spreadsheetId: body.spreadsheetId,
+            inventorySpreadsheetId: body.inventorySpreadsheetId || body.spreadsheetId,
             color: body.color || 'slate',
             status: 'Active'
         };

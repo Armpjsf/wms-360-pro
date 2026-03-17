@@ -3,7 +3,7 @@ const path = require('path');
 const { google } = require('googleapis');
 
 // INPUT FROM USER
-const AUTH_CODE = "4/0ASc3gC3EEp1l6cAJ_6H6QCHI2OPRCtMhOxX9k3j-mfPxtg_Il0-BzL00kdedMxZXilhwTQ";
+const AUTH_CODE = "4/0AfrIepAzc5yezFaSQtD3aJIMR28qfV8RXf5k1NvOEJNcBmEaZZKHITlqVwPoV5a7uzDFjw";
 
 const TOKEN_PATH = path.join(__dirname, '..', 'token.json');
 const CREDENTIALS_PATH = path.join(__dirname, '..', 'credentials.json');

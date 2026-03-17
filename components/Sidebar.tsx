@@ -12,13 +12,12 @@ import {
   Settings, 
   Users, 
   ShieldAlert,
+  RefreshCw,
   Menu,
   LogOut,
   QrCode,
   History,
   ScanLine,
-  Bell,
-  BellOff,
   Sparkles,
   Globe,
   Mail,
@@ -36,8 +35,6 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import InstallPWA from './InstallPWA';
-import NotificationManager from './NotificationManager';
-import NotificationCenter from './NotificationCenter';
 
 import BranchSelector from './BranchSelector';
 
@@ -55,6 +52,7 @@ export default function Sidebar() {
     { label: t('menu_inventory'), href: '/inventory', icon: Box },
     { label: t('menu_inbound'), href: '/ops/inbound', icon: ArrowDownToLine },
     { label: t('menu_outbound'), href: '/ops/outbound', icon: ArrowUpFromLine },
+    { label: t('menu_cycle_count'), href: '/mobile/cycle-count', icon: RefreshCw },
     { label: t('menu_damage'), href: '/ops/damage', icon: ShieldAlert },
     { label: t('menu_jobs'), href: '/mobile/jobs', icon: Briefcase },
     { label: t('menu_transactions'), href: '/inventory/transactions', icon: RotateCcw },
@@ -101,10 +99,7 @@ export default function Sidebar() {
         <Menu className="w-6 h-6 text-slate-700" />
       </button>
 
-      {/* Mobile Notification Bell */}
-      <div className="md:hidden fixed top-4 right-4 z-50 bg-white rounded-xl shadow-md p-1">
-         <NotificationCenter />
-      </div>
+
 
       <AnimatePresence>
         {mobileOpen && (
@@ -183,18 +178,9 @@ export default function Sidebar() {
           })}
         </div>
 
-        {/* Language & Notification Toggle */}
+        {/* Language Toggle */}
         {!collapsed && (
             <div className="px-4 pb-2 space-y-2">
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2">
-                     {/* Desktop Notification Center */}
-                    <div className="flex-1 flex justify-center">
-                        <NotificationCenter />
-                    </div>
-                </div>
-                
-                <NotificationManager />
-                
                 <button 
                     onClick={() => setLanguage(language === 'en' ? 'th' : 'en')}
                     className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors group"

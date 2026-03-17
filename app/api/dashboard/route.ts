@@ -28,6 +28,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const branchId = searchParams.get('branchId');
+
+    // Resolve Spreadsheet IDs based on branch
+    const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+    const invSSID = await resolveSpreadsheetId(branchId, 'inventory');
+    const docSSID = await resolveSpreadsheetId(branchId, 'doc');
     
     // ... (Filter helpers remain same)
     const filterByDate = (row: any[], dateIdx: number) => {
@@ -54,28 +60,26 @@ export async function GET(req: Request) {
 
     const { googleSheets } = await getGoogleSheets();
     
-    console.log("[Dashboard] Fetching Sheet Data (Split IDs)...");
+    console.log(`[Dashboard] Fetching Sheet Data (Branch: ${branchId || 'HQ'})...`);
     
-    // 1. Inventory (From Product Sheet - ID 1)
-    const invRaw = await getSheetData(PRODUCT_SPREADSHEET_ID, "'📊 รายงานสินค้าคงเหลือ'!A:Z");
+    // 1. Inventory (From Branch-specific Inventory Sheet)
+    const invRaw = await getSheetData(invSSID, "'📊 รายงานสินค้าคงเหลือ'!A:Z");
     
-    // 2. Transactions (From Product Sheet - ID 1)
-    const receiveRawFullData = await getSheetData(PRODUCT_SPREADSHEET_ID, "'💸 Transaction รับ'!A:J");
-    const issueRawFullData = await getSheetData(PRODUCT_SPREADSHEET_ID, "'💰 Transaction จ่าย'!A:M");
+    // 2. Transactions (From Branch-specific Inventory Sheet)
+    const receiveRawFullData = await getSheetData(invSSID, "'💸 Transaction รับ'!A:J");
+    const issueRawFullData = await getSheetData(invSSID, "'💰 Transaction จ่าย'!A:M");
     
-    // 3. Damage (From Product Sheet - ID 1)
-    let damageRawFull = await getSheetData(PRODUCT_SPREADSHEET_ID, "'Damage'!A:F");
+    // 3. Damage (From Branch-specific Inventory Sheet)
+    let damageRawFull = await getSheetData(invSSID, "'Damage'!A:F");
     if (!damageRawFull || damageRawFull.length === 0) {
-        damageRawFull = await getSheetData(PRODUCT_SPREADSHEET_ID, "'เสียหาย'!A:F");
+        damageRawFull = await getSheetData(invSSID, "'เสียหาย'!A:F");
     }
     
-    // 4. PO Logs (Internally uses env or fallback, likely DOC_ID)
-    const poLogsFull = await getPOLogs();
+    // 4. PO Logs (From Branch-specific Doc Sheet)
+    const poLogsFull = await getPOLogs(docSSID);
     
-    // 5. Product Master (From Product Sheet - ID 1)
-    // User confirmed 'Inventory' has no price. 
-    // We fetch 'ชื่อสินค้า' -> Col A=Name, C=Cost, D=Sale
-    const productMasterRaw = await getSheetData(PRODUCT_SPREADSHEET_ID, "'ชื่อสินค้า'!A:E");
+    // 5. Product Master (From Branch-specific Inventory Sheet)
+    const productMasterRaw = await getSheetData(invSSID, "'ชื่อสินค้า'!A:E");
 
     // ---------------------------------------------------------
     // Filtering Logic (Existing)
@@ -127,12 +131,21 @@ export async function GET(req: Request) {
     const idxLocation = getCol(['location', 'ที่เก็บ', 'zone']);
     const idxUnit = getCol(['หน่วย', 'unit']);
     const idxStatus = getCol(['สถานะ', 'status']); // NEW: Status Column
+    const idxMovement = getCol([
+      "Movement",
+      "movement",
+      "Turnover",
+      "turnover",
+      "การเคลื่อนไหว",
+      "สถานะการเคลื่อนไหว",
+      "ประเภทการเคลื่อนไหวสินค้า",
+    ]);
     
     // Image Logic (Already existed but integrated here)
     const idxImgLink = getCol(['ลิงค์', 'link', 'drive', 'url']);
     const idxImgNormal = getCol(['รูป', 'image', 'pic']);
     
-    console.log(`[Dashboard] Inventory Columns: Name=${idxName}, Stock=${idxStock}, Loc=${idxLocation}, Cat=${idxCategory}, Status=${idxStatus}`);
+    console.log(`[Dashboard] Inventory Columns: Name=${idxName}, Stock=${idxStock}, Movement=${idxMovement}`);
 
     const lastSoldMap = new Map<string, number>();
     issueRaw?.slice(1).forEach((row: any[]) => {
@@ -159,16 +172,22 @@ export async function GET(req: Request) {
        // Skip empty rows
        if (!name || name === "Unknown Item") return null;
 
-       const lastSold = lastSoldMap.get(name);
-       let computedStatus = "Deadstock"; 
+       // Use Sheet Formula for Movement (Priority)
+       let computedStatus = idxMovement > -1 ? (row[idxMovement] || "").trim() : "";
        
-       if (lastSold) {
-          const daysDiff = Math.floor((now - lastSold) / DAY_MS);
-          if (daysDiff <= 15) computedStatus = "Fast Moving";
-          else if (daysDiff <= 60) computedStatus = "Normal Moving";
-          else if (daysDiff <= 90) computedStatus = "Slow Moving";
-          else if (daysDiff <= 180) computedStatus = "Very Slow Moving";
-          else computedStatus = "Deadstock";
+       // Fallback: If sheet is empty, use legacy calculation (optional, or just default to Unknown)
+       if (!computedStatus) {
+           const lastSold = lastSoldMap.get(name);
+           if (lastSold) {
+              const daysDiff = Math.floor((now - lastSold) / DAY_MS);
+              if (daysDiff <= 15) computedStatus = "Fast Moving";
+              else if (daysDiff <= 60) computedStatus = "Normal Moving";
+              else if (daysDiff <= 90) computedStatus = "Slow Moving";
+              else if (daysDiff <= 180) computedStatus = "Very Slow Moving";
+              else computedStatus = "Deadstock";
+           } else {
+              computedStatus = "Deadstock"; // Default if no sales and no sheet value
+           }
        }
        
        const stock = idxStock > -1 ? parseFloat(row[idxStock]?.replace(/,/g, '') || "0") : 0;
