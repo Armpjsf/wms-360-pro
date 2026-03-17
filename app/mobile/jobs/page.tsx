@@ -379,6 +379,7 @@ export default function MobileJobsPage() {
                         <div key={job.docNum} className="bg-white border-l-4 border-l-orange-400 border-y border-r border-slate-200 rounded-r-2xl p-4 shadow-sm flex justify-between items-center">
                             <div>
                                 <div className="font-bold text-slate-800 text-sm">{job.docNum}</div>
+                                <div className="text-xs text-orange-600 font-bold mb-0.5">Order: {job.orderNo || "N/A"}</div>
                                 <div className="text-xs text-slate-500 flex items-center gap-1">
                                     <User className="w-3 h-3" /> {job.customer}
                                 </div>
