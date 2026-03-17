@@ -24,36 +24,6 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
         setMounted(true);
     }, []);
 
-    // Handle Resize & DPI Scaling
-    useEffect(() => {
-        if (!isOpen || !mounted) return;
-
-        const resizeCanvas = () => {
-            const canvas = sigCanvasRef.current?.getCanvas();
-            if (canvas) {
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                const width = canvas.offsetWidth * ratio;
-                const height = canvas.offsetHeight * ratio;
-                
-                if (canvas.width !== width || canvas.height !== height) {
-                    canvas.width = width;
-                    canvas.height = height;
-                    canvas.getContext('2d')?.scale(ratio, ratio);
-                    sigCanvasRef.current?.clear(); // Reset on resize to prevent distortion
-                }
-            }
-        };
-
-        // Delay slightly to ensure DOM is ready
-        const timeoutId = setTimeout(resizeCanvas, 100);
-        window.addEventListener('resize', resizeCanvas);
-        
-        return () => {
-            clearTimeout(timeoutId);
-            window.removeEventListener('resize', resizeCanvas);
-        };
-    }, [isOpen, mounted]);
-
     if (!isOpen || !mounted) return null;
 
     const handleClear = () => {
@@ -102,11 +72,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
                 <SignatureCanvas 
                     ref={sigCanvasRef}
                     penColor="black"
-                    velocityFilterWeight={0.7}
-                    minWidth={1.5}
-                    maxWidth={4}
-                    minDistance={2}
-                    throttle={16}
+                    backgroundColor="white"
                     canvasProps={{ 
                         className: 'w-full h-full cursor-crosshair touch-none',
                         style: { touchAction: 'none' }
