@@ -103,16 +103,19 @@ export default function MobileJobsPage() {
   const viewedDocs = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (activeJob?.docNum) {
+    // Only auto-trigger if we have an active job that we haven't shown the modal for yet
+    if (activeJob?.docNum && !activeJob.signature) {
         const docNum = activeJob.docNum;
         if (!viewedDocs.current.has(docNum)) {
-            // New Job detected! Auto-open for customer
-            setSigningDoc(docNum);
-            setShowSigModal(true);
-            viewedDocs.current.add(docNum);
+            const timer = setTimeout(() => {
+                setSigningDoc(docNum);
+                setShowSigModal(true);
+                viewedDocs.current.add(docNum);
+            }, 500); // 500ms delay for better UX
+            return () => clearTimeout(timer);
         }
     }
-  }, [activeJob?.docNum]); 
+  }, [activeJob?.docNum, activeJob?.signature]); 
 
   // --- Signature Logic ---
   const handleSignClick = (docId: string) => {

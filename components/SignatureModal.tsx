@@ -51,66 +51,76 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
     };
 
     const modalContent = (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col pt-safe-area backdrop-blur-sm animate-in fade-in duration-200">
-            {/* Header */}
-            <div className="flex justify-between items-center px-4 py-4 md:px-6">
-                <div>
-                    <h2 className="text-xl font-bold text-white">Sign for {docNum}</h2>
-                    <p className="text-slate-400 text-xs">Customer Acknowledgement</p>
+        <div className="fixed inset-0 z-[9999] bg-black/70 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            {/* Modal Card */}
+            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+                {/* Header */}
+                <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800">
+                    <div>
+                        <h2 className="text-xl font-bold text-white">Sign for {docNum}</h2>
+                        <p className="text-slate-400 text-xs">Customer Acknowledgement</p>
+                    </div>
+                    <button 
+                        onClick={onClose} 
+                        className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+                        disabled={saving}
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
-                <button 
-                    onClick={onClose} 
-                    className="p-3 bg-slate-800/80 rounded-full text-white hover:bg-slate-700 transition"
-                    disabled={saving}
-                >
-                    <X className="w-6 h-6" />
-                </button>
-            </div>
-            
-            {/* Canvas Container - Constrained Height for Landscape Signature */}
-            <div className="h-72 bg-white mx-4 mb-4 rounded-2xl overflow-hidden border-4 border-slate-700 relative shadow-2xl shrink-0">
-                <SignatureCanvas 
-                    ref={sigCanvasRef}
-                    penColor="black"
-                    backgroundColor="white"
-                    canvasProps={{ 
-                        className: 'w-full h-full cursor-crosshair touch-none',
-                        style: { touchAction: 'none' }
-                    }}
-                 />
-                 
-                 {/* Watermark / Guide */}
-                 <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none opacity-10 text-slate-900 font-black text-3xl select-none">
-                    SIGN HERE
-                 </div>
-                 <div className="absolute top-1/2 left-4 right-4 h-px bg-slate-200 -translate-y-1/2 pointer-events-none" />
-
-                 {/* Floating Clear Button */}
-                 <button 
-                    onClick={handleClear}
-                    className="absolute top-4 right-4 p-2 bg-slate-100 text-slate-600 rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition"
-                    title="Clear Signature"
-                 >
-                     <Trash2 className="w-5 h-5" />
-                 </button>
-            </div>
-
-            {/* Actions */}
-            <div className="px-4 pb-8 md:pb-10 pt-2">
-                <button 
-                    onClick={handleConfirm}
-                    disabled={saving}
-                    className={`w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-black text-lg shadow-xl shadow-green-900/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${saving ? 'opacity-70 cursor-wait' : ''}`}
-                >
-                    {saving ? (
-                        <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                        <>
-                            <Check className="w-6 h-6" />
-                            CONFIRM SIGNATURE
-                        </>
-                    )}
-                </button>
+                
+                {/* Canvas Container */}
+                <div className="p-6">
+                    <div className="h-64 bg-white rounded-2xl overflow-hidden border-2 border-slate-700 relative shadow-inner shrink-0 mb-6">
+                        <SignatureCanvas 
+                            ref={sigCanvasRef}
+                            penColor="black"
+                            backgroundColor="white"
+                            canvasProps={{ 
+                                className: 'w-full h-full cursor-crosshair touch-none',
+                                style: { touchAction: 'none' }
+                            }}
+                         />
+                         
+                         {/* Watermark / Guide */}
+                         <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none opacity-10 text-slate-900 font-black text-3xl select-none">
+                            SIGN HERE
+                         </div>
+                         <div className="absolute top-1/2 left-4 right-4 h-px bg-slate-100 -translate-y-1/2 pointer-events-none" />
+        
+                         {/* Floating Clear Button */}
+                         <button 
+                            onClick={handleClear}
+                            className="absolute top-4 right-4 p-2 bg-slate-50 text-slate-400 rounded-full shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-colors"
+                            title="Clear Signature"
+                         >
+                             <Trash2 className="w-4 h-4" />
+                         </button>
+                    </div>
+        
+                    {/* Actions */}
+                    <button 
+                        onClick={handleConfirm}
+                        disabled={saving}
+                        className={`w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-indigo-900/40 flex items-center justify-center gap-3 transition-all active:scale-[0.98] ${saving ? 'opacity-70 cursor-wait' : ''}`}
+                    >
+                        {saving ? (
+                            <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <>
+                                <Check className="w-6 h-6" />
+                                CONFIRM SIGNATURE
+                            </>
+                        )}
+                    </button>
+                    <button 
+                        onClick={onClose}
+                        disabled={saving}
+                        className="w-full mt-3 text-slate-500 hover:text-slate-300 font-bold py-2 text-sm transition-colors"
+                    >
+                        Cancel
+                    </button>
+                </div>
             </div>
         </div>
     );
