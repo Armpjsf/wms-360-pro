@@ -51,9 +51,14 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
     };
 
     const modalContent = (
-        <div className="fixed inset-0 z-[9999] bg-black/70 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div 
+            className="fixed inset-0 z-[9999] bg-black/40 flex flex-col items-center justify-center p-4 backdrop-blur-sm"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
             {/* Modal Card */}
-            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800">
                     <div>
