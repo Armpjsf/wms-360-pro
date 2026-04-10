@@ -113,7 +113,30 @@ export default function POLogPage() {
 
   // Delivery Pagination Logic
   const deliveryTotalPages = Math.ceil(filteredDeliveryLogs.length / itemsPerPage);
-  const currentDeliveryData = filteredDeliveryLogs.slice(
+  
+  // Helper to parse DD/MM/YYYY or YYYY-MM-DD for comparison
+  const parseDate = (d: string) => {
+    if (!d) return 0;
+    if (d.includes('-')) return new Date(d).getTime(); // ISO
+    if (d.includes('/')) {
+        const [day, month, year] = d.split('/').map(Number);
+        // Handle Buddhist Year if > 2500
+        const finalYear = year > 2500 ? year - 543 : year;
+        return new Date(finalYear, month - 1, day).getTime();
+    }
+    return 0;
+  };
+
+  // Sort by date descending (Newest first)
+  const sortedDeliveryLogs = [...filteredDeliveryLogs].sort((a, b) => {
+    const timeA = parseDate(a.date);
+    const timeB = parseDate(b.date);
+    if (timeA !== timeB) return timeB - timeA;
+    // Fallback to orderNo descending if dates are same
+    return (b.orderNo || "").localeCompare(a.orderNo || "");
+  });
+
+  const currentDeliveryData = sortedDeliveryLogs.slice(
     (deliveryCurrentPage - 1) * itemsPerPage,
     deliveryCurrentPage * itemsPerPage
   );
@@ -302,7 +325,7 @@ export default function POLogPage() {
     totalQty: stat.qty,
     waitingCount: stat.waitingCount,
     waitingQty: stat.waitingQty
-  })).sort((a, b) => b.waitingQty - a.waitingQty);
+  })).sort((a, b) => b.totalQty - a.totalQty); // Sorted by Total Qty (High to Low)
 
   // Filter & Paginate Summary
   const filteredSummary = showWaitingOnly 
