@@ -35,3 +35,17 @@ export const JobSchema = z.object({
 export type Product = z.infer<typeof ProductSchema>;
 export type Transaction = z.infer<typeof TransactionSchema>;
 export type Job = z.infer<typeof JobSchema>;
+
+export const DeliveryHistorySchema = z.object({
+  date: z.string(),
+  customerName: z.string(),
+  location: z.string().optional(),
+  orderNo: z.string(),
+  sku: z.string(),
+  qty: z.number(),
+  packs: z.number(),
+  status: z.string().optional(),
+  pdfLink: z.string().optional()
+});
+
+export type DeliveryHistory = z.infer<typeof DeliveryHistorySchema>;

@@ -10,7 +10,7 @@ const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: f
 interface SignatureModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (dataUrl: string) => Promise<void>;
+    onSave: (dataUrl: string, packs: number, location: string) => Promise<void>;
     docNum: string;
 }
 
@@ -18,6 +18,8 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
     const sigCanvasRef = useRef<any>(null);
     const [saving, setSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [packs, setPacks] = useState<string | number>(1);
+    const [location, setLocation] = useState<string>("");
 
     // Set mounted on client
     useEffect(() => {
@@ -40,7 +42,8 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
         try {
             // Get trimmed base64
             const dataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png');
-            await onSave(dataUrl);
+            const numericPacks = typeof packs === 'string' ? (parseInt(packs) || 0) : packs;
+            await onSave(dataUrl, numericPacks, location);
             onClose();
         } catch (error) {
             console.error("Signature Save Failed", error);
@@ -58,9 +61,9 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
             }}
         >
             {/* Modal Card */}
-            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 {/* Header */}
-                <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800">
+                <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold text-white">Sign for {docNum}</h2>
                         <p className="text-slate-400 text-xs">Customer Acknowledgement</p>
@@ -75,7 +78,39 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
                 </div>
                 
                 {/* Canvas Container */}
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto">
+                    {/* Location Input */}
+                    <div className="mb-4 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                        <label className="block text-slate-400 text-xs font-bold uppercase mb-2">สถานที่จัดส่ง (Delivery Location)</label>
+                        <textarea 
+                            value={location} 
+                            onChange={(e) => setLocation(e.target.value)}
+                            placeholder="ระบุสถานที่จัดส่ง..."
+                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm outline-none focus:border-indigo-500 resize-none h-20"
+                        />
+                    </div>
+
+                    {/* Packs Input */}
+                    <div className="mb-6 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                        <label className="block text-slate-400 text-xs font-bold uppercase mb-2">จำนวนแพ็ก (Number of Packs)</label>
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setPacks(Math.max(1, packs - 1))}
+                                className="w-12 h-12 bg-slate-700 rounded-xl text-white font-black text-xl flex items-center justify-center active:scale-95 transition-transform"
+                            >-</button>
+                            <input 
+                                type="number" 
+                                value={packs} 
+                                onChange={(e) => setPacks(parseInt(e.target.value) || 1)}
+                                className="flex-1 bg-transparent text-white text-3xl font-black text-center outline-none"
+                            />
+                            <button 
+                                onClick={() => setPacks(packs + 1)}
+                                className="w-12 h-12 bg-indigo-600 rounded-xl text-white font-black text-xl flex items-center justify-center active:scale-95 transition-transform"
+                            >+</button>
+                        </div>
+                    </div>
+
                     <div className="h-64 bg-white rounded-2xl overflow-hidden border-2 border-slate-700 relative shadow-inner shrink-0 mb-6">
                         <SignatureCanvas 
                             ref={sigCanvasRef}

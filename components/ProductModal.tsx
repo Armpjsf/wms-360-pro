@@ -67,8 +67,8 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                      category: '',
                      price: '',
                      cost: '',
-                     stock: '0', 
-                     minStock: '10',
+                     stock: '', 
+                     minStock: '',
                      unit: 'ชิ้น',
                      location: '',
                      image: ''

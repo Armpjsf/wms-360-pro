@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { docNum: rawDocNum, signature, branchId } = await req.json();
+    const { docNum: rawDocNum, signature, branchId, packs, location } = await req.json();
     const docNum = rawDocNum ? String(rawDocNum).trim() : null;
 
     if (!docNum) {
@@ -40,8 +40,17 @@ export async function POST(req: Request) {
     }
 
     // Resolver for Multi-Branch Isolation
-    const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
+    const { resolveSpreadsheetId, addDeliveryHistory } = await import('@/lib/googleSheets');
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
+    
+    // --- Pre-fetch data for Delivery History ---
+    const [custNameData, ordersData, itemsData, qtyData] = await Promise.all([
+        getSheetData(ssid, `'${FORM_SHEET}'!F6`),
+        getSheetData(ssid, `'${FORM_SHEET}'!C10:C25`),
+        getSheetData(ssid, `'${FORM_SHEET}'!D10:D25`),
+        getSheetData(ssid, `'${FORM_SHEET}'!G10:G25`)
+    ]);
+    const customerName = custNameData?.[0]?.[0] || "Unknown";
 
     // --- NEW: Multi-Active Job Logic (Promote from Pending) ---
     // 0. Check if this docNum is ALREADY the active one in 'ส่งสินค้า'
@@ -278,6 +287,43 @@ export async function POST(req: Request) {
     // 3. Upload to Drive (The Signed PDF)
     const uploadRes = await uploadPdfToDrive(Buffer.from(finalPdfBytes), pdfName, DELIVERY_FOLDER_ID);
     const pdfLink = uploadRes.webViewLink;
+
+    // --- NEW: Record in Delivery History ---
+    try {
+        const deliveryRows: any[][] = [];
+        const todayStr = getThaiDate();
+        
+        if (itemsData && itemsData.length > 0) {
+            for (let i = 0; i < itemsData.length; i++) {
+                const sku = itemsData[i]?.[0]?.trim();
+                if (sku) {
+                    const order = ordersData?.[i]?.[0]?.trim() || "";
+                    const qty = qtyData?.[i]?.[0] || 0;
+                    
+                    // Fields: วันที่, ชื่อลูกค้า, จัดส่งไปที่, Order, SKU, จำนวนของ, จำนวนแพ็ก, ค่าขนส่ง, หมายเหตุ, ลิงก์เอกสาร
+                    deliveryRows.push([
+                        todayStr,
+                        customerName,
+                        location || "", 
+                        order,
+                        sku,
+                        qty,
+                        packs || 1,
+                        0, // ค่าขนส่ง (Mobile process defaults to 0)
+                        "เสร็จสิ้น",
+                        pdfLink
+                    ]);
+                }
+            }
+        }
+
+        if (deliveryRows.length > 0) {
+            console.log(`[Finalize] Writing ${deliveryRows.length} items to Delivery History...`);
+            await addDeliveryHistory(deliveryRows);
+        }
+    } catch (historyErr) {
+        console.error("[Finalize] Failed to record delivery history:", historyErr);
+    }
 
     // --- NOTIFICATION: Signature Completed (Push to APK) ---
     try {

@@ -721,6 +721,114 @@ export const USER_SPREADSHEET_ID = PRODUCT_SPREADSHEET_ID; // Was: "1rd..." now 
 export const PO_SPREADSHEET_ID = DOC_SPREADSHEET_ID; // The "Form Link Mail" sheet contains "คลังข้อมูล"
 
 export const DELIVERY_FOLDER_ID = "1QGOYQUX8eDxmzuZ6pbiXJH5iuKAZG8s3"; // Folder for Delivery PDFs
+export const DELIVERY_HISTORY_SHEET = "ประวัติงานส่ง";
+export const DELIVERY_HISTORY_HEADERS = [
+  "วันที่",
+  "ชื่อลูกค้า",
+  "จัดส่งไปที่",
+  "Order",
+  "SKU",
+  "จำนวนของ",
+  "จำนวนแพ็ก",
+  "ค่าขนส่ง",
+  "หมายเหตุ",
+  "ลิงก์เอกสาร"
+];
+
+export async function ensureDeliveryHistorySheet(spreadsheetId?: string) {
+  const SSID = spreadsheetId || PRODUCT_SPREADSHEET_ID;
+  await ensureSheetExists(SSID, DELIVERY_HISTORY_SHEET, DELIVERY_HISTORY_HEADERS);
+}
+
+export async function addDeliveryHistory(rows: any[][], spreadsheetId?: string) {
+  const SSID = spreadsheetId || PRODUCT_SPREADSHEET_ID;
+  await ensureDeliveryHistorySheet(SSID);
+  // Ensure we append to A:J (10 columns)
+  await appendSheetData(SSID, `'${DELIVERY_HISTORY_SHEET}'!A:J`, rows);
+}
+
+export async function getDeliveryHistory(spreadsheetId?: string): Promise<any[]> {
+  try {
+    const SSID = spreadsheetId || PRODUCT_SPREADSHEET_ID;
+    const rawData = await getSheetData(SSID, `'${DELIVERY_HISTORY_SHEET}'!A:J`);
+    if (!rawData || rawData.length < 2) return [];
+
+    const headers = rawData[0];
+    const rows = rawData.slice(1);
+
+    return rows.map((r: any[]) => ({
+      date: r[0] || "",
+      customer: r[1] || "",
+      location: r[2] || "",
+      orderNo: r[3] || "",
+      sku: r[4] || "",
+      qty: parseFloat(String(r[5] || "0").replace(/,/g, "")) || 0,
+      packs: parseFloat(String(r[6] || "0").replace(/,/g, "")) || 0,
+      shippingCost: parseFloat(String(r[7] || "0").replace(/,/g, "")) || 0,
+      notes: r[8] || "",
+      pdfLink: r[9] || ""
+    })).reverse(); // Newest first
+  } catch (error) {
+    console.error("Error fetching delivery history:", error);
+    return [];
+  }
+}
+
+export async function deleteDeliveryHistory(
+    date: string, 
+    customer: string, 
+    orderNo: string, 
+    sku: string, 
+    spreadsheetId?: string
+) {
+    const SSID = spreadsheetId || PRODUCT_SPREADSHEET_ID;
+    const { googleSheets, auth } = await getGoogleSheets();
+    
+    // 1. Fetch data to find row index
+    const rawData = await getSheetData(SSID, `'${DELIVERY_HISTORY_SHEET}'!A:E`);
+    if (!rawData || rawData.length < 2) return false;
+
+    // Search for exact match
+    let rowIndexToDelete = -1;
+    for (let i = 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row[0] === date && row[1] === customer && row[3] === orderNo && row[4] === sku) {
+            rowIndexToDelete = i;
+            break; 
+        }
+    }
+
+    if (rowIndexToDelete === -1) {
+        console.warn(`[DeleteHistory] No matching row found for ${customer} / ${orderNo}`);
+        return false;
+    }
+
+    // 2. Get Sheet ID
+    const sheetId = await getSheetId(SSID, DELIVERY_HISTORY_SHEET);
+    if (sheetId === null) return false;
+
+    // 3. Delete Dimension (Delete the row)
+    await googleSheets.spreadsheets.batchUpdate({
+        auth: auth as any,
+        spreadsheetId: SSID,
+        requestBody: {
+            requests: [
+                {
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheetId,
+                            dimension: "ROWS",
+                            startIndex: rowIndexToDelete,
+                            endIndex: rowIndexToDelete + 1
+                        }
+                    }
+                }
+            ]
+        }
+    });
+
+    return true;
+}
 
 // ============================================================================
 // CORE DATA FUNCTIONS (REAL)
