@@ -1,11 +1,49 @@
-'use client';
-
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { X, Check, Trash2 } from 'lucide-react';
 
 const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false }) as any;
+
+// Create a memoized version of the signature pad to prevent re-renders when parent state changes
+const MemoizedSignaturePad = memo(({ sigRef, onClear }: { sigRef: any, onClear: () => void }) => {
+    return (
+        <div className="h-64 bg-white rounded-2xl overflow-hidden border-2 border-slate-700 relative shadow-inner shrink-0 mb-6">
+            <SignatureCanvas 
+                ref={sigRef}
+                penColor="black"
+                backgroundColor="white"
+                velocityFilterWeight={0.1} // Lower weight makes it more responsive/raw
+                minWidth={1.5} // Constant thickness feels smoother on some devices
+                maxWidth={2.5}
+                canvasProps={{ 
+                    className: 'w-full h-full cursor-crosshair touch-none',
+                    style: { touchAction: 'none' }
+                }}
+            />
+            
+            {/* Watermark / Guide */}
+            <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none opacity-10 text-slate-900 font-black text-3xl select-none">
+                SIGN HERE
+            </div>
+            <div className="absolute top-1/2 left-4 right-4 h-px bg-slate-100 -translate-y-1/2 pointer-events-none" />
+
+            {/* Floating Clear Button */}
+            <button 
+                onClick={(e) => {
+                    e.preventDefault();
+                    onClear();
+                }}
+                className="absolute top-4 right-4 p-2 bg-slate-50 text-slate-400 rounded-full shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-colors z-10"
+                title="Clear Signature"
+            >
+                <Trash2 className="w-4 h-4" />
+            </button>
+        </div>
+    );
+});
+
+MemoizedSignaturePad.displayName = 'MemoizedSignaturePad';
 
 interface SignatureModalProps {
     isOpen: boolean;
@@ -95,48 +133,24 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
                         <label className="block text-slate-400 text-xs font-bold uppercase mb-2">จำนวนแพ็ก (Number of Packs)</label>
                         <div className="flex items-center gap-4">
                             <button 
-                                onClick={() => setPacks(Math.max(1, packs - 1))}
+                                onClick={() => setPacks(Math.max(1, (typeof packs === 'string' ? parseInt(packs) || 0 : packs) - 1))}
                                 className="w-12 h-12 bg-slate-700 rounded-xl text-white font-black text-xl flex items-center justify-center active:scale-95 transition-transform"
                             >-</button>
                             <input 
                                 type="number" 
                                 value={packs} 
-                                onChange={(e) => setPacks(parseInt(e.target.value) || 1)}
+                                onChange={(e) => setPacks(e.target.value)}
                                 className="flex-1 bg-transparent text-white text-3xl font-black text-center outline-none"
                             />
                             <button 
-                                onClick={() => setPacks(packs + 1)}
+                                onClick={() => setPacks((typeof packs === 'string' ? parseInt(packs) || 0 : packs) + 1)}
                                 className="w-12 h-12 bg-indigo-600 rounded-xl text-white font-black text-xl flex items-center justify-center active:scale-95 transition-transform"
                             >+</button>
                         </div>
                     </div>
 
-                    <div className="h-64 bg-white rounded-2xl overflow-hidden border-2 border-slate-700 relative shadow-inner shrink-0 mb-6">
-                        <SignatureCanvas 
-                            ref={sigCanvasRef}
-                            penColor="black"
-                            backgroundColor="white"
-                            canvasProps={{ 
-                                className: 'w-full h-full cursor-crosshair touch-none',
-                                style: { touchAction: 'none' }
-                            }}
-                         />
-                         
-                         {/* Watermark / Guide */}
-                         <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none opacity-10 text-slate-900 font-black text-3xl select-none">
-                            SIGN HERE
-                         </div>
-                         <div className="absolute top-1/2 left-4 right-4 h-px bg-slate-100 -translate-y-1/2 pointer-events-none" />
-        
-                         {/* Floating Clear Button */}
-                         <button 
-                            onClick={handleClear}
-                            className="absolute top-4 right-4 p-2 bg-slate-50 text-slate-400 rounded-full shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-colors"
-                            title="Clear Signature"
-                         >
-                             <Trash2 className="w-4 h-4" />
-                         </button>
-                    </div>
+                    {/* Optimized Signature Pad Area */}
+                    <MemoizedSignaturePad sigRef={sigCanvasRef} onClear={handleClear} />
         
                     {/* Actions */}
                     <button 
