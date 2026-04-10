@@ -1,32 +1,59 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
-import { X, Check, Trash2 } from 'lucide-react';
+import { X, Check, Trash2, RotateCw } from 'lucide-react';
 
 const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false }) as any;
 
-// Create a memoized version of the signature pad to prevent re-renders when parent state changes
+// Maximum smoothness configuration
 const MemoizedSignaturePad = memo(({ sigRef, onClear }: { sigRef: any, onClear: () => void }) => {
+    
+    // Effect to handle canvas resolution for high-DPI screens
+    useEffect(() => {
+        const resizeCanvas = () => {
+            const canvas = sigRef.current?.getCanvas();
+            if (canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d")?.scale(ratio, ratio);
+                sigRef.current?.clear(); // Need to clear after resize to fix scaling
+            }
+        };
+
+        window.addEventListener("resize", resizeCanvas);
+        // Initial delay to ensure offsetWidth is ready
+        const timer = setTimeout(resizeCanvas, 100);
+        
+        return () => {
+            window.removeEventListener("resize", resizeCanvas);
+            clearTimeout(timer);
+        };
+    }, [sigRef]);
+
     return (
-        <div className="h-64 bg-white rounded-2xl overflow-hidden border-2 border-slate-700 relative shadow-inner shrink-0 mb-6">
+        <div className="flex-1 bg-white relative shadow-inner touch-none overflow-hidden">
             <SignatureCanvas 
                 ref={sigRef}
                 penColor="black"
                 backgroundColor="white"
-                velocityFilterWeight={0.1} // Lower weight makes it more responsive/raw
-                minWidth={1.5} // Constant thickness feels smoother on some devices
+                // Performance & Smoothness Tuning
+                velocityFilterWeight={0} // Raw input for zero lag
+                minWidth={1.5} 
                 maxWidth={2.5}
+                dotSize={2}
+                throttle={0} 
+                minDistance={0} 
                 canvasProps={{ 
-                    className: 'w-full h-full cursor-crosshair touch-none',
+                    className: 'w-full h-full cursor-crosshair',
                     style: { touchAction: 'none' }
                 }}
             />
             
-            {/* Watermark / Guide */}
-            <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none opacity-10 text-slate-900 font-black text-3xl select-none">
-                SIGN HERE
+            {/* Watermark */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] select-none">
+                <span className="text-8xl font-black rotate-[-20deg]">SIGN HERE</span>
             </div>
-            <div className="absolute top-1/2 left-4 right-4 h-px bg-slate-100 -translate-y-1/2 pointer-events-none" />
 
             {/* Floating Clear Button */}
             <button 
@@ -34,10 +61,10 @@ const MemoizedSignaturePad = memo(({ sigRef, onClear }: { sigRef: any, onClear: 
                     e.preventDefault();
                     onClear();
                 }}
-                className="absolute top-4 right-4 p-2 bg-slate-50 text-slate-400 rounded-full shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-colors z-10"
+                className="absolute top-4 right-4 p-3 bg-slate-100 text-slate-400 rounded-full shadow-md hover:bg-rose-50 hover:text-rose-500 transition-all z-10 active:scale-90"
                 title="Clear Signature"
             >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-5 h-5" />
             </button>
         </div>
     );
@@ -48,7 +75,7 @@ MemoizedSignaturePad.displayName = 'MemoizedSignaturePad';
 interface SignatureModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (dataUrl: string, packs: number, location: string) => Promise<void>;
+    onSave: (dataUrl: string) => Promise<void>;
     docNum: string;
 }
 
@@ -56,10 +83,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
     const sigCanvasRef = useRef<any>(null);
     const [saving, setSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const [packs, setPacks] = useState<string | number>(1);
-    const [location, setLocation] = useState<string>("");
 
-    // Set mounted on client
     useEffect(() => {
         setMounted(true);
     }, []);
@@ -72,20 +96,18 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
     const handleConfirm = async () => {
         if (!sigCanvasRef.current || sigCanvasRef.current.isEmpty()) {
-            alert("Please sign before confirming.");
+            alert("กรุณาเซ็นชื่อก่อนกดยืนยัน");
             return;
         }
 
         setSaving(true);
         try {
-            // Get trimmed base64
             const dataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png');
-            const numericPacks = typeof packs === 'string' ? (parseInt(packs) || 0) : packs;
-            await onSave(dataUrl, numericPacks, location);
+            await onSave(dataUrl);
             onClose();
         } catch (error) {
             console.error("Signature Save Failed", error);
-            alert("Failed to save signature");
+            alert("บันทึกลายเซ็นไม่สำเร็จ");
         } finally {
             setSaving(false);
         }
@@ -93,87 +115,57 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
     const modalContent = (
         <div 
-            className="fixed inset-0 z-[9999] bg-black/40 flex flex-col items-center justify-center p-4 backdrop-blur-sm"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) onClose();
-            }}
+            className="fixed inset-0 z-[9999] bg-slate-950 flex items-center justify-center overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
         >
-            {/* Modal Card */}
-            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                {/* Header */}
-                <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800 shrink-0">
-                    <div>
-                        <h2 className="text-xl font-bold text-white">Sign for {docNum}</h2>
-                        <p className="text-slate-400 text-xs">Customer Acknowledgement</p>
-                    </div>
-                    <button 
-                        onClick={onClose} 
-                        className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
-                        disabled={saving}
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+            {/* Landscape Container */}
+            <div className="w-full h-full flex flex-col md:flex-row">
                 
-                {/* Canvas Container */}
-                <div className="p-6 overflow-y-auto">
-                    {/* Location Input */}
-                    <div className="mb-4 bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                        <label className="block text-slate-400 text-xs font-bold uppercase mb-2">สถานที่จัดส่ง (Delivery Location)</label>
-                        <textarea 
-                            value={location} 
-                            onChange={(e) => setLocation(e.target.value)}
-                            placeholder="ระบุสถานที่จัดส่ง..."
-                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm outline-none focus:border-indigo-500 resize-none h-20"
-                        />
+                {/* Left/Top Sidebar: Info & Controls */}
+                <div className="w-full md:w-64 bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 p-6 flex flex-col justify-between shrink-0">
+                    <div>
+                        <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                            <RotateCw className="w-4 h-4" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Landscape Mode</span>
+                        </div>
+                        <h2 className="text-xl font-black text-white leading-tight mb-1">เซ็นรับสินค้า</h2>
+                        <p className="text-slate-500 text-xs font-mono">{docNum}</p>
                     </div>
 
-                    {/* Packs Input */}
-                    <div className="mb-6 bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                        <label className="block text-slate-400 text-xs font-bold uppercase mb-2">จำนวนแพ็ก (Number of Packs)</label>
-                        <div className="flex items-center gap-4">
-                            <button 
-                                onClick={() => setPacks(Math.max(1, (typeof packs === 'string' ? parseInt(packs) || 0 : packs) - 1))}
-                                className="w-12 h-12 bg-slate-700 rounded-xl text-white font-black text-xl flex items-center justify-center active:scale-95 transition-transform"
-                            >-</button>
-                            <input 
-                                type="number" 
-                                value={packs} 
-                                onChange={(e) => setPacks(e.target.value)}
-                                className="flex-1 bg-transparent text-white text-3xl font-black text-center outline-none"
-                            />
-                            <button 
-                                onClick={() => setPacks((typeof packs === 'string' ? parseInt(packs) || 0 : packs) + 1)}
-                                className="w-12 h-12 bg-indigo-600 rounded-xl text-white font-black text-xl flex items-center justify-center active:scale-95 transition-transform"
-                            >+</button>
+                    <div className="hidden md:block space-y-4">
+                        <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                            <p className="text-slate-400 text-[10px] font-bold uppercase mb-2">คำแนะนำ</p>
+                            <p className="text-slate-300 text-xs leading-relaxed">กรุณาเซ็นชื่อให้ชัดเจนภายในกรอบสีขาวเพื่อความถูกต้องของเอกสาร</p>
                         </div>
                     </div>
 
-                    {/* Optimized Signature Pad Area */}
+                    <div className="flex flex-col gap-3 mt-6">
+                        <button 
+                            onClick={handleConfirm}
+                            disabled={saving}
+                            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black text-sm shadow-lg shadow-indigo-900/40 flex items-center justify-center gap-2 transition-all active:scale-95"
+                        >
+                            {saving ? (
+                                <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <Check className="w-5 h-5" />
+                                    ยืนยันลายเซ็น
+                                </>
+                            )}
+                        </button>
+                        <button 
+                            onClick={onClose}
+                            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-2xl font-bold text-xs transition-all active:scale-95"
+                        >
+                            ยกเลิก
+                        </button>
+                    </div>
+                </div>
+
+                {/* Main Content: The Canvas */}
+                <div className="flex-1 flex flex-col relative bg-white">
                     <MemoizedSignaturePad sigRef={sigCanvasRef} onClear={handleClear} />
-        
-                    {/* Actions */}
-                    <button 
-                        onClick={handleConfirm}
-                        disabled={saving}
-                        className={`w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-indigo-900/40 flex items-center justify-center gap-3 transition-all active:scale-[0.98] ${saving ? 'opacity-70 cursor-wait' : ''}`}
-                    >
-                        {saving ? (
-                            <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            <>
-                                <Check className="w-6 h-6" />
-                                CONFIRM SIGNATURE
-                            </>
-                        )}
-                    </button>
-                    <button 
-                        onClick={onClose}
-                        disabled={saving}
-                        className="w-full mt-3 text-slate-500 hover:text-slate-300 font-bold py-2 text-sm transition-colors"
-                    >
-                        Cancel
-                    </button>
                 </div>
             </div>
         </div>

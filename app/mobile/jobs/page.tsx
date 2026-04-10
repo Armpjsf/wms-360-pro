@@ -138,7 +138,7 @@ export default function MobileJobsPage() {
 
   const [successData, setSuccessData] = useState<{ pdfLink: string, docNum: string } | null>(null);
 
-  const handleConfirmSignature = async (dataUrl: string, packs: number, location: string) => {
+  const handleConfirmSignature = async (dataUrl: string) => {
       try {
           // REVERTED: Call finalize to Generate PDF + Archive immediately.
           const res = await fetch(getApiUrl('/api/orders/finalize'), {
@@ -147,8 +147,8 @@ export default function MobileJobsPage() {
               body: JSON.stringify({ 
                   signature: dataUrl, 
                   docNum: signingDoc,
-                  packs: packs,
-                  location: location
+                  packs: 0, // Admin will fill later
+                  location: "" // Admin will fill later
               })
           });
           
