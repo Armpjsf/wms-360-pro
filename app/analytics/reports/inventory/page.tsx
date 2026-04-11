@@ -96,17 +96,17 @@ export default function InventoryReportPage() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            Inventory Report
+                            {t('inventory_report_title')}
                         </h1>
                         <p className="text-slate-400 text-sm mt-1">
-                            Detailed movement history and analytics
+                            {t('inventory_report_subtitle')}
                         </p>
                     </div>
                     <button 
                         onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20"
                     >
-                        <Download className="w-4 h-4" /> Export CSV
+                        <Download className="w-4 h-4" /> {t('export_csv')}
                     </button>
                 </div>
 
@@ -116,7 +116,7 @@ export default function InventoryReportPage() {
                     {/* Date Range */}
                     <div className="flex gap-2">
                         <div className="space-y-1">
-                            <label className="text-xs text-slate-500 font-medium ml-1">Start Date</label>
+                            <label className="text-xs text-slate-500 font-medium ml-1">{t('date_start')}</label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                                 <input 
@@ -128,7 +128,7 @@ export default function InventoryReportPage() {
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs text-slate-500 font-medium ml-1">End Date</label>
+                            <label className="text-xs text-slate-500 font-medium ml-1">{t('date_end')}</label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                                 <input 
@@ -143,26 +143,26 @@ export default function InventoryReportPage() {
 
                     {/* Type Filter */}
                     <div className="space-y-1">
-                        <label className="text-xs text-slate-500 font-medium ml-1">Type</label>
+                        <label className="text-xs text-slate-500 font-medium ml-1">{t('col_type')}</label>
                         <select 
                             value={filters.type}
                             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
                             className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-32 text-slate-300"
                         >
-                            <option value="ALL">All Types</option>
-                            <option value="IN">Inbound (รับ)</option>
-                            <option value="OUT">Outbound (จ่าย)</option>
+                            <option value="ALL">{t('all_types')}</option>
+                            <option value="IN">{t('inbound_receive')}</option>
+                            <option value="OUT">{t('outbound_issue')}</option>
                         </select>
                     </div>
 
                     {/* Search */}
                     <div className="flex-1 space-y-1 w-full">
-                         <label className="text-xs text-slate-500 font-medium ml-1">Search</label>
+                         <label className="text-xs text-slate-500 font-medium ml-1">{t('search')}</label>
                          <div className="relative">
                             <Search className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                             <input 
                                 type="text"
-                                placeholder="Search Product, ID, Location..."
+                                placeholder={t('search_placeholder')}
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                                 className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-300 placeholder-slate-500"
@@ -177,13 +177,13 @@ export default function InventoryReportPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
-                                    <th className="p-4 font-medium">Date</th>
-                                    <th className="p-4 font-medium">ID</th>
-                                    <th className="p-4 font-medium">Type</th>
-                                    <th className="p-4 font-medium">Product</th>
-                                    <th className="p-4 font-medium text-right">Qty</th>
-                                    <th className="p-4 font-medium">Location</th>
-                                    <th className="p-4 font-medium">User</th>
+                                    <th className="p-4 font-medium">{t('col_date')}</th>
+                                    <th className="p-4 font-medium">{t('col_id')}</th>
+                                    <th className="p-4 font-medium">{t('col_type')}</th>
+                                    <th className="p-4 font-medium">{t('product')}</th>
+                                    <th className="p-4 font-medium text-right">{t('col_qty')}</th>
+                                    <th className="p-4 font-medium">{t('delivery_location')}</th>
+                                    <th className="p-4 font-medium">{t('col_user')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800">
@@ -191,13 +191,13 @@ export default function InventoryReportPage() {
                                     <tr>
                                         <td colSpan={7} className="p-8 text-center text-slate-500">
                                             <div className="inline-block w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                                            <p>Loading transactions...</p>
+                                            <p>{t('loading_transactions')}</p>
                                         </td>
                                     </tr>
                                 ) : transactions.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="p-8 text-center text-slate-500">
-                                            No transactions found matching your filters.
+                                            {t('no_transactions_found')}
                                         </td>
                                     </tr>
                                 ) : (
@@ -217,7 +217,7 @@ export default function InventoryReportPage() {
                                                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                                                     : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                                 }`}>
-                                                    {t.type === 'IN' ? 'RECEIVE' : 'ISSUE'}
+                                                    {t.type === 'IN' ? t('inbound') || 'RECEIVE' : t('outbound') || 'ISSUE'}
                                                 </span>
                                             </td>
                                             <td className="p-4 font-medium text-white">{t.product_name}</td>

@@ -58,9 +58,9 @@ export default function AgingPage() {
                  <div className="p-2 bg-amber-500/10 rounded-lg">
                     <Clock className="w-8 h-8 text-amber-400" />
                  </div>
-                 Inventory Aging & Deadstock
+                 {t('aging_title')}
               </h1>
-              <p className="text-slate-400 mt-2">วิเคราะห์สินค้าเคลื่อนไหวช้าและสินค้าค้างสต็อก</p>
+              <p className="text-slate-400 mt-2">{t('aging_subtitle')}</p>
            </div>
            
            <div className="bg-slate-900 border border-slate-800 p-1 rounded-lg flex">
@@ -74,7 +74,7 @@ export default function AgingPage() {
                           : 'text-slate-400 hover:text-white'
                       }`}
                    >
-                       {d > 300 ? '1 Year' : `${d} Days`}
+                       {d > 300 ? t('period_year') : t('period_days').replace('{0}', String(d))}
                    </button>
                ))}
            </div>
@@ -83,38 +83,38 @@ export default function AgingPage() {
        {/* KPIs */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-               <h3 className="text-slate-400 text-sm mb-2">Deadstock Items</h3>
+               <h3 className="text-slate-400 text-sm mb-2">{t('deadstock_items')}</h3>
                <div className="text-3xl font-bold text-white flex items-center gap-2">
                    {loading ? '...' : deadstock.length}
-                   <span className="text-xs font-normal text-slate-500">list items</span>
+                   <span className="text-xs font-normal text-slate-500">{t('ai_unit')}</span>
                </div>
                <div className="mt-4 flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-3 py-1 rounded-full w-fit">
                    <AlertCircle className="w-3 h-3" />
-                   สินค้าไม่เคลื่อนไหวเกิน {period} วัน
+                   {t('stagnant_desc').replace('{0}', String(period))}
                </div>
            </div>
 
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-               <h3 className="text-slate-400 text-sm mb-2">Deadstock Value</h3>
+               <h3 className="text-slate-400 text-sm mb-2">{t('deadstock_value')}</h3>
                <div className="text-3xl font-bold text-white flex items-center gap-2">
                    ฿{loading ? '...' : deadstockValue.toLocaleString()}
                    <span className="text-xs font-normal text-slate-500">THB</span>
                </div>
                <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full w-fit">
                    <Clock className="w-3 h-3" />
-                   มูลค่าเงินจมในสต็อก
+                   {t('capital_tied_up')}
                </div>
            </div>
 
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-               <h3 className="text-slate-400 text-sm mb-2">Active Items</h3>
+               <h3 className="text-slate-400 text-sm mb-2">{t('kpi_active_items')}</h3>
                <div className="text-3xl font-bold text-white flex items-center gap-2">
                    {loading ? '...' : activeObs.length}
                    <span className="text-xs font-normal text-slate-500">SKUs</span>
                </div>
                <div className="mt-4 flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full w-fit">
                    <CheckCircle className="w-3 h-3" />
-                   เคลื่อนไหวปกติ
+                   {t('filter_normal_moving')}
                </div>
            </div>
        </div>
@@ -123,24 +123,24 @@ export default function AgingPage() {
        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
                <div className="flex items-center gap-4">
-                   <h3 className="text-white font-medium">Inventory List</h3>
+                   <h3 className="text-white font-medium">{t('inventory_list')}</h3>
                    <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
                        <button 
                          onClick={() => setViewMode('DEADSTOCK')}
                          className={`px-3 py-1 text-xs rounded-md font-bold transition-colors ${viewMode === 'DEADSTOCK' ? 'bg-red-500/20 text-red-400' : 'text-slate-500 hover:text-slate-300'}`}
                        >
-                         Deadstock Only
+                         {t('deadstock_only')}
                        </button>
                        <button 
                          onClick={() => setViewMode('ALL')}
                          className={`px-3 py-1 text-xs rounded-md font-bold transition-colors ${viewMode === 'ALL' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}
                        >
-                         Show All
+                         {t('show_all')}
                        </button>
                    </div>
                </div>
                <button onClick={exportCSV} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm">
-                   <Download className="w-4 h-4" /> Export CSV
+                   <Download className="w-4 h-4" /> {t('export_csv')}
                </button>
            </div>
            
@@ -148,20 +148,20 @@ export default function AgingPage() {
                <table className="w-full text-left text-slate-300">
                    <thead className="bg-slate-950 text-slate-400 text-xs uppercase tracking-wider">
                        <tr>
-                           <th className="px-6 py-4">สินค้า (Product)</th>
-                           <th className="px-6 py-4">Location</th>
-                           <th className="px-6 py-4">คงเหลือ (Stock)</th>
-                           <th className="px-6 py-4">มูลค่า (Value)</th>
-                           <th className="px-6 py-4 text-center">Movement</th>
-                           <th className="px-6 py-4">ขายล่าสุด (Last Sold)</th>
-                           <th className="px-6 py-4">จำนวนวัน (Days)</th>
+                           <th className="px-6 py-4">{t('product')}</th>
+                           <th className="px-6 py-4">{t('delivery_location')}</th>
+                           <th className="px-6 py-4">{t('label_stock')}</th>
+                           <th className="px-6 py-4">{t('total_value')}</th>
+                           <th className="px-6 py-4 text-center">{t('col_status')}</th>
+                           <th className="px-6 py-4">{t('col_last_sold')}</th>
+                           <th className="px-6 py-4">{t('col_days_inactive')}</th>
                        </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-800">
                        {loading ? (
-                           <tr><td colSpan={7} className="p-8 text-center text-slate-500">Calculating aging...</td></tr>
+                           <tr><td colSpan={7} className="p-8 text-center text-slate-500">{t('loading')}</td></tr>
                        ) : tableData.length === 0 ? (
-                           <tr><td colSpan={7} className="p-8 text-center text-slate-500">No data found.</td></tr>
+                           <tr><td colSpan={7} className="p-8 text-center text-slate-500">{t('no_products_found')}</td></tr>
                        ) : (
                            tableData.map((item) => (
                                <tr key={item.id} className="hover:bg-slate-800/50">
@@ -181,10 +181,10 @@ export default function AgingPage() {
                                         </span>
                                    </td>
                                    <td className="px-6 py-4 text-slate-400">
-                                       {item.lastSoldDate || 'Never'}
+                                       {item.lastSoldDate || t('never_sold')}
                                    </td>
                                    <td className="px-6 py-4 text-red-400 font-bold">
-                                       {item.daysSinceLastSale > 9000 ? 'Never' : `${item.daysSinceLastSale} days`}
+                                       {item.daysSinceLastSale > 9000 ? t('never_sold') : `${item.daysSinceLastSale} days`}
                                    </td>
                                </tr>
                            ))

@@ -19,35 +19,35 @@ interface ReportConfig {
   color: string;
 }
 
-const reports: ReportConfig[] = [
+const reports = (t: any): ReportConfig[] => [
   {
     id: 'inventory_summary',
-    name: 'Inventory Summary',
-    description: 'Current stock levels, value, and status',
+    name: t('inventory_summary_report'),
+    description: t('inventory_summary_desc'),
     icon: PackageIcon,
     endpoint: '/api/reports/inventory',
     color: 'bg-indigo-500'
   },
   {
     id: 'stock_movement',
-    name: 'Stock Movement',
-    description: 'Inbound, Outbound, and adjustments log',
+    name: t('stock_movement_report'),
+    description: t('stock_movement_desc'),
     icon: ArrowRight,
     endpoint: '/api/reports/movement',
     color: 'bg-emerald-500'
   },
   {
     id: 'low_stock',
-    name: 'Low Stock Report',
-    description: 'Items below minimum stock level',
+    name: t('low_stock_report'),
+    description: t('low_stock_desc'),
     icon: Table,
     endpoint: '/api/reports/low-stock',
     color: 'bg-rose-500'
   },
   {
     id: 'damage_report',
-    name: 'Damage Report',
-    description: 'Damaged items and reasons',
+    name: t('damage_report_name'),
+    description: t('damage_report_desc'),
     icon: FileText,
     endpoint: '/api/reports/damage',
     color: 'bg-amber-500'
@@ -70,6 +70,8 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [loading, setLoading] = useState(false);
+
+  const availableReports = reports(t);
 
   const handleGenerate = async (report: ReportConfig) => {
     // Direct link to printable pages for supported reports
@@ -112,13 +114,13 @@ export default function ReportsPage() {
             <span className="p-2 bg-indigo-600 rounded-xl text-white">
               <BarChart className="w-6 h-6" />
             </span>
-            Report Center
+            {t('report_center_title')}
           </h1>
-          <p className="text-slate-500 mt-2 text-lg">Generate and export insights from your inventory</p>
+          <p className="text-slate-500 mt-2 text-lg">{t('report_center_subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reports.map((report) => (
+          {availableReports.map((report) => (
             <motion.div
               key={report.id}
               whileHover={{ y: -5 }}
@@ -144,7 +146,7 @@ export default function ReportsPage() {
                     handleGenerate(report);
                   }}
                 >
-                  Generate
+                  {t('generate_btn')}
                 </button>
               </div>
             </motion.div>
@@ -155,10 +157,10 @@ export default function ReportsPage() {
         <div className="bg-white rounded-3xl p-8 border border-slate-200">
           <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-slate-400" />
-            Scheduled Reports
+            {t('scheduled_reports')}
           </h3>
           <div className="p-8 bg-slate-50 rounded-2xl text-center border border-dashed border-slate-300">
-             <p className="text-slate-400 font-medium">Coming Soon: Schedule automated email reports</p>
+             <p className="text-slate-400 font-medium">{t('scheduled_reports_desc')}</p>
           </div>
         </div>
       </div>

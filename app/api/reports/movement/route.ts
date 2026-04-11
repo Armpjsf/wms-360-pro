@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTransactions } from '@/lib/googleSheets';
+import { getTransactionsUncached, resolveSpreadsheetId } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,10 +8,13 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const branchId = searchParams.get('branchId') || undefined;
 
-        // Fetch Both IN and OUT
+        // Resolve Spreadsheet ID
+        const targetSheetId = await resolveSpreadsheetId(branchId, 'inventory');
+
+        // Fetch Both IN and OUT (Using Uncached to avoid 'Invariant: incrementalCache missing')
         const [inbound, outbound] = await Promise.all([
-            getTransactions('IN', branchId),
-            getTransactions('OUT', branchId)
+            getTransactionsUncached('IN', targetSheetId),
+            getTransactionsUncached('OUT', targetSheetId)
         ]);
 
         // Tag them

@@ -29,8 +29,8 @@ export default function ForecastPage() {
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Demand Forecast & Risk Analysis</h1>
-            <p className="text-slate-400">ระบบพยากรณ์และวิเคราะห์ความเสี่ยง (Advanced Logic)</p>
+            <h1 className="text-3xl font-bold text-white mb-2">{t('forecast_title')}</h1>
+            <p className="text-slate-400">{t('forecast_subtitle')}</p>
         </div>
       </div>
 
@@ -38,25 +38,25 @@ export default function ForecastPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-slate-900 border border-red-500/30 p-6 rounded-xl flex items-center justify-between">
                <div>
-                   <div className="text-slate-400 text-sm mb-1">High Risk Items</div>
+                   <div className="text-slate-400 text-sm mb-1">{t('high_risk_items')}</div>
                    <div className="text-3xl font-bold text-red-500">{highRisk.length}</div>
-                   <div className="text-xs text-red-400 mt-2">Stock {"<"} 15-30 Days</div>
+                   <div className="text-xs text-red-400 mt-2">{t('label_stock')} {"<"} 15-30 {t('ai_unit')}</div>
                </div>
                <AlertTriangle className="w-10 h-10 text-red-500/50" />
           </div>
           <div className="bg-slate-900 border border-orange-500/30 p-6 rounded-xl flex items-center justify-between">
                <div>
-                   <div className="text-slate-400 text-sm mb-1">Reorder Suggestions</div>
+                   <div className="text-slate-400 text-sm mb-1">{t('reorder_suggestions')}</div>
                    <div className="text-3xl font-bold text-orange-400">{reorderNeeded.length}</div>
-                   <div className="text-xs text-orange-400 mt-2">Action Required</div>
+                   <div className="text-xs text-orange-400 mt-2">{t('ai_action_needed')}</div>
                </div>
                <ShoppingCart className="w-10 h-10 text-orange-400/50" />
           </div>
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl flex items-center justify-between">
                <div>
-                   <div className="text-slate-400 text-sm mb-1">Total Forecasted</div>
+                   <div className="text-slate-400 text-sm mb-1">{t('total_forecasted')}</div>
                    <div className="text-3xl font-bold text-blue-400">{data.length}</div>
-                   <div className="text-xs text-blue-400 mt-2">Products Analyzed</div>
+                   <div className="text-xs text-blue-400 mt-2">{t('ai_total_items')}</div>
                </div>
                <TrendingUp className="w-10 h-10 text-blue-400/50" />
           </div>
@@ -69,21 +69,21 @@ export default function ForecastPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
                    <h3 className="font-bold text-white flex items-center gap-2">
-                       <AlertTriangle className="w-4 h-4 text-red-400" /> Stock Risk Monitor
+                       <AlertTriangle className="w-4 h-4 text-red-400" /> {t('stock_risk_monitor')}
                    </h3>
                </div>
                <div className="max-h-[500px] overflow-y-auto">
                    <table className="w-full text-left text-slate-300 text-sm">
                        <thead className="bg-slate-950 text-slate-500 sticky top-0">
                            <tr>
-                               <th className="p-3">Product</th>
-                               <th className="p-3 text-right">Stock</th>
-                               <th className="p-3 text-right">Days Supply</th>
-                               <th className="p-3">Risk</th>
+                               <th className="p-3">{t('product')}</th>
+                               <th className="p-3 text-right">{t('label_stock')}</th>
+                               <th className="p-3 text-right">{t('days_supply')}</th>
+                               <th className="p-3">{t('risk_level')}</th>
                            </tr>
                        </thead>
                        <tbody className="divide-y divide-slate-800">
-                           {loading ? <tr><td colSpan={4} className="p-4 text-center">Analzying...</td></tr> : 
+                           {loading ? <tr><td colSpan={4} className="p-4 text-center">{t('ai_analyzing')}</td></tr> : 
                             data.slice(0, 50).map((item, i) => (
                                <tr key={i} className="hover:bg-slate-800/50">
                                    <td className="p-3 font-medium text-white max-w-[150px] truncate" title={item.name}>{item.name}</td>
@@ -95,7 +95,9 @@ export default function ForecastPage() {
                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
                                            ${item.riskLevel.includes('High') ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}
                                        `}>
-                                           {item.riskLevel}
+                                           {item.riskLevel === 'Very High' ? t('risk_very_high') : 
+                                            item.riskLevel === 'High' ? t('risk_high') : 
+                                            item.riskLevel === 'Low' ? t('risk_low') : item.riskLevel}
                                        </span>
                                    </td>
                                </tr>
@@ -109,23 +111,23 @@ export default function ForecastPage() {
            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
                <div className="p-4 border-b border-slate-800">
                    <h3 className="font-bold text-white flex items-center gap-2">
-                       <ShoppingCart className="w-4 h-4 text-orange-400" /> Automated PO Planner
+                       <ShoppingCart className="w-4 h-4 text-orange-400" /> {t('automated_po_planner')}
                    </h3>
-                   <p className="text-xs text-slate-500 mt-1">Recommended orders based on 3-month avg demand</p>
+                   <p className="text-xs text-slate-500 mt-1">{t('avg_demand_desc')}</p>
                </div>
                <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[500px]">
-                   {loading ? <div className="text-center text-slate-500">Calculating EOQ...</div> :
-                    reorderNeeded.length === 0 ? <div className="text-center text-green-500 py-10">No urgent orders needed.</div> :
+                   {loading ? <div className="text-center text-slate-500">{t('loading')}</div> :
+                    reorderNeeded.length === 0 ? <div className="text-center text-green-500 py-10">{t('no_urgent_orders')}</div> :
                     reorderNeeded.map((item, i) => (
                        <div key={i} className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg flex justify-between items-center group hover:border-orange-500 transition-colors">
                            <div>
                                <div className="font-bold text-white max-w-[200px] truncate" title={item.name}>{item.name}</div>
                                <div className="text-xs text-slate-400">
-                                   Stock: {item.stock} | Demand: {item.avgDemand.toFixed(1)}/mo
+                                   {t('label_stock')}: {item.stock} | {t('ai_insight')}: {item.avgDemand.toFixed(1)}/mo
                                </div>
                            </div>
                            <div className="text-right">
-                               <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">Suggest</div>
+                               <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">{t('ai_suggested_add')}</div>
                                <div className="text-xl font-bold text-orange-400">+{item.suggestedQty}</div>
                            </div>
                        </div>
@@ -134,13 +136,13 @@ export default function ForecastPage() {
                <div className="p-4 border-t border-slate-800 bg-slate-950">
                    <button 
                        onClick={() => {
-                           if (reorderNeeded.length === 0) return alert("No items need reordering.");
+                           if (reorderNeeded.length === 0) return alert(t('no_urgent_orders'));
                            const items = reorderNeeded.map(i => `- ${i.name}: ${i.suggestedQty} units`).join('\n');
-                           alert(`✅ สร้างใบสั่งซื้อ (Mockup) สำหรับ ${reorderNeeded.length} รายการ:\n\n${items}\n\n(ระบบ PO จริงจะเชื่อมต่อในเฟสถัดไป)`);
+                           alert(`✅ ${t('ai_po_success')}:\n\n${items}`);
                        }}
                        className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-bold flex justify-center items-center gap-2 transition-transform active:scale-95"
                    >
-                       Create PO Draft <ArrowRight className="w-4 h-4" />
+                       {t('create_po_draft')} <ArrowRight className="w-4 h-4" />
                    </button>
                </div>
            </div>
