@@ -6,6 +6,7 @@ import { Building2, TrendingUp, AlertTriangle, Package, RefreshCw, DollarSign } 
 import { getApiUrl } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface BranchStat {
     id: string;
@@ -19,6 +20,7 @@ interface BranchStat {
 }
 
 export default function HQDashboard() {
+    const { t } = useLanguage();
     const [stats, setStats] = useState<{ branches: BranchStat[], global: any } | null>(null);
     const [loading, setLoading] = useState(true);
 
