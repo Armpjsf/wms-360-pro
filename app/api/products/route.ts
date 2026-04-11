@@ -57,6 +57,26 @@ export async function POST(request: Request) {
         console.log(`[API] Adding product to branch: ${branchId || 'HQ'} -> SSID: ${targetSheetId}`);
         const success = await addProduct(productData, targetSheetId);
         if (success) {
+            // Audit Log
+            try {
+                const { logAction } = await import('@/lib/auditTrail');
+                const { getServerSession } = await import("next-auth/next");
+                const { authOptions } = await import("@/lib/auth");
+                // @ts-ignore
+                const session = await getServerSession(authOptions);
+
+                await logAction({
+                    userId: session?.user?.email || 'System',
+                    userName: session?.user?.name || 'Inventory Manager',
+                    action: 'CREATE',
+                    module: 'Inventory',
+                    description: `Added new product: ${productData.name}`,
+                    newValues: productData
+                });
+            } catch (auditErr) {
+                console.warn("Audit Log Failed:", auditErr);
+            }
+
             return NextResponse.json({ success: true });
         } else {
              return NextResponse.json({ error: "Failed to add product" }, { status: 500 });
@@ -82,6 +102,26 @@ export async function PUT(request: Request) {
         console.log(`[API] Editing product in branch: ${branchId || 'HQ'} -> SSID: ${targetSheetId}`);
         const success = await editProduct(oldName, updates, targetSheetId);
         if (success) {
+            // Audit Log
+            try {
+                const { logAction } = await import('@/lib/auditTrail');
+                const { getServerSession } = await import("next-auth/next");
+                const { authOptions } = await import("@/lib/auth");
+                // @ts-ignore
+                const session = await getServerSession(authOptions);
+
+                await logAction({
+                    userId: session?.user?.email || 'System',
+                    userName: session?.user?.name || 'Inventory Manager',
+                    action: 'UPDATE',
+                    module: 'Inventory',
+                    description: `Updated product: ${oldName}`,
+                    newValues: updates
+                });
+            } catch (auditErr) {
+                console.warn("Audit Log Failed:", auditErr);
+            }
+
             return NextResponse.json({ success: true });
         } else {
             return NextResponse.json({ error: "Failed to update product (not found?)" }, { status: 404 });

@@ -67,6 +67,11 @@ export async function POST(request: Request) {
     try {
       const { logAction } = await import('@/lib/auditTrail');
       const { checkStockRules } = await import('@/lib/automation');
+      const { getServerSession } = await import("next-auth/next");
+      const { authOptions } = await import("@/lib/auth");
+
+      // @ts-ignore
+      const session = await getServerSession(authOptions);
 
       // Parallelize rule checking
       const productsRefresh = await getProducts();
@@ -79,8 +84,8 @@ export async function POST(request: Request) {
       }));
 
       await logAction({
-        userId: 'System', 
-        userName: 'Inbound API',
+        userId: session?.user?.email || 'System', 
+        userName: session?.user?.name || 'Inbound API',
         action: 'CREATE',
         module: 'Inbound',
         description: `Received ${items.length} items (Doc: ${items[0].docRef || 'N/A'})`,

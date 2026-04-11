@@ -170,6 +170,7 @@ export async function POST(request: Request) {
     // 10. Write to Transaction Sheet (RESTORED)
     try {
         const { writeTransactionData } = await import('@/lib/transactionUtils');
+        const { logAction } = await import('@/lib/auditTrail');
         const transactionItems: any[] = [];
         
         // Use dataToArchive which we built earlier
@@ -196,6 +197,16 @@ export async function POST(request: Request) {
                  console.log(`[Process] Writing ${transactionItems.length} rows to Transaction (SSID: ${invSSID})...`);
                  await writeTransactionData(transactionItems, invSSID);
                  console.log(`[Process] ✅ Transaction write successful`);
+
+                 // Audit Log
+                 await logAction({
+                    userId: 'System',
+                    userName: 'Order Processor',
+                    action: 'CREATE',
+                    module: 'Outbound',
+                    description: `Processed Order ${newDocId} for ${custName} (${transactionItems.length} items)`,
+                    newValues: { docId: newDocId, customer: custName, items: transactionItems }
+                 });
             }
         }
     } catch (txErr) {

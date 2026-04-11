@@ -40,6 +40,11 @@ export async function POST(request: Request) {
       const { logAction } = await import('@/lib/auditTrail');
       const { checkStockRules } = await import('@/lib/automation');
       const { getProducts } = await import('@/lib/googleSheets');
+      const { getServerSession } = await import("next-auth/next");
+      const { authOptions } = await import("@/lib/auth");
+
+      // @ts-ignore
+      const session = await getServerSession(authOptions);
       
       // Fetch current stock to calculate projected stock after this outbound
       const products = await getProducts();
@@ -54,8 +59,8 @@ export async function POST(request: Request) {
       }));
 
       await logAction({
-        userId: 'System', 
-        userName: 'Outbound API',
+        userId: session?.user?.email || 'System', 
+        userName: session?.user?.name || 'Outbound API',
         action: 'CREATE', 
         module: 'Outbound',
         description: `Issued ${items.length} items (Doc: ${items[0].docRef || 'N/A'})`,

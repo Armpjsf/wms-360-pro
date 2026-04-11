@@ -364,6 +364,21 @@ export async function POST(req: Request) {
         }
         await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
         console.log('[Finalize] Archive updated');
+
+        // Audit Log
+        try {
+            const { logAction } = await import('@/lib/auditTrail');
+            await logAction({
+                userId: 'System',
+                userName: 'Order Finalizer',
+                action: 'UPDATE',
+                module: 'Outbound',
+                description: `Finalized and signed Order ${docNum} for ${customerName}`,
+                newValues: { docId: docNum, customer: customerName, pdfLink: pdfLink }
+            });
+        } catch (auditErr) {
+            console.warn("[Finalize] Audit Log Failed:", auditErr);
+        }
     }
 
     // 5. Clear Form
