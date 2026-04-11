@@ -99,7 +99,7 @@ export default function UserManagerPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-      if(!confirm('Are you sure you want to delete this user?')) return;
+      if(!confirm(t('confirm_delete_user'))) return;
       await fetch('/api/admin/users', {
           method: 'DELETE',
           body: JSON.stringify({ id: userId })
@@ -196,13 +196,13 @@ export default function UserManagerPage() {
                             onClick={() => handleEditUser(user)}
                             className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                         >
-                            <UserPlus className="w-4 h-4" /> Edit User
+                            <UserPlus className="w-4 h-4" /> {t('edit_user')}
                         </button>
                         <button 
                              onClick={() => handleDeleteUser(user.id)}
                             className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                         >
-                            <XCircle className="w-4 h-4" /> Delete User
+                            <XCircle className="w-4 h-4" /> {t('delete_user')}
                         </button>
                      </div>
                   )}
@@ -217,7 +217,7 @@ export default function UserManagerPage() {
       {showModal && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
               <div className="bg-white border border-slate-200 p-6 rounded-xl w-full max-w-sm space-y-4 shadow-2xl">
-                  <h3 className="text-lg font-bold text-slate-900">{t('add_user')}</h3>
+                  <h3 className="text-lg font-bold text-slate-900">{isEditing ? t('edit_user') : t('add_new_user')}</h3>
                   
                   {/* Username */}
                   <div>
@@ -261,7 +261,7 @@ export default function UserManagerPage() {
 
                   {/* Branch Access */}
                   <div>
-                      <label className="text-xs text-slate-500 block mb-1">Branch Access</label>
+                      <label className="text-xs text-slate-500 block mb-1">{t('allowed_branches')}</label>
                       <div className="bg-slate-50 border border-slate-300 rounded p-2 max-h-32 overflow-y-auto space-y-1">
                           {/* All Access Option */}
                           <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded">
@@ -271,7 +271,7 @@ export default function UserManagerPage() {
                                   onChange={() => toggleBranch('*')}
                                   className="rounded text-blue-600 focus:ring-blue-500"
                               />
-                               All Branches (Unlimited)
+                               {t('all_branches')}
                           </label>
                           <div className="h-px bg-slate-200 my-1"/>
                           {branches.map(b => (
@@ -297,7 +297,7 @@ export default function UserManagerPage() {
                         disabled={!newUser.username || (!isEditing && !newUser.password)}
                         className="px-4 py-2 bg-blue-600 rounded text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {t('save') || 'Save'}
+                        {isEditing ? t('save_changes') : t('save')}
                       </button>
                   </div>
               </div>

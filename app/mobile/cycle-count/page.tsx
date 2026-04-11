@@ -32,7 +32,10 @@ interface LogEntry {
   status: string;
 }
 
+import { useLanguage } from '@/components/providers/LanguageProvider';
+
 export default function CycleCountPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'count' | 'history'>('count');
   const [items, setItems] = useState<DailyCountItem[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -74,8 +77,8 @@ export default function CycleCountPage() {
 
         // Notify if there are items
         if (data.length > 0) {
-            sendNotification('Cycle Count Tasks', {
-                body: `You have ${data.length} items to verify today.`,
+            sendNotification(t('alert_cycle_tasks'), {
+                body: t('alert_cycle_body').replace('{0}', String(data.length)),
                 tag: 'cycle-count'
             });
         }
@@ -99,7 +102,7 @@ export default function CycleCountPage() {
 
   const handleCountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProduct || !actualQty) return alert('กรุณาระบุจำนวนที่นับได้จริง');
+    if (!selectedProduct || !actualQty) return alert(t('alert_input_actual'));
 
     const sysQty = selectedProduct.system_qty;
     const actQty = parseFloat(actualQty);
@@ -127,7 +130,7 @@ export default function CycleCountPage() {
           location: selectedProduct.location,
           system_qty: selectedProduct.system_qty,
           actual_qty: actualQty,
-          inspector: inspector || 'พนักงาน',
+          inspector: inspector || t('staff'),
           variance_reason: varianceReason,
           photo_url: photoUrl,
         })
@@ -138,12 +141,12 @@ export default function CycleCountPage() {
         setItems(prev => prev.filter(item => item.product_name !== selectedProduct.product_name));
 
         const result = await res.json();
-        alert(`✅ บันทึกสำเร็จ!${result.has_variance ? ` ผลต่าง: ${result.variance}` : ''}`);
+        alert(`✅ ${t('save_success')}${result.has_variance ? ` ${t('difference')}: ${result.variance}` : ''}`);
         resetForm();
         fetchLogs();
         // setActiveTab('history'); // Keep user on count tab for continuous flow
       } else {
-        alert('❌ บันทึกไม่สำเร็จ');
+        alert(`❌ ${t('save_failed')}`);
       }
     } catch (e) {
       alert('Error: ' + e);
@@ -192,8 +195,8 @@ export default function CycleCountPage() {
                   <ClipboardCheck className="w-8 h-8 text-indigo-600" />
               </div>
               <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">Cycle Count</h1>
-                  <p className="text-slate-500 text-xs font-medium">Daily Stock Verification</p>
+                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">{t('cycle_count_title')}</h1>
+                  <p className="text-slate-500 text-xs font-medium">{t('cycle_count_subtitle')}</p>
               </div>
            </div>
            {loading && <RefreshCw className="w-5 h-5 text-indigo-500 animate-spin" />}
@@ -206,8 +209,8 @@ export default function CycleCountPage() {
             className="mt-4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl p-4 shadow-lg shadow-indigo-500/20 text-white"
           >
             <div className="flex justify-between items-center">
-                <span className="text-indigo-100 text-sm font-medium">✨ Target for today</span>
-                <span className="text-2xl font-black">{filteredItems.length} Items</span>
+                <span className="text-indigo-100 text-sm font-medium">✨ {t('target_today')}</span>
+                <span className="text-2xl font-black">{filteredItems.length} {t('ai_unit')}</span>
             </div>
             <div className="w-full bg-white/20 h-1 mt-2 rounded-full overflow-hidden">
                 <div className="bg-white h-full w-1/3 rounded-full" />
@@ -225,7 +228,7 @@ export default function CycleCountPage() {
             activeTab === 'count' ? "border-indigo-600 text-indigo-600 bg-indigo-50/50" : "border-transparent text-slate-400 hover:text-slate-600"
           )}
         >
-          Count List ({filteredItems.length})
+          {t('tab_count')} ({filteredItems.length})
           {activeTab === 'count' && <motion.div layoutId="tab" className="absolute bottom-[-2px] left-0 right-0 h-0.5 bg-indigo-600" />}
         </button>
         <button
@@ -235,7 +238,7 @@ export default function CycleCountPage() {
             activeTab === 'history' ? "border-indigo-600 text-indigo-600 bg-indigo-50/50" : "border-transparent text-slate-400 hover:text-slate-600"
           )}
         >
-          History Log
+          {t('tab_history')}
           {activeTab === 'history' && <motion.div layoutId="tab" className="absolute bottom-[-2px] left-0 right-0 h-0.5 bg-indigo-600" />}
         </button>
       </div>
@@ -267,7 +270,7 @@ export default function CycleCountPage() {
                                 : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300"
                           )}
                         >
-                          {zone === 'All' ? '🌐 All Zones' : `📍 Zone ${zone}`}
+                          {zone === 'All' ? `🌐 ${t('all_zones')}` : `📍 ${t('zone_label').replace('{0}', zone)}`}
                         </button>
                       ))}
                     </div>
@@ -278,7 +281,7 @@ export default function CycleCountPage() {
                   <Search className="text-slate-400 w-5 h-5 ml-2" />
                   <input
                     type="text"
-                    placeholder="Search product or location..."
+                    placeholder={t('search_product_loc')}
                     className="bg-transparent text-slate-900 outline-none flex-1 placeholder:text-slate-400 font-medium h-10"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
@@ -296,8 +299,8 @@ export default function CycleCountPage() {
                       <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                           <CheckCircle className="w-10 h-10 text-slate-300" />
                       </div>
-                      <p className="font-bold text-lg text-slate-600">All Caught Up!</p>
-                      <p className="text-sm">No items remaining to count</p>
+                      <p className="font-bold text-lg text-slate-600">{t('all_caught_up')}</p>
+                      <p className="text-sm">{t('no_items_remaining')}</p>
                     </div>
                   ) : (
                     <AnimatePresence mode='popLayout'>
@@ -326,11 +329,11 @@ export default function CycleCountPage() {
                         
                         <div className="bg-slate-50 rounded-xl p-3 grid grid-cols-2 gap-4">
                           <div>
-                            <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">System Qty</span>
+                            <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">{t('system_qty_label')}</span>
                             <span className="text-slate-900 font-black text-lg">{item.system_qty} <span className="text-xs text-slate-500 font-medium">{item.unit}</span></span>
                           </div>
                           <div>
-                            <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">Today's Flow</span>
+                            <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">{t('today_flow')}</span>
                             <span className={cn("font-black text-lg", item.movement_type === 'IN' ? 'text-emerald-600' : 'text-orange-500')}>
                               {item.movement_type === 'IN' ? `+${item.today_in}` : `-${item.today_out}`} <span className="text-xs text-slate-500 font-medium">{item.unit}</span>
                             </span>
@@ -338,7 +341,7 @@ export default function CycleCountPage() {
                         </div>
 
                         <div className="mt-4 flex justify-end items-center gap-2 text-indigo-600 font-bold text-sm group-hover:gap-3 transition-all">
-                          <span>Tap to Count</span> <span className="p-1 bg-indigo-100 rounded-full">➜</span>
+                          <span>{t('tap_to_count')}</span> <span className="p-1 bg-indigo-100 rounded-full">➜</span>
                         </div>
                       </motion.div>
                     ))}
@@ -363,24 +366,24 @@ export default function CycleCountPage() {
                         <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                             <AlertTriangle className="w-10 h-10 text-orange-500" />
                         </div>
-                        <h2 className="text-2xl font-black text-slate-900 mb-1">⚠️ Variance Detected</h2>
-                        <p className="text-slate-500 text-sm font-medium">Please review the discrepancy</p>
+                        <h2 className="text-2xl font-black text-slate-900 mb-1">⚠️ {t('variance_detected')}</h2>
+                        <p className="text-slate-500 text-sm font-medium">{t('review_discrepancy')}</p>
                       </div>
 
                       <div className="bg-slate-50 rounded-3xl p-6 mb-6 border border-slate-100">
                         <div className="grid grid-cols-2 gap-8 text-center relative">
                             <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2" />
                           <div>
-                            <div className="text-slate-400 text-xs font-bold uppercase mb-1">System</div>
+                            <div className="text-slate-400 text-xs font-bold uppercase mb-1">{t('legend_system') || 'System'}</div>
                             <div className="text-3xl font-black text-slate-900">{selectedProduct.system_qty}</div>
                           </div>
                           <div>
-                            <div className="text-slate-400 text-xs font-bold uppercase mb-1">Counted</div>
+                            <div className="text-slate-400 text-xs font-bold uppercase mb-1">{t('counted')}</div>
                             <div className="text-3xl font-black text-indigo-600">{actualQty}</div>
                           </div>
                         </div>
                         <div className="text-center mt-6 pt-6 border-t border-slate-200">
-                          <div className="text-slate-400 text-xs font-bold uppercase mb-2">Difference</div>
+                          <div className="text-slate-400 text-xs font-bold uppercase mb-2">{t('difference')}</div>
                           <div className={cn("text-5xl font-black tracking-tighter", parseFloat(actualQty) > selectedProduct.system_qty ? 'text-emerald-500' : 'text-rose-500')}>
                             {parseFloat(actualQty) > selectedProduct.system_qty ? '+' : ''}
                             {parseFloat(actualQty) - selectedProduct.system_qty} <span className="text-lg font-bold text-slate-400">{selectedProduct.unit}</span>
@@ -390,7 +393,7 @@ export default function CycleCountPage() {
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-slate-400 text-xs font-bold uppercase mb-2 ml-1">Reason (Optional)</label>
+                          <label className="block text-slate-400 text-xs font-bold uppercase mb-2 ml-1">{t('reason_optional')}</label>
                           <textarea
                             value={varianceReason}
                             onChange={e => setVarianceReason(e.target.value)}
@@ -401,12 +404,12 @@ export default function CycleCountPage() {
                         </div>
 
                         <div>
-                           <label className="block text-slate-400 text-xs font-bold uppercase mb-2 ml-1">Evidence (Optional)</label>
+                           <label className="block text-slate-400 text-xs font-bold uppercase mb-2 ml-1">{t('evidence_optional')}</label>
                            <button className="w-full bg-white border-2 border-dashed border-slate-200 rounded-2xl p-4 text-slate-500 hover:bg-slate-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2 group">
                              <div className="p-2 bg-slate-100 rounded-full group-hover:bg-indigo-50 transition-colors">
                                 <Camera className="w-5 h-5 group-hover:text-indigo-500" />
                              </div>
-                             <span className="font-bold">Add Photo Evidence</span>
+                             <span className="font-bold">{t('add_photo_evidence')}</span>
                            </button>
                         </div>
                       </div>
@@ -416,7 +419,7 @@ export default function CycleCountPage() {
                           onClick={submitCount}
                           className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/30 text-lg flex items-center justify-center gap-2"
                         >
-                          <span>Confirm Variance</span> <CheckCircle className="w-6 h-6" />
+                          <span>{t('confirm_variance')}</span> <CheckCircle className="w-6 h-6" />
                         </button>
                         <button
                           onClick={() => {
@@ -425,7 +428,7 @@ export default function CycleCountPage() {
                           }}
                           className="w-full py-4 text-slate-500 font-bold hover:bg-slate-100 rounded-2xl transition-colors"
                         >
-                          Go Back & Recount
+                          {t('go_back_recount')}
                         </button>
                       </div>
                     </motion.div>
@@ -448,13 +451,13 @@ export default function CycleCountPage() {
                                      <span>📍 {selectedProduct.location}</span>
                                 </div>
                                 <h2 className="text-2xl font-black mb-2 leading-tight">{selectedProduct.product_name}</h2>
-                                <p className="text-indigo-200 font-medium text-sm">Target: {selectedProduct.system_qty} {selectedProduct.unit}</p>
+                                <p className="text-indigo-200 font-medium text-sm">{t('target') || 'Target'}: {selectedProduct.system_qty} {selectedProduct.unit}</p>
                            </div>
                         </div>
 
                         {/* Input */}
                         <div className="bg-slate-50 rounded-[2rem] p-6 border border-slate-100 text-center">
-                          <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Enter Actual Quantity</label>
+                          <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">{t('enter_actual_qty')}</label>
                           <div className="relative max-w-[200px] mx-auto">
                               <input
                                 type="number"
@@ -471,13 +474,13 @@ export default function CycleCountPage() {
                         </div>
 
                         <div>
-                          <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 ml-4">Inspector Name</label>
+                          <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 ml-4">{t('inspector_name')}</label>
                           <input
                             type="text"
                             value={inspector}
                             onChange={e => setInspector(e.target.value)}
                             className="w-full bg-white border border-slate-200 rounded-2xl p-5 text-slate-900 font-bold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm placeholder:text-slate-300"
-                            placeholder="Your Name..."
+                            placeholder={t('placeholder_name') || "Your Name..."}
                           />
                         </div>
 
@@ -487,14 +490,14 @@ export default function CycleCountPage() {
                             type="submit"
                             className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-black rounded-3xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/30"
                           >
-                            <span>Verify Count</span> <CheckCircle className="w-7 h-7" />
+                            <span>{t('verify_count')}</span> <CheckCircle className="w-7 h-7" />
                           </button>
                           <button
                             type="button"
                             onClick={resetForm}
                             className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 hover:bg-slate-50 rounded-3xl transition-colors"
                           >
-                            Cancel
+                            {t('btn_cancel')}
                           </button>
                         </div>
                       </form>
@@ -513,18 +516,18 @@ export default function CycleCountPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                   <tr>
-                    <th className="p-4">Date</th>
-                    <th className="p-4">Product</th>
-                    <th className="p-4 text-right">Sys</th>
-                    <th className="p-4 text-right">Act</th>
-                    <th className="p-4 text-right">Var</th>
-                    <th className="p-4 text-right">Status</th>
+                    <th className="p-4">{t('col_date')}</th>
+                    <th className="p-4">{t('product')}</th>
+                    <th className="p-4 text-right">SYS</th>
+                    <th className="p-4 text-right">ACT</th>
+                    <th className="p-4 text-right">VAR</th>
+                    <th className="p-4 text-right">{t('col_status')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-600">
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-12 text-center text-slate-400 font-medium">No history logs found</td>
+                      <td colSpan={6} className="p-12 text-center text-slate-400 font-medium">{t('no_history_logs')}</td>
                     </tr>
                   ) : (
                     logs.map((log, i) => (
@@ -538,9 +541,9 @@ export default function CycleCountPage() {
                         </td>
                         <td className="p-4 text-right">
                            {log.variance === 0 ? (
-                              <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Matched</span>
+                              <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{t('matched')}</span>
                            ) : (
-                              <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Variance</span>
+                              <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{t('variance_status')}</span>
                            )}
                         </td>
                       </tr>

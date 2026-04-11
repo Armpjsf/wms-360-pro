@@ -226,7 +226,7 @@ export default function POLogPage() {
   };
 
   const handleDeleteDelivery = async (log: any) => {
-    if (!confirm(`ยืนยันการลบประวัติการส่งของลูกค้า ${log.customer} (Order: ${log.orderNo}) ใช่หรือไม่?`)) {
+    if (!confirm(t('confirm_delete_delivery').replace('{0}', log.customer).replace('{1}', log.orderNo))) {
         return;
     }
 
@@ -399,7 +399,7 @@ export default function POLogPage() {
                 : "border-transparent text-slate-400 hover:text-slate-600"
             )}
           >
-            {t('po_log_title')} (Order Logs)
+            {t('tab_orders')}
           </button>
           <button
             onClick={() => setActiveTab('delivery')}
@@ -410,7 +410,7 @@ export default function POLogPage() {
                 : "border-transparent text-slate-400 hover:text-slate-600"
             )}
           >
-            ประวัติงานส่ง (Delivery History)
+            {t('tab_delivery')}
           </button>
         </div>
 
@@ -423,7 +423,6 @@ export default function POLogPage() {
           >
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* ... existing KPIs ... */}
               <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-sm flex items-center gap-4">
                 <div className="p-4 bg-blue-50 text-blue-600 rounded-xl">
                   <Truck className="w-6 h-6" />
@@ -560,7 +559,7 @@ export default function POLogPage() {
                             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-medium transition-colors shadow-sm shadow-emerald-500/20"
                         >
                             <Download className="w-4 h-4" />
-                            <span>Export CSV</span>
+                            <span>{t('export_csv')}</span>
                         </button>
                     </div>
                 </div>
@@ -751,7 +750,7 @@ export default function POLogPage() {
                                 title={`รวบส่งทั้ง Order (${log.orderNo})`}
                               >
                                 <Truck className="w-4 h-4" />
-                                <span>รวบส่ง Order</span>
+                                <span>{t('group_send_order')}</span>
                               </button>
                               <div className="text-right min-w-[80px]">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase">
@@ -822,7 +821,7 @@ export default function POLogPage() {
                         <DollarSign className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">รวมค่าขนส่ง</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t('total_shipping_cost')}</p>
                         <p className="text-2xl font-black text-slate-800">
                             ฿{filteredDeliveryLogs.reduce((sum, log) => sum + (log.shippingCost || 0), 0).toLocaleString()}
                         </p>
@@ -833,7 +832,7 @@ export default function POLogPage() {
                         <Package className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">รวมจำนวนแพ็ก</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t('total_packs')}</p>
                         <p className="text-2xl font-black text-slate-800">
                             {filteredDeliveryLogs.reduce((sum, log) => sum + (log.packs || 0), 0).toLocaleString()}
                         </p>
@@ -844,7 +843,7 @@ export default function POLogPage() {
                         <Truck className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">จำนวนงานส่ง</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{t('total_shipment_count')}</p>
                         <p className="text-2xl font-black text-slate-800">
                             {filteredDeliveryLogs.length.toLocaleString()}
                         </p>
@@ -856,7 +855,7 @@ export default function POLogPage() {
             <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col md:flex-row gap-4 shadow-sm items-center">
                 <div className="flex-1 w-full flex gap-2">
                     <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                        <span className="text-slate-400 text-xs font-bold uppercase">วันที่เริ่ม</span>
+                        <span className="text-slate-400 text-xs font-bold uppercase">{t('date_start')}</span>
                         <input
                             type="date"
                             value={deliveryStartDate}
@@ -865,7 +864,7 @@ export default function POLogPage() {
                         />
                     </div>
                     <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                        <span className="text-slate-400 text-xs font-bold uppercase">วันที่สิ้นสุด</span>
+                        <span className="text-slate-400 text-xs font-bold uppercase">{t('date_end')}</span>
                         <input
                             type="date"
                             value={deliveryEndDate}
@@ -881,7 +880,7 @@ export default function POLogPage() {
                     }}
                     className="px-4 py-2 text-slate-400 hover:text-slate-600 font-bold text-xs uppercase"
                 >
-                    ล้างการกรอง
+                    {t('clear_filter')}
                 </button>
             </div>
 
@@ -889,24 +888,24 @@ export default function POLogPage() {
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6">
                 <h3 className="font-black text-slate-800 text-lg mb-4 flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-indigo-500" />
-                    สรุปพื้นที่จัดส่ง (Delivery Areas)
+                    {t('delivery_areas')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     {Object.entries(locationSummary).map(([loc, count], idx) => (
                         <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                            <p className="text-xs text-slate-400 font-bold uppercase truncate" title={loc}>{loc || "ไม่ระบุที่อยู่"}</p>
+                            <p className="text-xs text-slate-400 font-bold uppercase truncate" title={loc}>{loc || "N/A"}</p>
                             <p className="text-xl font-black text-indigo-600">{count} <span className="text-[10px] text-slate-400 font-medium">ครั้ง</span></p>
                         </div>
                     ))}
                     {Object.keys(locationSummary).length === 0 && (
-                        <p className="col-span-full text-center py-4 text-slate-400 text-sm">ยังไม่มีข้อมูลพื้นที่จัดส่ง</p>
+                        <p className="col-span-full text-center py-4 text-slate-400 text-sm">{t('no_logs')}</p>
                     )}
                 </div>
             </div>
 
             {/* Delivery History Header */}
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-black text-slate-800">ประวัติการจัดส่งสินค้า</h2>
+                <h2 className="text-2xl font-black text-slate-800">{t('delivery_history_title')}</h2>
                 <button
                     onClick={() => {
                         setEditingLog(null);
@@ -927,7 +926,7 @@ export default function POLogPage() {
                     className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                 >
                     <Plus className="w-5 h-5" />
-                    เพิ่มข้อมูลการส่ง
+                    {t('add_delivery_btn')}
                 </button>
             </div>
 
@@ -943,7 +942,7 @@ export default function POLogPage() {
                         >
                             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-800">บันทึกข้อมูลการจัดส่งสินค้า</h3>
+                                    <h3 className="text-xl font-black text-slate-800">{editingLog ? 'แก้ไขข้อมูลการจัดส่ง' : 'บันทึกข้อมูลการจัดส่งสินค้า'}</h3>
                                     <p className="text-slate-500 text-sm">กรอกรายละเอียดเพื่อบันทึกลงในประวัติ</p>
                                 </div>
                                 <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
@@ -954,7 +953,7 @@ export default function POLogPage() {
                             <form onSubmit={handleAddDelivery} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">วันที่จัดส่ง</label>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('col_date')}</label>
                                         <div className="relative group">
                                             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                                             <input 
@@ -967,7 +966,7 @@ export default function POLogPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">ชื่อลูกค้า</label>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('customer')}</label>
                                         <input 
                                             type="text" 
                                             required
@@ -980,7 +979,7 @@ export default function POLogPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">สถานที่จัดส่ง</label>
+                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('delivery_location')}</label>
                                     <div className="relative group">
                                         <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                                         <textarea 
@@ -995,7 +994,7 @@ export default function POLogPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">เลขที่ Order</label>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('col_order_no')}</label>
                                         <input 
                                             type="text" 
                                             placeholder="เช่น 20260410-001"
@@ -1022,7 +1021,7 @@ export default function POLogPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">จำนวนของ</label>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('col_qty')}</label>
                                         <input 
                                             type="number" 
                                             min="0"
@@ -1032,7 +1031,7 @@ export default function POLogPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">จำนวนแพ็ก</label>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('packs_count')}</label>
                                         <input 
                                             type="number" 
                                             min="0"
@@ -1043,7 +1042,7 @@ export default function POLogPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-indigo-500 uppercase tracking-wider ml-1 flex items-center gap-1">
-                                            <DollarSign className="w-3 h-3" /> ค่าขนส่ง
+                                            <DollarSign className="w-3 h-3" /> {t('shipping_cost')}
                                         </label>
                                         <input 
                                             type="number" 
@@ -1058,7 +1057,7 @@ export default function POLogPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">หมายเหตุ</label>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('col_notes')}</label>
                                         <input 
                                             type="text" 
                                             value={formData.notes}
@@ -1087,14 +1086,14 @@ export default function POLogPage() {
                                         onClick={() => setShowAddForm(false)}
                                         className="flex-1 px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all active:scale-95"
                                     >
-                                        ยกเลิก
+                                        {t('btn_cancel')}
                                     </button>
                                     <button 
                                         type="submit"
                                         disabled={submitting}
                                         className="flex-[2] px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/30 active:scale-95 disabled:opacity-50"
                                     >
-                                        {submitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+                                        {submitting ? t('btn_saving') : t('btn_save')}
                                     </button>
                                 </div>
                             </form>
@@ -1109,13 +1108,13 @@ export default function POLogPage() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-widest">
                             <tr>
-                                <th className="px-6 py-5">วันที่</th>
-                                <th className="px-6 py-5">ชื่อลูกค้า / สถานที่</th>
-                                <th className="px-6 py-5">Order / SKU</th>
-                                <th className="px-6 py-5 text-center">จำนวน / แพ็ก</th>
-                                <th className="px-6 py-5 text-right">ค่าขนส่ง</th>
-                                <th className="px-6 py-5">หมายเหตุ</th>
-                                <th className="px-6 py-5 text-center">เอกสาร</th>
+                                <th className="px-6 py-5">{t('col_date')}</th>
+                                <th className="px-6 py-5">{t('col_customer_loc')}</th>
+                                <th className="px-6 py-5">{t('col_order_sku')}</th>
+                                <th className="px-6 py-5 text-center">{t('col_qty_packs')}</th>
+                                <th className="px-6 py-5 text-right">{t('shipping_cost')}</th>
+                                <th className="px-6 py-5">{t('col_notes')}</th>
+                                <th className="px-6 py-5 text-center">{t('col_docs')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">

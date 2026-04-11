@@ -10,49 +10,49 @@ export default function AdminPage() {
   const menuItems = [
     { 
       title: t('menu_ops_user'), 
-      desc: "Manage users, roles, and permissions", 
+      desc: t('admin_users_desc'), 
       icon: Users, 
       href: '/admin/users',
       color: 'bg-blue-500'
     },
     { 
       title: t('menu_audit'), 
-      desc: "View system logs and activity history", 
+      desc: t('admin_audit_desc'), 
       icon: History, 
       href: '/admin/audit-trail',
       color: 'bg-amber-500'
     },
     { 
       title: t('menu_quality'), 
-      desc: "Check data integrity and consistency", 
+      desc: t('admin_quality_desc'), 
       icon: ShieldAlert, 
       href: '/admin/data-quality',
       color: 'bg-emerald-500'
     },
     { 
       title: t('menu_smart_restock'), 
-      desc: "AI-powered inventory analysis", 
+      desc: t('admin_smart_restock_desc'), 
       icon: Sparkles, 
       href: '/ai-reorder',
       color: 'bg-purple-500'
     },
     { 
       title: t('menu_slotting'), 
-      desc: "Warehouse layout optimization (ABC)", 
+      desc: t('admin_slotting_desc'), 
       icon: LayoutGrid, 
       href: '/admin/slotting',
       color: 'bg-indigo-500'
     },
     { 
-      title: "Label Designer", 
-      desc: "Print product stickers & barcodes", 
+      title: t('barcode_title'), 
+      desc: t('admin_labels_desc'), 
       icon: Printer, 
       href: '/admin/labels',
       color: 'bg-rose-500'
     },
     { 
-      title: "Branch Management", 
-      desc: "Add/Remove locations & sheets", 
+      title: t('branch_management_title'), 
+      desc: t('admin_branches_desc'), 
       icon: Building2, 
       href: '/admin/branches',
       color: 'bg-teal-500'
@@ -66,7 +66,7 @@ export default function AdminPage() {
           <Settings className="w-8 h-8 text-slate-700" />
           {t('menu_admin')}
         </h1>
-        <p className="text-slate-500">System Configuration and Management Console</p>
+        <p className="text-slate-500">{t('admin_subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

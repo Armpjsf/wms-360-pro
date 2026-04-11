@@ -17,7 +17,10 @@ interface BranchConfig {
     status: 'Active' | 'Inactive';
 }
 
+import { useLanguage } from '@/components/providers/LanguageProvider';
+
 export default function AdminBranchesPage() {
+    const { t } = useLanguage();
     const { sendNotification } = useNotification();
     const [branches, setBranches] = useState<BranchConfig[]>([]);
     const [loading, setLoading] = useState(true);
@@ -66,7 +69,7 @@ export default function AdminBranchesPage() {
             });
 
             if (res.ok) {
-                sendNotification('Success', { body: 'Branch saved successfully!' });
+                sendNotification('Success', { body: t('branch_saved_success') });
                 setIsAdding(false);
                 setFormData({ id: '', name: '', spreadsheetId: '', color: 'slate' });
                 fetchData();
@@ -79,7 +82,7 @@ export default function AdminBranchesPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to deactivate this branch?')) return;
+        if (!confirm(t('confirm_deactivate_branch'))) return;
 
         try {
             const res = await fetch(getApiUrl(`/api/branches?id=${id}`), {
@@ -87,7 +90,7 @@ export default function AdminBranchesPage() {
             });
 
             if (res.ok) {
-                sendNotification('Success', { body: 'Branch deactivated.' });
+                sendNotification('Success', { body: t('branch_deactivated') });
                 fetchData();
             } else {
                 throw new Error('Failed to delete');
@@ -108,8 +111,8 @@ export default function AdminBranchesPage() {
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900">Branch Management</h1>
-                        <p className="text-slate-500 font-medium">Configure locations and spreadsheet connections</p>
+                        <h1 className="text-3xl font-black text-slate-900">{t('branch_management_title')}</h1>
+                        <p className="text-slate-500 font-medium">{t('branch_management_subtitle')}</p>
                     </div>
                     <button onClick={fetchData} className="ml-auto p-2 bg-white rounded-lg shadow-sm hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-colors">
                         <RefreshCw className="w-5 h-5" />
@@ -119,7 +122,7 @@ export default function AdminBranchesPage() {
                         className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20"
                     >
                         <Plus className="w-5 h-5" />
-                        Add Branch
+                        {t('add_branch')}
                     </button>
                 </div>
 
@@ -132,11 +135,11 @@ export default function AdminBranchesPage() {
                         className="overflow-hidden"
                     >
                         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-xl border border-indigo-100">
-                            <h3 className="font-bold text-lg text-slate-800 mb-6">New Branch Details</h3>
+                            <h3 className="font-bold text-lg text-slate-800 mb-6">{t('new_branch_details')}</h3>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Branch ID (Slug)</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('branch_id_label')}</label>
                                     <input 
                                         type="text" 
                                         placeholder="e.g. branch-2"
@@ -144,10 +147,10 @@ export default function AdminBranchesPage() {
                                         onChange={e => setFormData({...formData, id: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                                     />
-                                    <p className="text-[10px] text-slate-400 mt-1">Unique identifier, lowercase, no spaces.</p>
+                                    <p className="text-[10px] text-slate-400 mt-1">{t('branch_id_desc')}</p>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('display_name')}</label>
                                     <input 
                                         type="text" 
                                         placeholder="e.g. Chiang Mai Branch"
@@ -157,7 +160,7 @@ export default function AdminBranchesPage() {
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Google Spreadsheet ID</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('spreadsheet_id_label')}</label>
                                     <div className="relative">
                                         <LinkIcon className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                                         <input 
@@ -168,10 +171,10 @@ export default function AdminBranchesPage() {
                                             className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                                         />
                                     </div>
-                                    <p className="text-[10px] text-slate-400 mt-1">Found in the Google Sheet URL: /spreadsheets/d/<b>ID</b>/edit</p>
+                                    <p className="text-[10px] text-slate-400 mt-1">{t('spreadsheet_id_desc')}</p>
                                 </div>
                                 <div className="md:col-span-2">
-                                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Branch Color</label>
+                                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('branch_color')}</label>
                                      <div className="flex flex-wrap gap-2">
                                         {colors.map(color => (
                                             <button
@@ -190,8 +193,8 @@ export default function AdminBranchesPage() {
                             </div>
 
                             <div className="flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">Cancel</button>
-                                <button type="submit" className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20">Save Branch</button>
+                                <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">{t('cancel')}</button>
+                                <button type="submit" className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20">{t('save_branch')}</button>
                             </div>
                         </form>
                     </motion.div>
@@ -201,13 +204,13 @@ export default function AdminBranchesPage() {
                 {/* List */}
                 <div className="space-y-4">
                     {loading ? (
-                        <div className="text-center py-20 text-slate-400">Loading branches...</div>
+                        <div className="text-center py-20 text-slate-400">{t('loading')}</div>
                     ) : branches.length === 0 ? (
                         <div className="bg-white rounded-2xl p-10 text-center border dashed border-slate-200">
                             <Building2 className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                             <h3 className="text-lg font-bold text-slate-800">No Branches Configured</h3>
                             <p className="text-slate-500 mb-6">Start by adding your first branch configuration.</p>
-                            <button onClick={() => setIsAdding(true)} className="text-indigo-600 font-bold hover:underline">Add Branch</button>
+                            <button onClick={() => setIsAdding(true)} className="text-indigo-600 font-bold hover:underline">{t('add_branch')}</button>
                         </div>
                     ) : (
                         branches.map((branch) => (

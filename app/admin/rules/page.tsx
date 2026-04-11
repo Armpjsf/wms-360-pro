@@ -16,7 +16,10 @@ interface AutomationRule {
     lastTriggered?: string;
 }
 
+import { useLanguage } from '@/components/providers/LanguageProvider';
+
 export default function RulesPage() {
+    const { t } = useLanguage();
     const [rules, setRules] = useState<AutomationRule[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -131,17 +134,17 @@ export default function RulesPage() {
                 <div>
                      <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
                         <Bot className="w-8 h-8 text-indigo-600" />
-                        Automation Rules
+                        {t('rules_title')}
                         <span className="px-3 py-1 bg-indigo-100 text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider">Beta</span>
                      </h1>
-                     <p className="text-slate-500 mt-2">Create "If This Then That" rules to automate your warehouse.</p>
+                     <p className="text-slate-500 mt-2">{t('rules_subtitle')}</p>
                 </div>
                 <button 
                     onClick={() => setIsCreating(!isCreating)}
                     className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
                 >
                     <Plus className="w-5 h-5" />
-                    New Rule
+                    {t('new_rule')}
                 </button>
             </header>
 
@@ -154,7 +157,7 @@ export default function RulesPage() {
                 >
                     <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                         <Save className="w-5 h-5 text-indigo-500" />
-                        Define New Rule
+                        {t('define_new_rule')}
                     </h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -171,7 +174,7 @@ export default function RulesPage() {
                             </div>
                             
                             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-4">IF (Condition)</label>
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-4">{t('if_condition')}</label>
                                 <div className="flex gap-2">
                                     <select disabled className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-600">
                                         <option>When Stock Level</option>
@@ -198,7 +201,7 @@ export default function RulesPage() {
                         {/* Right: Action */}
                         <div className="space-y-4">
                             <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 h-full">
-                                <label className="block text-xs font-black text-indigo-400 uppercase tracking-wider mb-4">THEN (Action)</label>
+                                <label className="block text-xs font-black text-indigo-400 uppercase tracking-wider mb-4">{t('then_action')}</label>
                                 <div className="space-y-3">
                                     <select 
                                         value={actionType}
@@ -244,8 +247,8 @@ export default function RulesPage() {
             ) : rules.length === 0 ? (
                 <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
                     <Bot className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-bold text-slate-600">No Rules Defined</h3>
-                    <p className="text-slate-400">Create your first automation rule to get started.</p>
+                    <h3 className="text-lg font-bold text-slate-600">{t('no_history')}</h3>
+                    <p className="text-slate-400">{t('no_rules_desc')}</p>
                 </div>
             ) : (
                 <div className="grid gap-4">

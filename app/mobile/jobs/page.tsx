@@ -68,8 +68,8 @@ export default function MobileJobsPage() {
               setActiveJob(data.activeForm);
               // Notify about active job
               if (data.activeForm.docNum !== activeJob?.docNum) {
-                 sendNotification(`New Active Job: ${data.activeForm.docNum}`, {
-                     body: `Customer: ${data.activeForm.customer}`,
+                 sendNotification(t('active_job_alert').replace('{0}', data.activeForm.docNum), {
+                     body: t('customer_label').replace('{0}', data.activeForm.customer),
                      tag: 'new-job-active'
                  });
               }
@@ -202,8 +202,8 @@ export default function MobileJobsPage() {
               </div>
               <h1 className="text-4xl font-black mb-2 relative z-10">{t('mobile_job_complete')}</h1>
               <p className="text-emerald-200 mb-8 max-w-xs mx-auto relative z-10">
-                  Document <strong>{successData.docNum}</strong> finalized.<br/>
-                  <span className="text-sm opacity-75">PDF sent to dashboard automatically.</span>
+                  {t('document_finalized').replace('{0}', successData.docNum)}<br/>
+                  <span className="text-sm opacity-75">{t('pdf_sent_dashboard')}</span>
               </p>
               
               {nextJob && (
@@ -214,7 +214,7 @@ export default function MobileJobsPage() {
                       }}
                       className="w-full bg-white text-emerald-900 font-bold py-5 rounded-3xl flex items-center justify-center gap-2 shadow-xl hover:bg-emerald-50 transition-colors relative z-10 mb-4 active:scale-95"
                   >
-                      <span>Start Next: {nextJob.docNum || nextJob.name}</span> <Play className="w-5 h-5 fill-emerald-900" />
+                      <span>{t('start_next_job').replace('{0}', nextJob.docNum || nextJob.name)}</span> <Play className="w-5 h-5 fill-emerald-900" />
                   </button>
               )}
               
@@ -245,7 +245,7 @@ export default function MobileJobsPage() {
                      <p className="text-slate-500 text-xs font-medium">{t('mobile_picking_tasks')}</p>
                      <div className={`flex items-center gap-1.5 text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${isConnected ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                         {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                        {isConnected ? 'Online' : 'Offline'}
+                        {isConnected ? t('online') : t('offline')}
                     </div>
                 </div>
             </div>
@@ -366,13 +366,13 @@ export default function MobileJobsPage() {
                 animate={{ opacity: 1 }}
                 className="mb-6"
             >
-                <h2 className="text-slate-400 font-bold uppercase tracking-wider text-xs mb-4 px-2">Ready to Process ({waitingJobs.length})</h2>
+                <h2 className="text-slate-400 font-bold uppercase tracking-wider text-xs mb-4 px-2">{t('ready_to_process')} ({waitingJobs.length})</h2>
                 <div className="space-y-3">
                     {waitingJobs.map((job) => (
                         <div key={job.docNum} className="bg-white border-l-4 border-l-orange-400 border-y border-r border-slate-200 rounded-r-2xl p-4 shadow-sm flex justify-between items-center">
                             <div>
                                 <div className="font-bold text-slate-800 text-sm">{job.docNum}</div>
-                                <div className="text-xs text-indigo-600 font-bold mb-0.5">PO REF: {job.orderNo || "N/A"}</div>
+                                <div className="text-xs text-indigo-600 font-bold mb-0.5">{t('col_po_ref')}: {job.orderNo || "N/A"}</div>
                                 <div className="text-xs text-slate-500 flex items-center gap-1">
                                     <User className="w-3 h-3" /> {job.customer}
                                 </div>
@@ -381,7 +381,7 @@ export default function MobileJobsPage() {
                                 onClick={() => handleStartJob(job.docNum)}
                                 className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
                             >
-                                Start
+                                {t('start_btn')}
                             </button>
                         </div>
                     ))}
@@ -411,7 +411,7 @@ export default function MobileJobsPage() {
                                     onClick={() => handleSignClick(job.id)}
                                     className="bg-slate-900 hover:bg-slate-800 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-lg shadow-slate-900/20"
                                  >
-                                    Sign
+                                    {t('sign_btn')}
                                  </button>
                             </div>
                             {/* Items Preview */}
@@ -436,7 +436,7 @@ export default function MobileJobsPage() {
                                })}
                                {job.items && job.items.length > 3 && (
                                    <div className="text-center text-[10px] text-slate-400 font-bold pt-1">
-                                       + {job.items.length - 3} more items
+                                       {t('more_items').replace('{0}', String(job.items.length - 3))}
                                    </div>
                                )}
                             </div>

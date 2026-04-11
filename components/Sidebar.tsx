@@ -47,7 +47,7 @@ export default function Sidebar() {
 
   const menuItems = [
     { label: t('menu_dashboard'), href: '/dashboard', icon: Home },
-    { label: "HQ Command Center", href: '/hq', icon: Building2 }, // Hardcoded English/Thai for now until i18n
+    { label: "HQ Command Center", href: '/hq', icon: Building2 }, 
     { label: t('menu_orders'), href: '/orders', icon: Mail },
     { label: t('menu_inventory'), href: '/inventory', icon: Box },
     { label: t('menu_inbound'), href: '/ops/inbound', icon: ArrowDownToLine },
@@ -60,12 +60,9 @@ export default function Sidebar() {
     { label: t('menu_reports'), href: '/analytics/reports', icon: FileText },
     { label: t('menu_stock_card'), href: '/inventory/stock-card', icon: ClipboardList },
     { label: t('menu_barcode'), href: '/barcode/generator', icon: QrCode },
-    { label: "Automation Rules", href: '/admin/rules', icon: Bot },
-    { label: "Profit Analytics", href: '/analytics/profit', icon: DollarSign },
+    { label: t('rules_title'), href: '/admin/rules', icon: Bot },
+    { label: t('profit_title'), href: '/analytics/profit', icon: DollarSign },
     { label: t('menu_admin'), href: '/admin', icon: Settings },
-    // { label: t('menu_ops_user'), href: '/admin/users', icon: Users },      // Moved to Admin Dashboard
-    // { label: t('menu_audit'), href: '/admin/audit-trail', icon: History }, // Moved to Admin Dashboard
-    // { label: t('menu_quality'), href: '/admin/data-quality', icon: ShieldAlert }, // Moved to Admin Dashboard
     { label: t('menu_smart_restock'), href: '/ai-reorder', icon: Sparkles },
   ];
 

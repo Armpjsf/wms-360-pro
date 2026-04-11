@@ -2,11 +2,13 @@ import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { X, Check, Trash2, RotateCw } from 'lucide-react';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false }) as any;
 
 // Maximum smoothness configuration
 const MemoizedSignaturePad = memo(({ sigRef, onClear }: { sigRef: any, onClear: () => void }) => {
+    const { t } = useLanguage();
     
     // Effect to handle canvas resolution for high-DPI screens
     useEffect(() => {
@@ -52,7 +54,7 @@ const MemoizedSignaturePad = memo(({ sigRef, onClear }: { sigRef: any, onClear: 
             
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] select-none">
-                <span className="text-8xl font-black rotate-[-20deg]">SIGN HERE</span>
+                <span className="text-8xl font-black rotate-[-20deg] uppercase">{t('sign_here')}</span>
             </div>
 
             {/* Floating Clear Button */}
@@ -80,6 +82,7 @@ interface SignatureModalProps {
 }
 
 export default function SignatureModal({ isOpen, onClose, onSave, docNum }: SignatureModalProps) {
+    const { t } = useLanguage();
     const sigCanvasRef = useRef<any>(null);
     const [saving, setSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -96,7 +99,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
     const handleConfirm = async () => {
         if (!sigCanvasRef.current || sigCanvasRef.current.isEmpty()) {
-            alert("กรุณาเซ็นชื่อก่อนกดยืนยัน");
+            alert(t('sign_instruction'));
             return;
         }
 
@@ -107,7 +110,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
             onClose();
         } catch (error) {
             console.error("Signature Save Failed", error);
-            alert("บันทึกลายเซ็นไม่สำเร็จ");
+            alert("Error");
         } finally {
             setSaving(false);
         }
@@ -126,16 +129,16 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
                     <div>
                         <div className="flex items-center gap-2 text-indigo-400 mb-1">
                             <RotateCw className="w-4 h-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest">Landscape Mode</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest">{t('landscape_mode')}</span>
                         </div>
-                        <h2 className="text-xl font-black text-white leading-tight mb-1">เซ็นรับสินค้า</h2>
+                        <h2 className="text-xl font-black text-white leading-tight mb-1">{t('sign_title')}</h2>
                         <p className="text-slate-500 text-xs font-mono">{docNum}</p>
                     </div>
 
                     <div className="hidden md:block space-y-4">
                         <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-                            <p className="text-slate-400 text-[10px] font-bold uppercase mb-2">คำแนะนำ</p>
-                            <p className="text-slate-300 text-xs leading-relaxed">กรุณาเซ็นชื่อให้ชัดเจนภายในกรอบสีขาวเพื่อความถูกต้องของเอกสาร</p>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase mb-2">{t('label_usage_tips') || 'TIPS'}</p>
+                            <p className="text-slate-300 text-xs leading-relaxed">{t('sign_instruction')}</p>
                         </div>
                     </div>
 
@@ -150,7 +153,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
                             ) : (
                                 <>
                                     <Check className="w-5 h-5" />
-                                    ยืนยันลายเซ็น
+                                    {t('confirm_signature')}
                                 </>
                             )}
                         </button>
@@ -158,7 +161,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
                             onClick={onClose}
                             className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-2xl font-bold text-xs transition-all active:scale-95"
                         >
-                            ยกเลิก
+                            {t('btn_cancel')}
                         </button>
                     </div>
                 </div>

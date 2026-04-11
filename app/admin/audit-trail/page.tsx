@@ -110,9 +110,9 @@ export default function AuditTrailPage() {
           <div>
             <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
               <History className="w-6 h-6 text-indigo-600" />
-              {t('logs_title')}
+              {t('audit_trail_title')}
             </h1>
-            <p className="text-sm text-slate-500">{t('logs_subtitle')}</p>
+            <p className="text-sm text-slate-500">{t('audit_trail_subtitle')}</p>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export default function AuditTrailPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="ค้นหา..."
+                placeholder={t('search')}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
               />
             </div>
@@ -144,7 +144,7 @@ export default function AuditTrailPage() {
                 className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none"
               >
                 {modules.map(m => (
-                  <option key={m} value={m}>{m === 'All' ? 'All Modules' : m}</option>
+                  <option key={m} value={m}>{m === 'All' ? t('filter_all_modules') : m}</option>
                 ))}
               </select>
             </div>
@@ -156,7 +156,7 @@ export default function AuditTrailPage() {
               className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 outline-none"
             >
               {actions.map(a => (
-                <option key={a} value={a}>{a === 'All' ? 'All Actions' : a}</option>
+                <option key={a} value={a}>{a === 'All' ? t('filter_all_actions') : a}</option>
               ))}
             </select>
           </div>
@@ -238,7 +238,7 @@ export default function AuditTrailPage() {
               onClick={e => e.stopPropagation()}
             >
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-800">Log Details</h3>
+                <h3 className="font-bold text-slate-800">{t('log_details')}</h3>
                 <button 
                   onClick={() => setSelectedLog(null)}
                   className="text-slate-400 hover:text-slate-600"
@@ -248,32 +248,32 @@ export default function AuditTrailPage() {
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">Action</p>
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('col_status')}</p>
                   <span className={cn("px-3 py-1 rounded-lg text-xs font-bold border", getActionColor(selectedLog.action))}>
                     {selectedLog.action}
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">Description</p>
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('col_description')}</p>
                   <p className="text-slate-700">{selectedLog.description}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">User</p>
+                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('col_user')}</p>
                     <p className="text-slate-700">{selectedLog.userName}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">Module</p>
+                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('col_module')}</p>
                     <p className="text-slate-700">{selectedLog.module}</p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">Timestamp</p>
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('col_timestamp')}</p>
                   <p className="text-slate-700">{formatDate(selectedLog.timestamp)}</p>
                 </div>
                 {selectedLog.oldValues && (
                   <div>
-                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">Old Values</p>
+                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('old_value')}</p>
                     <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-x-auto">
                       {JSON.stringify(selectedLog.oldValues, null, 2)}
                     </pre>
@@ -281,7 +281,7 @@ export default function AuditTrailPage() {
                 )}
                 {selectedLog.newValues && (
                   <div>
-                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">New Values</p>
+                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">{t('new_value')}</p>
                     <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-x-auto">
                       {JSON.stringify(selectedLog.newValues, null, 2)}
                     </pre>

@@ -57,8 +57,8 @@ export default function HQDashboard() {
                         <Building2 className="w-8 h-8" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900">HQ Command Center</h1>
-                        <p className="text-slate-500 font-medium">Multi-Branch Real-time Overview</p>
+                        <h1 className="text-3xl font-black text-slate-900">{t('hq_title')}</h1>
+                        <p className="text-slate-500 font-medium">{t('hq_subtitle')}</p>
                     </div>
                     <button onClick={fetchData} className="ml-auto p-2 bg-white rounded-lg shadow-sm hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-colors">
                         <RefreshCw className="w-5 h-5" />
@@ -68,22 +68,22 @@ export default function HQDashboard() {
                 {/* Global Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                      <MetricCard 
-                        title="Global Valuation"
+                        title={t('global_valuation')}
                         value={`฿${stats.global.totalValue.toLocaleString()}`}
                         icon={DollarSign}
                         color="indigo"
                      />
                      <MetricCard 
-                        title="Total Inventory"
+                        title={t('total_inventory_all')}
                         value={stats.global.totalStock.toLocaleString()}
-                        subtitle="Units across all branches"
+                        subtitle={t('units_across_branches')}
                         icon={Package}
                         color="blue"
                      />
                      <MetricCard 
-                        title="Critical Alerts"
+                        title={t('critical_alerts_all')}
                         value={stats.global.lowStockCount}
-                        subtitle="Items needing restock"
+                        subtitle={t('items_needing_restock')}
                         icon={AlertTriangle}
                         color="rose"
                      />
@@ -92,7 +92,7 @@ export default function HQDashboard() {
                 {/* Branch Breakdown */}
                 <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-slate-400" />
-                    Branch Performance
+                    {t('branch_performance')}
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -111,7 +111,7 @@ export default function HQDashboard() {
                                     )} />
                                     <div>
                                         <h3 className="font-bold text-lg text-slate-800">{branch.name}</h3>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{branch.status}</p>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{branch.status === 'Online' ? t('online') : t('offline')}</p>
                                     </div>
                                 </div>
                                 <div className={cn("p-2 rounded-lg bg-slate-50", branch.color === 'indigo' ? "text-indigo-600" : "text-rose-600")}>
@@ -120,16 +120,16 @@ export default function HQDashboard() {
                             </div>
 
                             <div className="space-y-4">
-                                <Row label="Stock Value" value={`฿${branch.totalValue.toLocaleString()}`} />
-                                <Row label="Active Items" value={branch.activeCount} />
-                                <Row label="Critical Stock" value={branch.lowStockCount} highlight={branch.lowStockCount > 0} />
+                                <Row label={t('stock_value')} value={`฿${branch.totalValue.toLocaleString()}`} />
+                                <Row label={t('active_items')} value={branch.activeCount} />
+                                <Row label={t('critical_stock')} value={branch.lowStockCount} highlight={branch.lowStockCount > 0} />
                             </div>
                             
                             <div className="mt-6 pt-4 border-t border-slate-50">
                                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                                     <div className={cn("h-full bg-slate-300", branch.color === "indigo" ? "bg-indigo-500" : "bg-rose-500")} style={{ width: '70%' }} />
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2 text-right">Capacity Used (Est.)</p>
+                                <p className="text-[10px] text-slate-400 mt-2 text-right">{t('capacity_used')}</p>
                             </div>
                         </motion.div>
                     ))}

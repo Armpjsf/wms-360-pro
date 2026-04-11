@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ClipboardList, ClipboardCheck } from 'lucide-react';
 
+import { useLanguage } from '@/components/providers/LanguageProvider';
+
 export default function MobileNav() {
+  const { t } = useLanguage();
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/mobile/jobs', label: 'งานส่งสินค้า', icon: ClipboardList },
-    { href: '/mobile/cycle-count', label: 'นับสต็อก', icon: ClipboardCheck },
+    { href: '/mobile/jobs', label: t('mobile_nav_jobs'), icon: ClipboardList },
+    { href: '/mobile/cycle-count', label: t('mobile_nav_cycle_count'), icon: ClipboardCheck },
   ];
 
   return (

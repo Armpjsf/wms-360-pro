@@ -80,7 +80,7 @@ export default function DataQualityPage() {
                <div className={`text-3xl font-bold ${unknownSkuCount > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
                    {loading ? '...' : unknownSkuCount}
                </div>
-               <p className="text-xs text-slate-500 mt-2">สินค้าที่ไม่มีใน Master List</p>
+               <p className="text-xs text-slate-500 mt-2">{t('dq_unknown_sku_desc')}</p>
            </div>
            
            <div className={`p-6 rounded-xl border ${invalidQtyCount > 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-white border-slate-200'}`}>
@@ -88,7 +88,7 @@ export default function DataQualityPage() {
                <div className={`text-3xl font-bold ${invalidQtyCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
                    {loading ? '...' : invalidQtyCount}
                </div>
-               <p className="text-xs text-slate-500 mt-2">จำนวนติดลบหรือเท่ากับ 0</p>
+               <p className="text-xs text-slate-500 mt-2">{t('dq_invalid_qty_desc')}</p>
            </div>
 
            <div className={`p-6 rounded-xl border ${dateErrorCount > 0 ? 'bg-blue-500/10 border-blue-500/20' : 'bg-white border-slate-200'}`}>
@@ -96,7 +96,7 @@ export default function DataQualityPage() {
                <div className={`text-3xl font-bold ${dateErrorCount > 0 ? 'text-blue-600' : 'text-slate-900'}`}>
                    {loading ? '...' : dateErrorCount}
                </div>
-               <p className="text-xs text-slate-500 mt-2">วันที่ผิดรูปแบบหรือว่าง</p>
+               <p className="text-xs text-slate-500 mt-2">{t('dq_date_error_desc')}</p>
            </div>
 
            <div className={`p-6 rounded-xl border ${reconcileErrorCount > 0 ? 'bg-purple-500/10 border-purple-500/20' : 'bg-white border-slate-200'}`}>
@@ -104,7 +104,7 @@ export default function DataQualityPage() {
                <div className={`text-3xl font-bold ${reconcileErrorCount > 0 ? 'text-purple-600' : 'text-slate-900'}`}>
                    {loading ? '...' : reconcileErrorCount}
                </div>
-               <p className="text-xs text-slate-500 mt-2">ยอด Log ไม่ตรงกับยอด Sheet</p>
+               <p className="text-xs text-slate-500 mt-2">{t('dq_stock_mismatch_desc')}</p>
            </div>
        </div>
 
