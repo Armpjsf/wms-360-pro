@@ -4,13 +4,19 @@ import { useState, useEffect } from 'react';
 import { BarChart3, Calendar, ArrowDownLeft, ArrowUpRight, ClipboardList, Printer } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
-
 export default function SummaryPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [granularity, setGranularity] = useState('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   useEffect(() => {
     async function fetchData() {
@@ -137,7 +143,7 @@ export default function SummaryPage() {
        {/* Comparison Chart */}
        <div className="bg-white border border-slate-200 p-6 rounded-xl h-[450px] shadow-sm">
            <h3 className="text-slate-800 font-bold mb-6">{t('inbound_vs_outbound')} ({granularity === 'day' ? t('daily') : t('monthly')})</h3>
-           {loading || !data ? (
+           {loading || !data || !mounted ? (
                <div className="h-full flex items-center justify-center text-slate-500">{t('loading')}</div>
            ) : (
                <ResponsiveContainer width="100%" height="85%">

@@ -2,10 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { AlertTriangle, TrendingUp, ShoppingCart, ArrowRight } from 'lucide-react';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function ForecastPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
      async function load() {

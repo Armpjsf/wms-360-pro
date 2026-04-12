@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { Clock, AlertCircle, CheckCircle, Download } from 'lucide-react';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function AgingPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(90); // Default 3 months
   const [viewMode, setViewMode] = useState<'DEADSTOCK' | 'ALL'>('DEADSTOCK');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
