@@ -282,7 +282,17 @@ export async function POST(req: Request) {
     console.log('[Finalize] Generated Filename:', pdfName);
 
     // 3. Upload to Drive (The Signed PDF)
-    const uploadRes = await uploadPdfToDrive(Buffer.from(finalPdfBytes), pdfName, DELIVERY_FOLDER_ID);
+    let uploadRes;
+    try {
+        uploadRes = await uploadPdfToDrive(Buffer.from(finalPdfBytes), pdfName, DELIVERY_FOLDER_ID);
+    } catch (uploadErr: any) {
+        console.error("[Finalize] Drive Upload Failed:", uploadErr);
+        const isAuthError = uploadErr.message?.includes('invalid_grant') || uploadErr.toString().includes('invalid_grant');
+        throw new Error(isAuthError 
+            ? "Google Drive Authentication Expired. Please update GMAIL_TOKEN_JSON in Vercel." 
+            : `Drive Upload Failed: ${uploadErr.message || 'Unknown Error'}`
+        );
+    }
     const pdfLink = uploadRes.webViewLink;
 
     // --- NEW: Record in Delivery History ---

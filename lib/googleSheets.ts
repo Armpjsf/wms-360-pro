@@ -1910,8 +1910,10 @@ export async function uploadPdfToDrive(
   let drive;
   const userAuth = getOAuth2Client();
   if (userAuth) {
+    console.log("[uploadPdfToDrive] Using OAuth Client (Client Side Flow)");
     drive = google.drive({ version: "v3", auth: userAuth });
   } else {
+    console.log("[uploadPdfToDrive] Initializing Drive via getGoogleDrive (Server Side Flow)");
     const { drive: saDrive } = await getGoogleDrive();
     drive = saDrive;
   }
