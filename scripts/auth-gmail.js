@@ -18,8 +18,8 @@ const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets', 
   'https://www.googleapis.com/auth/drive'
 ];
-const REDIRECT_URI = 'http://localhost';
-const PORT = 80;
+const REDIRECT_URI = 'http://localhost:5000';
+const PORT = 5000;
 
 async function main() {
   // 1. Load Credentials
@@ -100,6 +100,7 @@ function authenticate(oAuth2Client) {
             prompt: 'consent' // Force refresh token generation
         });
         console.log(`Opening browser for authentication on ${REDIRECT_URI}...`);
+        console.log(`Authorization URL: ${authorizeUrl}`);
         console.log(`(If this fails, you may need to run as Admin to use port 80)`);
         open(authorizeUrl);
       } catch (err) {

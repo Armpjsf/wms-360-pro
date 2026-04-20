@@ -179,7 +179,7 @@ export async function POST(req: Request) {
                  ]);
                  
                  // Clear existing items first
-                 await clearSheetRange(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!B10:G25`);
+                 await clearSheetRange(ssid, `'${FORM_SHEET}'!B10:G25`);
                  
                  // Write new items
                  if (itemRows.length > 0) {
@@ -189,23 +189,14 @@ export async function POST(req: Request) {
                      });
                  }
                  
-                 await Promise.all(updates.map(u => updateSheetData(PO_SPREADSHEET_ID, u.range, u.values)));
+                 await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
                  
-                 // Update local variable to use the REAL docNum for PDF generation
-                 // (Because we generated PDF with 'RT1' as name? No, we want real OrderNo)
-                 // Wait, rawDocNum passed was 'RT1'. We should update `docNum` variable or just rely on G3 read later?
-                 // The step 2.5 reads G3/Items to name PDF. So we are good.
+                 // Update local variable to use the REAL docNum for PDF generation and status update
+                 docNum = finalDocNum;
                  
-                 console.log(`[Finalize] Promotion Complete. New Active Doc: ${finalDocNum}`);
+                 console.log(`[Finalize] Promotion Complete. New Active Doc: ${docNum}`);
                  
-                 // IMPORTANT: Check if we need to clear the Roll Tag source?
-                 // Usually, Admin clears it. But if Driver "Takes" it, should we clear it?
-                 // If we finish it, we probably should clear it to prevent duplicate doing.
-                 // Let's clear the items in RT? Or just leave it?
-                 // User request: "Shipment 2 might come before Shipment 1".
-                 // If we clear it, it disappears from Queue. Good.
-                 
-                 await clearSheetRange(PO_SPREADSHEET_ID, `'${sourceInfo.sheet}'!A4:F17`);
+                 await clearSheetRange(ssid, `'${sourceInfo.sheet}'!A4:F17`);
              }
         }
     }
@@ -232,7 +223,13 @@ export async function POST(req: Request) {
             
             // Embed the signature image
             // Signature is "data:image/png;base64,..."
-            const pngImageBytes = await fetch(signature).then((res) => res.arrayBuffer());
+            let pngImageBytes: ArrayBuffer;
+            if (signature.startsWith('data:')) {
+                const base64 = signature.split(',')[1];
+                pngImageBytes = Buffer.from(base64, 'base64').buffer;
+            } else {
+                pngImageBytes = await fetch(signature).then((res) => res.arrayBuffer());
+            }
             const pngImage = await pdfDoc.embedPng(pngImageBytes);
             
             const pages = pdfDoc.getPages();
