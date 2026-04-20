@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   try {
     const { docNum: rawDocNum, signature, branchId, packs, location } = await req.json();
-    const docNum = rawDocNum ? String(rawDocNum).trim() : null;
+    let docNum = rawDocNum ? String(rawDocNum).trim() : null;
 
     if (!docNum) {
         return NextResponse.json({ error: 'Missing DocNum' }, { status: 400, headers: corsHeaders });
