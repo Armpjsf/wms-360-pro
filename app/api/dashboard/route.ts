@@ -61,6 +61,7 @@ export async function GET(req: Request) {
     const { googleSheets } = await getGoogleSheets();
     
     console.log(`[Dashboard] Fetching Sheet Data (Branch: ${branchId || 'HQ'})...`);
+    console.time('[Dashboard] Total Fetch Time');
     
     // 1. Inventory (From Branch-specific Inventory Sheet)
     const invRaw = await getSheetData(invSSID, "'📊 รายงานสินค้าคงเหลือ'!A:Z");
@@ -80,6 +81,9 @@ export async function GET(req: Request) {
     
     // 5. Product Master (From Branch-specific Inventory Sheet)
     const productMasterRaw = await getSheetData(invSSID, "'ชื่อสินค้า'!A:E");
+
+    console.timeEnd('[Dashboard] Total Fetch Time');
+    console.time('[Dashboard] Indexing & Processing Time');
 
     // ---------------------------------------------------------
     // Filtering Logic (Existing)
@@ -162,6 +166,32 @@ export async function GET(req: Request) {
 
     const now = Date.now();
     const DAY_MS = 1000 * 60 * 60 * 24;
+
+    // --- OPTIMIZATION: Pre-index Full Data by Product Name for O(1) Lookup ---
+    const receiveByProductMap = new Map<string, any[]>();
+    receiveRawFullData?.slice(1).forEach((row: any[]) => {
+        const name = row[1];
+        if (name) {
+            if (!receiveByProductMap.has(name)) receiveByProductMap.set(name, []);
+            receiveByProductMap.get(name)!.push({
+                date: row[0],
+                qty: parseFloat(row[2]?.replace(/,/g, '') || "0")
+            });
+        }
+    });
+
+    const issueByProductMap = new Map<string, any[]>();
+    issueRawFullData?.slice(1).forEach((row: any[]) => {
+        const name = row[1];
+        if (name) {
+            if (!issueByProductMap.has(name)) issueByProductMap.set(name, []);
+            issueByProductMap.get(name)!.push({
+                date: row[0],
+                qty: parseFloat(row[2]?.replace(/,/g, '') || "0")
+            });
+        }
+    });
+    // ------------------------------------------------------------------------
 
     const inventory: InventoryItem[] = invRaw?.slice(1)
        .map((row: any[]) => {
@@ -443,17 +473,11 @@ export async function GET(req: Request) {
         image: i.image // Add Image
       }))
 
-    // 11. FIFO Aging Analysis (NEW)
+    // 11. FIFO Aging Analysis (OPTIMIZED)
     let agingStockCount = 0;
     const inventoryWithAging = inventory.map(item => {
-        // Filter Inbound Logs for this Item
-        // row[1] is Item Name (Name Index = 1)
-        const inboundLogs = receiveRawFullData?.slice(1)
-            .filter((row: any[]) => row[1] === item.name) 
-            .map((row: any[]) => ({
-                date: row[0],
-                qty: parseFloat(row[2]?.replace(/,/g, '') || "0")
-            })) || [];
+        // Optimized: Use Pre-indexed Map instead of filtering full array
+        const inboundLogs = receiveByProductMap.get(item.name) || [];
         
         const fifoResult = calculateFIFOLayers(item.stock, inboundLogs);
         
@@ -634,60 +658,27 @@ export async function GET(req: Request) {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
-    // ---------------------------------------------------------
-    // 16. AI Forecasting (Brain 2.0)
-    // ---------------------------------------------------------
+    // 16. AI Forecasting (Brain 2.0 - OPTIMIZED)
     const { calculateBurnRate, predictStockout } = await import('@/lib/forecast');
-
-    // 16.1 Pre-process daily usage for all items
-    // Map<ProductName, number[]> -> Array of daily quantities
-    const productUsageMap = new Map<string, number[]>();
-    
-    // Sort issues by date ascending to get chronological usage
-    const sortedIssues = issueRawFullData?.slice(1)
-        .map((row: any[]) => ({
-            date: normalizeDate(row[0]),
-            name: normalizeName(row[1]),
-            qty: parseNum(row[2])
-        }))
-        .filter(x => x.date && x.name)
-        .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
-
-    // Group by Date for each product to get "Daily" usage (sum if multiple tx in one day)
-    const productDailyMap = new Map<string, Map<string, number>>(); 
-
-    sortedIssues?.forEach(tx => {
-        if (!tx.name || !tx.date) return;
-        if (!productDailyMap.has(tx.name)) productDailyMap.set(tx.name, new Map());
-        
-        const dayMap = productDailyMap.get(tx.name)!;
-        dayMap.set(tx.date, (dayMap.get(tx.date) || 0) + tx.qty);
-    });
-
-    // Convert to simple number arrays for the forecast lib
-    // We only take the last 90 days for relevant burn rate? Or all history?
-    // Let's use last 90 days for better responsiveness.
     const ninetyDaysAgo = now - (90 * DAY_MS);
 
-    inventory.forEach(item => {
-        const dayMap = productDailyMap.get(item.name);
-        if (dayMap) {
-            // Filter for last 90 days
-            const recentUsage: number[] = [];
-            dayMap.forEach((qty, dateStr) => {
-                if (new Date(dateStr).getTime() >= ninetyDaysAgo) {
-                    recentUsage.push(qty);
+    const forecasts = inventory
+        .filter(i => !isInactive(i.masterStatus)) // Basic filter for active SKUs
+        .map(item => {
+            // Use Pre-indexed Map
+            const productIssues = issueByProductMap.get(item.name) || [];
+            
+            // Calculate Daily Usage (last 90 days)
+            const dayMap = new Map<string, number>();
+            productIssues.forEach(tx => {
+                const ts = new Date(tx.date).getTime();
+                if (ts >= ninetyDaysAgo) {
+                    const dStr = tx.date; // already normalized or assume sheet format
+                    dayMap.set(dStr, (dayMap.get(dStr) || 0) + tx.qty);
                 }
             });
-            productUsageMap.set(item.name, recentUsage);
-        }
-    });
 
-    // 16.2 Generate Forecasts
-    const forecasts = inventory
-        .filter(i => !isInactive(i.masterStatus) && i.stock > 0) // Only active & in-stock
-        .map(item => {
-            const usageHistory = productUsageMap.get(item.name) || [];
+            const usageHistory = Array.from(dayMap.values());
             const burnRate = calculateBurnRate(usageHistory);
             const prediction = predictStockout(item.stock, burnRate);
             
@@ -701,10 +692,11 @@ export async function GET(req: Request) {
                 ...prediction
             };
         })
-        .filter(f => f.risk !== 'LOW') // Only return items with some risk or data? Or return all for the table?
-                                       // Let's return Top 50 riskiest to save bandwidth
+        .filter(f => f.risk !== 'LOW' && f.stock > 0) // Only return items with risk and in stock
         .sort((a, b) => a.daysLeft - b.daysLeft)
         .slice(0, 50);
+
+    console.timeEnd('[Dashboard] Indexing & Processing Time');
 
     return NextResponse.json({
       summary: {
