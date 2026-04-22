@@ -2547,3 +2547,38 @@ export async function saveUserConfig(
     return false;
   }
 }
+
+/**
+ * Robustly find a sheet title by keywords or default name
+ * Prevents issues if users rename sheets with extra spaces or different casing
+ */
+export async function findSheetTitle(
+  spreadsheetId: string,
+  keywords: string[],
+  defaultTitle: string
+): Promise<string> {
+  const { googleSheets } = await getGoogleSheets();
+  try {
+    const meta = await googleSheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties.title'
+    });
+    const titles = meta.data.sheets?.map((s: any) => s.properties.title) || [];
+    
+    // 1. Exact Match (with trim)
+    for (const k of [defaultTitle, ...keywords]) {
+      const match = titles.find(t => t.toLowerCase().trim() === k.toLowerCase().trim());
+      if (match) return match;
+    }
+    
+    // 2. Partial Match (All keywords must exist)
+    for (const title of titles) {
+      const tLower = title.toLowerCase();
+      const hasAll = keywords.every(k => tLower.includes(k.toLowerCase()));
+      if (hasAll) return title;
+    }
+  } catch (err) {
+    console.error("Failed to fetch sheet metadata in findSheetTitle:", err);
+  }
+  return defaultTitle;
+}

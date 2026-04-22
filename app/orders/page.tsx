@@ -181,8 +181,16 @@ function OrderManagement() {
   };
 
   const handlePrint = (tagId: string) => {
-    const url = getApiUrl(`/api/print/roll-tag?tagId=${tagId}`);
-    window.open(url, '_blank');
+    const params = new URLSearchParams(window.location.search);
+    const branchId = params.get('branchId') || 'hq';
+    
+    const url = getApiUrl(`/api/print/roll-tag?tagId=${tagId}&branchId=${branchId}`);
+    console.log('Opening Print URL:', url);
+    
+    const win = window.open(url, '_blank');
+    if (!win) {
+      alert('Popup blocked! Please allow popups for this site to print roll tags.');
+    }
   };
 
   const handleCopyLineMsg = async () => {
