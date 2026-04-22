@@ -611,13 +611,15 @@ function PendingOrdersCard({
               </div>
               
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => onPrint(task.id)}
+                <a
+                  href={getApiUrl(`/api/print/roll-tag?tagId=${task.id}&branchId=${new URLSearchParams(window.location.search).get('branchId') || 'hq'}`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
                 >
                   <Printer className="w-3 h-3" />
                   {t('print_btn')}
-                </button>
+                </a>
                 <button
                   onClick={() => onProcess(task.id)}
                   disabled={processing}
