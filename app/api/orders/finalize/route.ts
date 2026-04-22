@@ -295,6 +295,7 @@ export async function POST(req: Request) {
     }
     const pdfLink = uploadRes.webViewLink;
 
+    /* 
     // --- NEW: Record in Delivery History ---
     try {
         const deliveryRows: any[][] = [];
@@ -331,6 +332,7 @@ export async function POST(req: Request) {
     } catch (historyErr) {
         console.error("[Finalize] Failed to record delivery history:", historyErr);
     }
+    */
 
     // --- NOTIFICATION: Signature Completed (Push to APK) ---
     try {
