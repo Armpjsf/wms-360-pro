@@ -655,7 +655,7 @@ export default function POLogPage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
                                 <span className="font-mono font-bold text-lg text-slate-900">
-                                  {log.orderNo}
+                                  {log.poOrder || log.orderNo}
                                 </span>
                                 <span
                                   className={cn(
@@ -689,6 +689,11 @@ export default function POLogPage() {
                                     title={log.item}
                                   >
                                     {log.item}
+                                    {!log.pdfLink && isCompleted && (
+                                      <span className="ml-2 text-[10px] text-amber-500 font-medium flex items-center gap-1 inline-flex">
+                                        (ไม่มี PDF)
+                                      </span>
+                                    )}
                                   </span>
                                 </div>
                                 {log.poOrder && (
@@ -710,6 +715,11 @@ export default function POLogPage() {
                               <button
                                 onClick={async () => {
                                   try {
+                                    if (!log.pdfLink) {
+                                      if (!confirm("⚠️ รายการนี้ยังไม่มีลิงก์ไฟล์ PDF (อาจยังไม่ได้เซ็นรับ) คุณต้องการส่งไปยังประวัติงานส่งโดยไม่มีไฟล์แนบใช่หรือไม่?")) {
+                                        return;
+                                      }
+                                    }
                                     // 1. Group items by OrderNo
                                     const sameOrderItems = logs.filter(l => l.orderNo === log.orderNo);
                                     
@@ -723,7 +733,7 @@ export default function POLogPage() {
                                     const payload = {
                                       date: log.date,
                                       customer: log.customer,
-                                      orderNo: log.orderNo,
+                                      orderNo: log.poOrder || log.orderNo, // Use 6-digit if available
                                       sku: combinedSKUs, // All SKUs in one string
                                       qty: totalQty,     // Sum of all quantities
                                       packs: 0,
@@ -739,7 +749,7 @@ export default function POLogPage() {
                                     });
 
                                     if (res.ok) {
-                                      alert(`รวบรวมข้อมูลเลขที่ ${log.orderNo} จำนวน ${sameOrderItems.length} รายการ (รวม ${totalQty} ชิ้น) ไปยังประวัติงานส่งแล้ว`);
+                                      alert(`รวบรวมข้อมูลเลขที่ ${log.poOrder || log.orderNo} จำนวน ${sameOrderItems.length} รายการ (รวม ${totalQty} ชิ้น) ไปยังประวัติงานส่งแล้ว`);
                                     }
                                   } catch (err) {
                                     console.error(err);
@@ -747,7 +757,7 @@ export default function POLogPage() {
                                   }
                                 }}
                                 className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-amber-100 whitespace-nowrap"
-                                title={`รวบส่งทั้ง Order (${log.orderNo})`}
+                                title={`รวบส่งทั้ง Order (${log.poOrder || log.orderNo})`}
                               >
                                 <Truck className="w-4 h-4" />
                                 <span>{t('group_send_order')}</span>

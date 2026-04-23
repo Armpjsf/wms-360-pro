@@ -362,14 +362,19 @@ export async function POST(req: Request) {
 
     // 4. Update "Archive" (Status=เสร็จสิ้น, Link=pdfLink)
     console.log(`[Finalize] Searching for DocNum: "${docNum}" to update status...`);
-    const rowIndices = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum);
-    console.log(`[Finalize] Found ${rowIndices.length} rows to update:`, rowIndices);
+    const { findSheetTitle } = await import('@/lib/googleSheets');
+    const actualDataSheet = await findSheetTitle(ssid, ["คลังข้อมูล", "Archive", "Data"], "คลังข้อมูล");
     
-    if (rowIndices.length > 0) {
+    const rowIndices = await findAllRowIndices(ssid, actualDataSheet, 0, docNum);
+    console.log(`[Finalize] Found ${rowIndices.length} rows to update in ${actualDataSheet}:`, rowIndices);
+    
+    if (rowIndices.length === 0) {
+        console.warn(`[Finalize] ⚠️ No rows found matching DocNum: ${docNum}. PDF Link was NOT saved to sheet.`);
+    } else {
         const updates = [];
         for (const row of rowIndices) {
-            updates.push({ range: `'${DATA_SHEET}'!G${row}`, values: [['เสร็จสิ้น']] });
-            updates.push({ range: `'${DATA_SHEET}'!H${row}`, values: [[pdfLink]] });
+            updates.push({ range: `'${actualDataSheet}'!G${row}`, values: [['เสร็จสิ้น']] });
+            updates.push({ range: `'${actualDataSheet}'!H${row}`, values: [[pdfLink]] });
         }
         await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
         console.log('[Finalize] Archive updated');
