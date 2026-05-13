@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, AlertCircle, CheckCircle, Download } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Download, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function AgingPage() {
@@ -57,18 +59,26 @@ export default function AgingPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-       {/* Header */}
-       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-           <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                 <div className="p-2 bg-amber-500/10 rounded-lg">
-                    <Clock className="w-8 h-8 text-amber-400" />
-                 </div>
-                 {t('aging_title')}
-              </h1>
-              <p className="text-slate-400 mt-2">{t('aging_subtitle')}</p>
-           </div>
+    <div className="relative min-h-screen p-6 max-w-7xl mx-auto space-y-8">
+       <AmbientBackground />
+       
+       <div className="relative z-10">
+         <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit">
+             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+             {t('back_to_analytics')}
+         </Link>
+
+         {/* Header */}
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+             <div>
+                <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                   <div className="p-2 bg-amber-500/10 rounded-lg">
+                      <Clock className="w-8 h-8 text-amber-500" />
+                   </div>
+                   {t('aging_title')}
+                </h1>
+                <p className="text-slate-500 font-medium mt-2">{t('aging_subtitle')}</p>
+             </div>
            
            <div className="bg-slate-900 border border-slate-800 p-1 rounded-lg flex">
                {[30, 60, 90, 180, 365].map((d) => (
@@ -201,5 +211,6 @@ export default function AgingPage() {
            </div>
        </div>
     </div>
+  </div>
   );
-  }
+}

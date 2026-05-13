@@ -217,14 +217,14 @@ export default function Dashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <motion.div variants={item} className="flex space-x-1 bg-white p-1 rounded-2xl w-fit shadow-sm border border-slate-200">
+        <motion.div variants={item} className="flex space-x-1 bg-white/50 backdrop-blur-md p-1.5 rounded-[1.5rem] w-fit shadow-lg border border-white/50">
           <button
             onClick={() => setActiveTab("operational")}
             className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
+              "px-8 py-3 rounded-2xl text-sm font-black transition-all duration-500 relative overflow-hidden group",
               activeTab === "operational"
-                ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                ? "bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-xl shadow-slate-900/30"
+                : "text-slate-500 hover:text-slate-900 hover:bg-white"
             )}
           >
             {t('tab_operational')}
@@ -232,10 +232,10 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab("executive")}
             className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
+              "px-8 py-3 rounded-2xl text-sm font-black transition-all duration-500 relative overflow-hidden group",
               activeTab === "executive"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                ? "bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-600/30"
+                : "text-slate-500 hover:text-indigo-600 hover:bg-white"
             )}
           >
             {t('tab_executive')}
@@ -243,16 +243,17 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab("forecast")}
             className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2",
+              "px-8 py-3 rounded-2xl text-sm font-black transition-all duration-500 flex items-center gap-2 relative overflow-hidden group",
               activeTab === "forecast"
-                ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-600/30"
+                : "text-slate-500 hover:text-purple-600 hover:bg-white"
             )}
           >
-            {/* Brain icon or similar would be nice, but simple text is fine for now */}
             <span>Forecast</span>
-            {/* Optional: Add a 'Beta' or 'New' badge */}
-            <span className="bg-white/20 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider">Beta</span>
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-black",
+              activeTab === "forecast" ? "bg-white/20 text-white" : "bg-purple-100 text-purple-600"
+            )}>Beta</span>
           </button>
         </motion.div>
 
@@ -629,22 +630,22 @@ export default function Dashboard() {
                         </h3>
                         <div className="flex gap-2">
                             <span className="px-3 py-1 bg-rose-100 text-rose-600 rounded-full text-[10px] font-bold uppercase tracking-wide border border-rose-200">Critical: &lt; 7 Days</span>
-                            <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-bold uppercase tracking-wide border border-amber-200">High: &lt; 14 Days</span>
+<span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-bold uppercase tracking-wide border border-amber-200">High: &lt; 14 Days</span>
                         </div>
                    </div>
                    
                    <div className="overflow-x-auto">
                        <table className="w-full text-sm">
-                           <thead className="text-slate-400 uppercase font-bold text-[10px] bg-slate-50/50 border-b border-slate-200">
-                               <tr>
-                                   <th className="text-left py-4 pl-4 rounded-l-xl">Product</th>
-                                   <th className="text-right py-4">Current Stock</th>
-                                   <th className="text-right py-4">Burn Rate (Avg/Day)</th>
-                                   <th className="text-right py-4">Days Left</th>
-                                   <th className="text-center py-4">Est. Stockout</th>
-                                   <th className="text-center py-4 pr-4 rounded-r-xl">Risk Level</th>
-                               </tr>
-                           </thead>
+                            <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
+                                <tr className="bg-gradient-to-r from-slate-800 to-slate-900 shadow-md">
+                                    <th className="text-left py-5 pl-4 rounded-l-2xl">Product</th>
+                                    <th className="text-right py-5">Current Stock</th>
+                                    <th className="text-right py-5">Burn Rate (Avg/Day)</th>
+                                    <th className="text-right py-5">Days Left</th>
+                                    <th className="text-center py-5">Est. Stockout</th>
+                                    <th className="text-center py-5 pr-4 rounded-r-2xl">Risk Level</th>
+                                </tr>
+                            </thead>
                            <tbody className="divide-y divide-slate-100">
                                {data?.forecasts?.length > 0 ? (
                                    data.forecasts.map((item: any, idx: number) => (
@@ -719,22 +720,37 @@ export default function Dashboard() {
  
 function KpiCard({ label, value, icon: Icon, color, bg, border, href, title }: any) {
     const Content = (
-     <div title={title} className={cn("bg-white border shadow-sm p-6 rounded-[2rem] flex flex-col justify-between h-40 group hover:border-indigo-500/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 relative overflow-hidden cursor-pointer", border || "border-slate-200")}>
-        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-          <Icon className="h-24 w-24 text-slate-900" />
+      <div title={title} className={cn("relative border-none shadow-lg p-6 rounded-[2.5rem] flex flex-col justify-between h-44 group hover:-translate-y-2 hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer", border)}>
+        {/* Permanent Gradient Background */}
+        <div className={cn("absolute inset-0 bg-gradient-to-br transition-transform duration-700 group-hover:scale-110", 
+            color.includes('indigo') ? 'from-indigo-600 to-blue-700' :
+            color.includes('green') ? 'from-emerald-600 to-teal-700' :
+            color.includes('rose') ? 'from-rose-600 to-pink-700' :
+            color.includes('amber') ? 'from-amber-500 to-orange-600' :
+            color.includes('violet') ? 'from-violet-600 to-purple-700' :
+            color.includes('blue') ? 'from-blue-600 to-indigo-700' :
+            color.includes('emerald') ? 'from-emerald-600 to-teal-700' :
+            'from-slate-800 to-slate-900'
+        )} />
+
+        {/* Decorative Background Icon */}
+        <div className="absolute -right-6 -top-6 p-8 opacity-20 transition-all transform group-hover:scale-150 group-hover:rotate-12 duration-700 blur-xl">
+          <Icon className="h-32 w-32 text-white" />
         </div>
+
         <div className="flex justify-between items-start relative z-10">
-           <div className={cn("p-3 rounded-2xl w-fit", bg)}>
-             <Icon className={cn("h-6 w-6", color.split(' ')[0])} />
+           <div className="p-4 rounded-2xl w-fit bg-white/20 backdrop-blur-md shadow-sm">
+             <Icon className="h-7 w-7 text-white" />
            </div>
         </div>
+
         <div className="relative z-10">
-           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">{label}</p>
-           <p className={cn("text-4xl font-black tabular-nums tracking-tighter text-slate-900")}>
+           <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mb-1">{label}</p>
+           <p className="text-4xl font-black tabular-nums tracking-tighter text-white">
               {typeof value === 'number' ? <CountUp end={value} duration={1.8} separator="," /> : value}
            </p>
         </div>
-     </div>
+      </div>
     );
 
     if (href) {
@@ -744,11 +760,22 @@ function KpiCard({ label, value, icon: Icon, color, bg, border, href, title }: a
 }
  
  function AdminMetric({ label, value, target, color }: any) {
-   return (
-     <div className="bg-white/60 border border-white/40 p-6 rounded-[2rem] flex flex-col h-32 backdrop-blur-xl hover:border-white/60 transition-colors shadow-sm">
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">{label}</p>
-        <p className={cn("text-3xl font-black mb-1 tracking-tight", color.split(' ')[0])}>{value}</p>
-        <p className="text-[10px] text-slate-500 font-medium">Target: <span className="text-slate-700 font-bold">{target}</span></p>
-     </div>
-   );
- }
+    const bgColor = color.includes('indigo') ? 'from-indigo-600 to-blue-700' :
+                    color.includes('rose') ? 'from-rose-600 to-pink-700' :
+                    color.includes('amber') ? 'from-amber-500 to-orange-600' :
+                    color.includes('emerald') ? 'from-emerald-600 to-teal-700' :
+                    'from-slate-800 to-slate-900';
+
+    return (
+      <div className={cn("relative group border-none p-6 rounded-[2rem] flex flex-col h-36 shadow-lg hover:-translate-y-1 transition-all duration-500 overflow-hidden")}>
+         {/* Permanent Gradient Background */}
+         <div className={cn("absolute inset-0 bg-gradient-to-br transition-transform duration-700 group-hover:scale-110", bgColor)} />
+         
+         <div className="relative z-10">
+            <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.2em] mb-3">{label}</p>
+            <p className="text-4xl font-black mb-1 tracking-tighter text-white">{value}</p>
+            <p className="text-[10px] text-white/60 font-medium">Target: <span className="text-white font-bold">{target}</span></p>
+         </div>
+      </div>
+    );
+  }

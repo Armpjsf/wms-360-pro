@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { User, Shield, UserPlus, MoreVertical, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { motion } from 'framer-motion';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 export default function UserManagerPage() {
   const { t } = useLanguage();
@@ -112,36 +114,52 @@ export default function UserManagerPage() {
   // currently simplified to manual close or close on action)
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <Link href="/admin" className="text-slate-500 hover:text-blue-600 flex items-center gap-2 mb-4 transition-colors font-medium">
-        <ArrowLeft className="w-4 h-4" /> {t('back_to_admin')}
-      </Link>
-      <div className="flex justify-between items-center mb-8">
-        <div>
-           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-             <Shield className="w-8 h-8 text-blue-600" />
-             {t('admin_users_title')}
-           </h1>
-           <p className="text-slate-500">{t('admin_users_subtitle')}</p>
-        </div>
-        <button 
-           onClick={() => setShowModal(true)}
-           className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium"
-        >
-           <UserPlus className="w-4 h-4" />
-           {t('add_user')}
-        </button>
-      </div>
+    <div className="p-8 pb-32 max-w-6xl mx-auto min-h-screen relative">
+      <AmbientBackground />
+      
+      <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-blue-500/5 relative overflow-hidden"
+      >
+         <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/5 blur-3xl rounded-full" />
+         
+         <div className="relative z-10 flex items-center gap-6">
+             <Link
+              href="/admin"
+              className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-blue-600 hover:shadow-lg hover:-translate-x-1 transition-all"
+             >
+              <ArrowLeft className="w-6 h-6" />
+             </Link>
+             <div>
+                 <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+                     <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-3 rounded-2xl shadow-lg shadow-blue-200">
+                       <Shield className="w-8 h-8" />
+                     </div>
+                     {t('admin_users_title')}
+                 </h1>
+                 <p className="text-slate-500 font-medium text-lg ml-2 mt-1">{t('admin_users_subtitle')}</p>
+             </div>
+         </div>
+         
+         <button 
+            onClick={() => setShowModal(true)}
+            className="relative z-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-2xl hover:shadow-blue-500/40 text-white px-8 py-4 rounded-2xl flex items-center gap-3 font-bold transition-all hover:scale-105 active:scale-95"
+         >
+            <UserPlus className="w-6 h-6" />
+            {t('add_user')}
+         </button>
+      </motion.div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left text-slate-700">
-          <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-            <tr>
-              <th className="px-6 py-4">{t('user_info')}</th>
-              <th className="px-6 py-4">{t('role')}</th>
-              <th className="px-6 py-4">{t('col_status')}</th>
-              <th className="px-6 py-4">{t('last_login')}</th>
-              <th className="px-6 py-4 text-right">{t('actions')}</th>
+          <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
+            <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-md">
+              <th className="px-6 py-5 rounded-l-2xl">{t('user_info')}</th>
+              <th className="px-6 py-5">{t('role')}</th>
+              <th className="px-6 py-5">{t('col_status')}</th>
+              <th className="px-6 py-5">{t('last_login')}</th>
+              <th className="px-6 py-5 text-right rounded-r-2xl">{t('actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">

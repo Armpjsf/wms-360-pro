@@ -21,6 +21,12 @@ export default function TransactionsPage() {
   const [data, setData] = useState<Log[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, search]);
 
   useEffect(() => {
     fetchLogs(activeTab);
@@ -55,6 +61,9 @@ export default function TransactionsPage() {
       
       return matchProduct || matchDate || matchLocation;
   });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const currentItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const exportCSV = () => {
     const BOM = "\uFEFF";
@@ -152,7 +161,7 @@ export default function TransactionsPage() {
                   ) : filtered.length === 0 ? (
                       <tr><td colSpan={5} className="p-8 text-center">{t('no_logs')}</td></tr>
                   ) : (
-                      filtered.map((item, i) => (
+                      currentItems.map((item, i) => (
                           <tr key={i} className="hover:bg-slate-50 transition-colors">
                               <td className="p-4 font-mono text-slate-500">{item.date}</td>
                               <td className="p-4 font-medium text-slate-900">{item.product}</td>
@@ -180,6 +189,63 @@ export default function TransactionsPage() {
               </tbody>
           </table>
       </div>
+
+      {/* Pagination UI */}
+      {totalPages > 1 && (
+          <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="text-sm text-slate-500">
+                  Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-bold text-slate-900">{filtered.length}</span> results
+              </div>
+              <div className="flex gap-2">
+                  <button 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  >
+                      Previous
+                  </button>
+                  <div className="flex gap-1">
+                      {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                          // Simple pagination logic: show first few pages
+                          const pageNum = i + 1;
+                          return (
+                              <button
+                                  key={pageNum}
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className={`w-10 h-10 rounded-lg text-sm font-bold border transition-all ${
+                                      currentPage === pageNum 
+                                          ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
+                                          : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300'
+                                  }`}
+                              >
+                                  {pageNum}
+                              </button>
+                          );
+                      })}
+                      {totalPages > 5 && <span className="flex items-center px-2 text-slate-400">...</span>}
+                      {totalPages > 5 && (
+                          <button
+                              onClick={() => setCurrentPage(totalPages)}
+                              className={`w-10 h-10 rounded-lg text-sm font-bold border transition-all ${
+                                  currentPage === totalPages 
+                                      ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
+                                      : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300'
+                              }`}
+                          >
+                              {totalPages}
+                          </button>
+                      )}
+                  </div>
+                  <button 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  >
+                      Next
+                  </button>
+              </div>
+          </div>
+      )}
       </div>
     </div>
   );

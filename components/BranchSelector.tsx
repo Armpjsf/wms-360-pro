@@ -95,14 +95,14 @@ export default function BranchSelector() {
             >
                 <div className="flex items-center gap-3">
                     <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center text-white",
-                        `bg-${currentBranch.color}-500`
+                        "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg",
+                        `bg-gradient-to-br from-${currentBranch.color}-500 to-${currentBranch.color}-700 shadow-${currentBranch.color}-200`
                     )}>
-                        <Store className="w-4 h-4" />
+                        <Store className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Current Branch</p>
-                        <p className="text-xs font-bold text-slate-800 line-clamp-1">{currentBranch.name}</p>
+                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest leading-none mb-1">Current Branch</p>
+                        <p className="text-xs font-black text-slate-900 line-clamp-1 tracking-tight">{currentBranch.name}</p>
                     </div>
                 </div>
                 <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", isOpen && "rotate-180")} />
@@ -129,11 +129,11 @@ export default function BranchSelector() {
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
-                                            "w-2 h-2 rounded-full",
-                                            `bg-${branch.color}-500`
+                                            "w-3 h-3 rounded-full shadow-sm",
+                                            `bg-gradient-to-br from-${branch.color}-500 to-${branch.color}-700`
                                         )} />
                                         <span className={cn(
-                                            "text-sm font-medium",
+                                            "text-sm font-black tracking-tight transition-colors",
                                             currentBranchId === branch.id ? "text-slate-900" : "text-slate-500"
                                         )}>
                                             {branch.name}

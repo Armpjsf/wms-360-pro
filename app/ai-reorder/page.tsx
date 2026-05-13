@@ -17,8 +17,10 @@ import {
   Send,
   Trash2,
   Plus,
-  Minus
+  Minus,
+  ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getApiUrl } from '@/lib/config';
@@ -169,41 +171,53 @@ export default function AIReorderPage() {
       <AmbientBackground />
 
       <div className="max-w-7xl mx-auto relative z-10">
+          <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit">
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+              {t('back_to_analytics')}
+          </Link>
           
           {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-              <div>
-                  <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 bg-white/80 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/50 shadow-xl shadow-slate-900/5 relative overflow-hidden"
+          >
+              <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
+              
+              <div className="relative z-10">
+                  <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+                      <div className="bg-gradient-to-br from-amber-400 to-orange-500 text-white p-3 rounded-2xl shadow-lg shadow-amber-200">
+                        <Sparkles className="w-10 h-10 fill-white" />
+                      </div>
                       {t('ai_title')}
-                      <Sparkles className="w-8 h-8 text-amber-400 fill-amber-400 animate-pulse" />
                   </h1>
-                  <p className="text-slate-500 mt-2 font-medium max-w-xl text-lg">
+                  <p className="text-slate-500 mt-4 font-medium max-w-xl text-lg ml-2 leading-relaxed">
                       {t('ai_subtitle')}
                   </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-4 relative z-10">
                    <button 
                       onClick={handleReanalyze}
                       disabled={analyzing}
-                      className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 group disabled:opacity-50"
+                      className="px-8 py-4 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 group disabled:opacity-50 active:scale-95 shadow-lg shadow-slate-200/50"
                    >
-                       <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+                       <RefreshCw className={`w-6 h-6 ${analyzing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
                        {analyzing ? t('ai_analyzing') : t('ai_reanalyze')}
                    </button>
                    <button 
                       onClick={() => setIsCartOpen(true)}
-                      className="relative px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 shadow-slate-900/20"
+                      className="relative px-8 py-4 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-2xl font-bold hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 shadow-xl shadow-slate-900/40 active:scale-95"
                    >
-                       <ShoppingCart className="w-5 h-5" />
+                       <ShoppingCart className="w-6 h-6" />
                        <span className="hidden md:inline">{t('ai_cart')}</span>
                        {cart.length > 0 && (
-                           <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-bounce">
+                           <span className="absolute -top-3 -right-3 bg-gradient-to-br from-rose-500 to-pink-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg animate-bounce border-2 border-white">
                                {cart.length}
                            </span>
                        )}
                    </button>
               </div>
-          </div>
+          </motion.div>
 
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
@@ -235,12 +249,12 @@ export default function AIReorderPage() {
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.95 }}
                               transition={{ delay: idx * 0.05 }}
-                              className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow group relative overflow-hidden"
+                              className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-8 shadow-lg border border-white/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
                           >
                               {/* Left Border Indicator */}
-                              <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                                  item.confidence >= 90 ? 'bg-rose-500' : 
-                                  item.confidence >= 70 ? 'bg-amber-500' : 'bg-slate-200'
+                              <div className={`absolute left-0 top-0 bottom-0 w-2 ${
+                                  item.confidence >= 90 ? 'bg-gradient-to-b from-rose-500 to-pink-600' : 
+                                  item.confidence >= 70 ? 'bg-gradient-to-b from-amber-500 to-orange-500' : 'bg-gradient-to-b from-slate-300 to-slate-400'
                               }`} />
 
                               <div className="flex flex-col md:flex-row gap-6">

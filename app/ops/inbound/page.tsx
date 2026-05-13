@@ -168,17 +168,19 @@ export default function InboundPage() {
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
+            className="mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-emerald-500/20 relative overflow-hidden"
         >
-           <Link href="/dashboard" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+           <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/10 blur-3xl rounded-full" />
+           
+           <Link href="/dashboard" className="relative z-10 text-slate-500 hover:text-emerald-600 flex items-center gap-2 mb-6 transition-colors font-bold uppercase text-xs tracking-widest">
               <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
            </Link>
-           <div className="flex items-center gap-4">
-               <div className="p-4 bg-emerald-100 rounded-3xl border border-emerald-200 shadow-lg shadow-emerald-900/10">
-                 <PackagePlus className="w-10 h-10 text-emerald-600" />
+           <div className="relative z-10 flex items-center gap-6">
+               <div className="p-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-xl shadow-emerald-200">
+                 <PackagePlus className="w-10 h-10 text-white" />
                </div>
                <div>
-                   <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                   <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-1">
                       {t('inbound_order')}
                    </h1>
                    <p className="text-slate-500 font-medium text-lg">{t('inbound_subtitle')}</p>
@@ -209,7 +211,7 @@ export default function InboundPage() {
                                     type="date" 
                                     value={date} 
                                     onChange={e => setDate(e.target.value)} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-medium" 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all font-medium" 
                                  />
                              </div>
                         </div>
@@ -220,7 +222,7 @@ export default function InboundPage() {
                                 value={docRef} 
                                 onChange={e => setDocRef(e.target.value)} 
                                 placeholder="e.g. PO-2024-001" 
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-medium" 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all font-medium" 
                              />
                         </div>
                     </div>
@@ -258,7 +260,7 @@ export default function InboundPage() {
                                     type="number" 
                                     value={currentQty} 
                                     onChange={e => setCurrentQty(e.target.value)} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all" 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all" 
                                     placeholder="0" 
                                 />
                              </div>
@@ -268,7 +270,7 @@ export default function InboundPage() {
                                     type="number" 
                                     value={currentPrice} 
                                     onChange={e => setCurrentPrice(e.target.value)} 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all" 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all" 
                                     placeholder="0.00" 
                                 />
                              </div>
@@ -293,7 +295,7 @@ export default function InboundPage() {
                                         value={batch} 
                                         onChange={e => setBatch(e.target.value)} 
                                         placeholder="e.g. LOT-2024-001"
-                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all" 
                                     />
                                 </div>
                                 <div className="group">
@@ -302,7 +304,7 @@ export default function InboundPage() {
                                         type="date" 
                                         value={expiryDate} 
                                         onChange={e => setExpiryDate(e.target.value)} 
-                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all" 
                                     />
                                 </div>
                                 <div className="group">
@@ -312,7 +314,7 @@ export default function InboundPage() {
                                         value={owner} 
                                         onChange={e => setOwner(e.target.value)} 
                                         placeholder="e.g. CustomerA"
-                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" 
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all" 
                                     />
                                 </div>
                             </div>
@@ -357,12 +359,12 @@ export default function InboundPage() {
                             </div>
                         ) : (
                             <table className="w-full text-left text-sm text-slate-600">
-                                <thead className="bg-slate-50 text-slate-400 uppercase font-bold text-[10px] tracking-wider sticky top-0">
-                                    <tr>
-                                        <th className="p-4 rounded-l-xl">{t('product')}</th>
-                                        <th className="p-4 text-right">{t('qty')}</th>
-                                        <th className="p-4 text-right">{t('cost_opt')}</th>
-                                        <th className="p-4 text-center rounded-r-xl">{t('edit')}</th>
+                                <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
+                                    <tr className="bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md">
+                                        <th className="p-5 rounded-l-2xl">{t('product')}</th>
+                                        <th className="p-5 text-right">{t('qty')}</th>
+                                        <th className="p-5 text-right">{t('cost_opt')}</th>
+                                        <th className="p-5 text-center rounded-r-2xl">{t('edit')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">

@@ -1,8 +1,10 @@
 'use client';
 
-import { Users, History, ShieldAlert, Sparkles, Settings, LayoutGrid, Printer, Building2 } from 'lucide-react';
+import { Users, History, ShieldAlert, Settings, LayoutGrid, Printer, Building2, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { motion } from 'framer-motion';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 export default function AdminPage() {
   const { t } = useLanguage();
@@ -13,73 +15,101 @@ export default function AdminPage() {
       desc: t('admin_users_desc'), 
       icon: Users, 
       href: '/admin/users',
-      color: 'bg-blue-500'
+      color: 'from-blue-600 to-indigo-700'
     },
     { 
       title: t('menu_audit'), 
       desc: t('admin_audit_desc'), 
       icon: History, 
       href: '/admin/audit-trail',
-      color: 'bg-amber-500'
+      color: 'from-amber-500 to-orange-600'
     },
     { 
       title: t('menu_quality'), 
       desc: t('admin_quality_desc'), 
       icon: ShieldAlert, 
       href: '/admin/data-quality',
-      color: 'bg-emerald-500'
-    },
-    { 
-      title: t('menu_smart_restock'), 
-      desc: t('admin_smart_restock_desc'), 
-      icon: Sparkles, 
-      href: '/ai-reorder',
-      color: 'bg-purple-500'
+      color: 'from-emerald-500 to-teal-600'
     },
     { 
       title: t('menu_slotting'), 
       desc: t('admin_slotting_desc'), 
       icon: LayoutGrid, 
       href: '/admin/slotting',
-      color: 'bg-indigo-500'
+      color: 'from-indigo-600 to-blue-700'
     },
     { 
       title: t('barcode_title'), 
       desc: t('admin_labels_desc'), 
       icon: Printer, 
       href: '/admin/labels',
-      color: 'bg-rose-500'
+      color: 'from-rose-600 to-pink-700'
     },
     { 
       title: t('branch_management_title'), 
       desc: t('admin_branches_desc'), 
       icon: Building2, 
       href: '/admin/branches',
-      color: 'bg-teal-500'
+      color: 'from-teal-500 to-cyan-600'
     }
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
-          <Settings className="w-8 h-8 text-slate-700" />
+    <div className="p-8 pb-32 max-w-7xl mx-auto min-h-screen relative">
+      <AmbientBackground />
+      
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-slate-900/5 relative overflow-hidden"
+      >
+        <div className="absolute -right-20 -top-20 w-64 h-64 bg-slate-500/5 blur-3xl rounded-full" />
+        <h1 className="relative z-10 text-4xl font-black text-slate-900 mb-2 flex items-center gap-4">
+          <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-lg">
+            <Settings className="w-8 h-8" />
+          </div>
           {t('menu_admin')}
         </h1>
-        <p className="text-slate-500">{t('admin_subtitle')}</p>
-      </div>
+        <p className="relative z-10 text-slate-500 font-medium text-lg ml-2">{t('admin_subtitle')}</p>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {menuItems.map((item, idx) => (
-          <Link key={idx} href={item.href}>
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-lg hover:border-slate-300 transition-all cursor-pointer group h-full">
-              <div className={`w-12 h-12 ${item.color} rounded-xl flex items-center justify-center mb-4 text-white shadow-md group-hover:scale-110 transition-transform`}>
-                <item.icon className="w-6 h-6" />
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+          >
+            <Link href={item.href}>
+              <div className="group relative border-none p-8 rounded-[2.5rem] flex flex-col h-full shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden cursor-pointer">
+                {/* Permanent Gradient Background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} transition-transform duration-700 group-hover:scale-110`} />
+                
+                {/* Decorative Circles */}
+                <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white opacity-10 blur-2xl group-hover:scale-150 transition-transform duration-700`} />
+
+                <div className="relative z-10">
+                  <div className={`w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm`}>
+                     <item.icon className={`w-8 h-8 text-white`} />
+                  </div>
+                  
+                  <h3 className={`text-2xl font-black text-white mb-3 tracking-tight`}>
+                     {item.title}
+                  </h3>
+                  
+                  <p className="text-white/80 leading-relaxed font-medium">
+                     {item.desc}
+                  </p>
+                </div>
+
+                <div className="mt-8 flex items-center gap-2 text-white font-black text-sm uppercase tracking-widest relative z-10 opacity-80 group-hover:opacity-100 transition-opacity">
+                   Manage Module
+                   <TrendingUp className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-800 mb-2">{item.title}</h2>
-              <p className="text-slate-500 text-sm">{item.desc}</p>
-            </div>
-          </Link>
+            </Link>
+          </motion.div>
         ))}
       </div>
     </div>

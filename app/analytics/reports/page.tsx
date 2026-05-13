@@ -26,7 +26,7 @@ const reports = (t: any): ReportConfig[] => [
     description: t('inventory_summary_desc'),
     icon: PackageIcon,
     endpoint: '/api/reports/inventory',
-    color: 'bg-indigo-500'
+    color: 'from-indigo-600 to-blue-700'
   },
   {
     id: 'stock_movement',
@@ -34,7 +34,7 @@ const reports = (t: any): ReportConfig[] => [
     description: t('stock_movement_desc'),
     icon: ArrowRight,
     endpoint: '/api/reports/movement',
-    color: 'bg-emerald-500'
+    color: 'from-emerald-500 to-teal-600'
   },
   {
     id: 'low_stock',
@@ -42,7 +42,7 @@ const reports = (t: any): ReportConfig[] => [
     description: t('low_stock_desc'),
     icon: Table,
     endpoint: '/api/reports/low-stock',
-    color: 'bg-rose-500'
+    color: 'from-rose-500 to-red-600'
   },
   {
     id: 'damage_report',
@@ -50,7 +50,7 @@ const reports = (t: any): ReportConfig[] => [
     description: t('damage_report_desc'),
     icon: FileText,
     endpoint: '/api/reports/damage',
-    color: 'bg-amber-500'
+    color: 'from-amber-500 to-orange-600'
   }
 ];
 
@@ -106,8 +106,9 @@ export default function ReportsPage() {
       <AmbientBackground />
 
       <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-        <Link href="/dashboard" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
-          <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
+        <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit print:hidden">
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+          {t('back_to_analytics')}
         </Link>
         <div>
           <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
@@ -123,31 +124,31 @@ export default function ReportsPage() {
           {availableReports.map((report) => (
             <motion.div
               key={report.id}
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-xl transition-all cursor-pointer group"
-              onClick={() => setSelectedReport(report.id)}
+              whileHover={{ y: -10 }}
+              transition={{ type: 'spring', stiffness: 300 }}
             >
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6 text-white shadow-lg", report.color)}>
-                <report.icon className="w-6 h-6" />
-              </div>
-              
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{report.name}</h3>
-              <p className="text-slate-500 text-sm mb-6">{report.description}</p>
-              
-              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">CSV / PDF</span>
-                <button 
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-bold text-white opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0",
-                    report.color
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleGenerate(report);
-                  }}
-                >
-                  {t('generate_btn')}
-                </button>
+              <div 
+                className="group relative border-none rounded-[2.5rem] p-8 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden h-full cursor-pointer"
+                onClick={() => handleGenerate(report)}
+              >
+                {/* Permanent Gradient Background */}
+                <div className={cn("absolute inset-0 bg-gradient-to-br transition-transform duration-700 group-hover:scale-110", report.color)} />
+
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-white shadow-lg bg-white/20 backdrop-blur-md transition-all duration-500")}>
+                    <report.icon className="w-7 h-7" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-black text-white mb-3 tracking-tight">{report.name}</h3>
+                  <p className="text-white/80 text-sm mb-8 leading-relaxed font-medium flex-1">{report.description}</p>
+                  
+                  <div className="pt-6 border-t border-white/20 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">CSV / PDF</span>
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:bg-white group-hover:text-indigo-600 transition-all duration-500">
+                        <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))}

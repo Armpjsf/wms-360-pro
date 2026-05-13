@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Prompt, Outfit } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import PushNotificationManager from "@/components/PushNotificationManager";
@@ -10,13 +10,14 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 
 import Providers from "@/components/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const prompt = Prompt({
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  variable: "--font-prompt",
+  subsets: ["latin", "thai"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
 });
 
@@ -46,7 +47,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         suppressHydrationWarning={true}
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${prompt.variable} ${outfit.variable} antialiased`}
       >
         <Providers>
             <PushNotificationManager />

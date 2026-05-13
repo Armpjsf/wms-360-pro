@@ -164,10 +164,10 @@ function InventoryContent() {
 
   // Calculate Status dynamically for display
   const getStatus = (p: any) => {
-    if (isInactive(p.status)) return { label: 'Inactive', color: 'text-slate-400', bg: 'bg-slate-100', border: 'border-slate-200' };
-    if (p.stock <= p.minStock) return { label: 'Low Stock', color: 'text-rose-600', bg: 'bg-rose-100', border: 'border-rose-200' };
-    if (p.stock === 0) return { label: 'Out of Stock', color: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' };
-    return { label: 'In Stock', color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-200' };
+    if (isInactive(p.status)) return { label: 'Inactive', color: 'text-white', bg: 'bg-gradient-to-r from-slate-500 to-slate-600', border: 'border-transparent shadow-lg shadow-slate-200/50' };
+    if (p.stock <= p.minStock) return { label: 'Low Stock', color: 'text-white', bg: 'bg-gradient-to-r from-rose-500 to-pink-600', border: 'border-transparent shadow-lg shadow-rose-200/50' };
+    if (p.stock === 0) return { label: 'Out of Stock', color: 'text-white', bg: 'bg-gradient-to-r from-slate-800 to-slate-900', border: 'border-transparent shadow-lg shadow-slate-900/10' };
+    return { label: 'In Stock', color: 'text-white', bg: 'bg-gradient-to-r from-emerald-500 to-teal-600', border: 'border-transparent shadow-lg shadow-emerald-200/50' };
   };
 
   const exportCSV = () => {
@@ -207,26 +207,27 @@ function InventoryContent() {
     <div className="min-h-screen relative p-8 pb-32">
         <AmbientBackground />
         
-        {/* Header */}
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-white/50 backdrop-blur-sm p-6 rounded-3xl border border-white/20 shadow-xl shadow-indigo-500/5 max-w-7xl mx-auto"
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(79,70,229,0.05)] max-w-7xl mx-auto overflow-hidden relative"
         >
-           <div>
+           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full" />
+           
+           <div className="relative z-10">
               <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2 flex items-center gap-3">
-                <span className="bg-indigo-600 text-white p-2 rounded-xl">
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-3 rounded-2xl shadow-lg shadow-indigo-200">
                     <Package className="w-8 h-8" />
-                </span>
+                </div>
                 {t('inventory_title')}
               </h1>
-              <p className="text-slate-500 font-medium text-lg">{t('inventory_subtitle')}</p>
+              <p className="text-slate-500 font-medium text-lg ml-2">{t('inventory_subtitle')}</p>
            </div>
            
-           <div className="flex gap-3">
+           <div className="flex gap-3 relative z-10">
               <button 
                   onClick={openAddModal}
-                  className="hidden md:flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-600/20"
+                  className="hidden md:flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:scale-105 active:scale-95"
               >
                   <Plus className="w-5 h-5" />
                   {t('add_product')}
@@ -234,14 +235,14 @@ function InventoryContent() {
 
               <button 
                 onClick={fetchData} 
-                className={cn("p-3 rounded-xl transition-all hover:scale-105 active:scale-95", loading ? "bg-slate-100 text-slate-400" : "bg-white text-indigo-600 shadow-lg shadow-indigo-500/10 border border-indigo-100")}
+                className={cn("p-4 rounded-2xl transition-all hover:scale-105 active:scale-95", loading ? "bg-slate-100 text-slate-400" : "bg-white text-indigo-600 shadow-xl shadow-indigo-500/10 border border-indigo-50")}
               >
                   <RefreshCcw className={cn("w-6 h-6", loading && "animate-spin")} />
               </button>
               
                <button 
                   onClick={exportCSV}
-                  className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-slate-900/20"
+                  className="flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-slate-900/20"
                >
                   <Download className="w-5 h-5" />
                   {t('export_csv')}
@@ -249,14 +250,12 @@ function InventoryContent() {
            </div>
         </motion.div>
 
-        {/* Filters */}
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="flex flex-col md:flex-row gap-4 mb-8 max-w-7xl mx-auto"
         >
-           {/* ... filters ... */}
            <div className="flex-1 relative group">
                <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
                <input 
@@ -269,7 +268,6 @@ function InventoryContent() {
            </div>
            
            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-                {/* Mobile Add Button */}
                 <button 
                   onClick={openAddModal}
                   className="md:hidden px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold whitespace-nowrap"
@@ -313,7 +311,6 @@ function InventoryContent() {
            </div>
         </motion.div>
 
-        {/* Content */}
         {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                {[...Array(12)].map((_, i) => (
@@ -338,15 +335,12 @@ function InventoryContent() {
                         className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
                     >
                         <div className="h-full relative z-10">
-                            {/* Blob Effect on Hover */}
                             <Link href={`/stock-card?search=${encodeURIComponent(product.name)}`} className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100 duration-500 z-0" />
                             
                             <div className="relative z-10 h-full flex flex-col justify-between">
                                 <div>
-                                    {/* Top Row: Image & Status & Edit */}
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 p-1 relative group/image">
-                                            {/* Desktop: Quick Actions Overlay (Hover) */}
                                             <div className="hidden md:flex absolute inset-0 bg-black/40 rounded-xl items-center justify-center gap-2 opacity-0 group-hover/image:opacity-100 transition-all duration-200 z-20 backdrop-blur-sm pointer-events-none">
                                                 <button
                                                     onClick={(e) => {
@@ -379,8 +373,6 @@ function InventoryContent() {
                                                 </button>
                                             </div>
 
-
-
                                         {product.image ? (
                                             <div 
                                                 className="w-full h-full cursor-zoom-in"
@@ -398,12 +390,11 @@ function InventoryContent() {
                                             </div>
                                         )}
                                         </div>
-                                        <span className={cn("px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider border", status.bg, status.color, status.border)}>
+                                        <span className={cn("px-4 py-1.5 rounded-full text-[10px] uppercase font-black tracking-[0.1em] shadow-sm", status.bg, status.color, status.border)}>
                                             {status.label}
                                         </span>
                                     </div>
 
-                                    {/* Info - Wrapped in Link for Navigation */}
                                     <Link href={`/stock-card?search=${encodeURIComponent(product.name)}`} className="block">
                                         <div className="mb-4 h-14">
                                             <h3 className="font-bold text-slate-800 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors" title={product.name}>
@@ -443,14 +434,17 @@ function InventoryContent() {
                                 </Link>
                             </div>
 
-                            {/* Footer Action */}
                             <div className="mt-auto pt-3 pb-3 px-4 border-t border-slate-50 flex justify-between items-center bg-white">
-                                <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
-                                    {product.id}
-                                </span>
+                                <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
+                                    <tr className="bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md">
+                                        <th className="p-5 rounded-l-2xl">{t('product')}</th>
+                                        <th className="p-5 text-right">{t('qty')}</th>
+                                        <th className="p-5 text-right">{t('cost_opt')}</th>
+                                        <th className="p-5 text-center rounded-r-2xl">{t('edit')}</th>
+                                    </tr>
+                                </thead>
                                 
                                 <div className="flex items-center gap-2">
-                                    {/* Mobile Actions in Footer */}
                                     <div className="md:hidden flex items-center gap-2">
                                         <Link 
                                             href={`/inventory/print-labels?sku=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&code=${encodeURIComponent(product.location || product.id)}`}

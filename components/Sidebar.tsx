@@ -24,7 +24,7 @@ import {
   Briefcase,
   Building2,
   Bot,
-  DollarSign
+  BarChart3
 } from 'lucide-react';
 import { useNotification } from './providers/GlobalNotificationProvider';
 import { useLanguage } from './providers/LanguageProvider';
@@ -46,24 +46,21 @@ export default function Sidebar() {
   const { t, language, setLanguage } = useLanguage();
 
   const menuItems = [
-    { label: t('menu_dashboard'), href: '/dashboard', icon: Home },
-    { label: "HQ Command Center", href: '/hq', icon: Building2 }, 
-    { label: t('menu_orders'), href: '/orders', icon: Mail },
-    { label: t('menu_inventory'), href: '/inventory', icon: Box },
-    { label: t('menu_inbound'), href: '/ops/inbound', icon: ArrowDownToLine },
-    { label: t('menu_outbound'), href: '/ops/outbound', icon: ArrowUpFromLine },
-    { label: t('menu_cycle_count'), href: '/mobile/cycle-count', icon: RefreshCw },
-    { label: t('menu_damage'), href: '/ops/damage', icon: ShieldAlert },
-    { label: t('menu_jobs'), href: '/mobile/jobs', icon: Briefcase },
-    { label: t('menu_transactions'), href: '/inventory/transactions', icon: RotateCcw },
-    { label: t('menu_po_log'), href: '/po-log', icon: FileText },
-    { label: t('menu_reports'), href: '/analytics/reports', icon: FileText },
-    { label: t('menu_stock_card'), href: '/inventory/stock-card', icon: ClipboardList },
-    { label: t('menu_barcode'), href: '/barcode/generator', icon: QrCode },
-    { label: t('rules_title'), href: '/admin/rules', icon: Bot },
-    { label: t('profit_title'), href: '/analytics/profit', icon: DollarSign },
-    { label: t('menu_admin'), href: '/admin', icon: Settings },
-    { label: t('menu_smart_restock'), href: '/ai-reorder', icon: Sparkles },
+    { label: t('menu_dashboard'), href: '/dashboard', icon: Home, color: 'text-blue-500' },
+    { label: "HQ Command Center", href: '/hq', icon: Building2, color: 'text-indigo-500' }, 
+    { label: t('menu_orders'), href: '/orders', icon: Mail, color: 'text-pink-500' },
+    { label: t('menu_inventory'), href: '/inventory', icon: Box, color: 'text-amber-500' },
+    { label: t('menu_inbound'), href: '/ops/inbound', icon: ArrowDownToLine, color: 'text-emerald-500' },
+    { label: t('menu_outbound'), href: '/ops/outbound', icon: ArrowUpFromLine, color: 'text-rose-500' },
+    { label: t('menu_damage'), href: '/ops/damage', icon: ShieldAlert, color: 'text-red-500' },
+    { label: t('menu_jobs'), href: '/mobile/jobs', icon: Briefcase, color: 'text-violet-500' },
+    { label: t('menu_transactions'), href: '/inventory/transactions', icon: RotateCcw, color: 'text-cyan-500' },
+    { label: t('menu_po_log'), href: '/po-log', icon: FileText, color: 'text-slate-500' },
+    { label: t('menu_analytics'), href: '/analytics', icon: BarChart3, color: 'text-purple-500' },
+    { label: t('menu_stock_card'), href: '/inventory/stock-card', icon: ClipboardList, color: 'text-blue-600' },
+    { label: t('menu_barcode'), href: '/barcode/generator', icon: QrCode, color: 'text-indigo-600' },
+    { label: t('rules_title'), href: '/admin/rules', icon: Bot, color: 'text-orange-500' },
+    { label: t('menu_admin'), href: '/admin', icon: Settings, color: 'text-slate-600' },
   ];
 
   const adminRoles = ['Super Admin', 'Admin', 'Manager'];
@@ -111,7 +108,7 @@ export default function Sidebar() {
       </AnimatePresence>
       
       <aside className={cn(
-        "fixed left-0 top-0 bottom-0 bg-white border-r border-slate-200 z-50 transition-all duration-300 flex flex-col",
+        "fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-slate-200/50 z-50 transition-all duration-300 flex flex-col shadow-[10px_0_30px_rgba(0,0,0,0.02)]",
         collapsed ? "w-20" : "w-64",
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
@@ -128,8 +125,10 @@ export default function Sidebar() {
                
                {/* Restore System Name */}
                <div>
-                  <h1 className="font-black text-slate-800 text-lg leading-none">WMS <span className="text-indigo-600">360</span></h1>
-                  <p className="text-[10px] font-bold text-slate-400 tracking-wider">PROFESSIONAL</p>
+                  <h1 className="font-black text-slate-800 text-2xl leading-none tracking-tighter">
+                    WMS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 font-mono">360</span>
+                  </h1>
+                  <p className="text-[10px] font-black text-slate-400 tracking-[0.2em] mt-1 font-mono">PROFESSIONAL</p>
                </div>
              </div>
            )}
@@ -149,6 +148,28 @@ export default function Sidebar() {
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 scrollbar-hide">
           {filteredMenu.map((item) => {
             const isActive = pathname === item.href;
+            
+            // Map icon color to background and border colors for premium frames
+            const getColorStyles = (colorClass: string) => {
+              if (colorClass.includes('blue-500')) return "bg-blue-500/10 border-blue-500/30";
+              if (colorClass.includes('indigo-500')) return "bg-indigo-500/10 border-indigo-500/30";
+              if (colorClass.includes('pink-500')) return "bg-pink-500/10 border-pink-500/30";
+              if (colorClass.includes('amber-500')) return "bg-amber-500/10 border-amber-500/30";
+              if (colorClass.includes('emerald-500')) return "bg-emerald-500/10 border-emerald-500/30";
+              if (colorClass.includes('rose-500')) return "bg-rose-500/10 border-rose-500/30";
+              if (colorClass.includes('red-500')) return "bg-red-500/10 border-red-500/30";
+              if (colorClass.includes('violet-500')) return "bg-violet-500/10 border-violet-500/30";
+              if (colorClass.includes('cyan-500')) return "bg-cyan-500/10 border-cyan-500/30";
+              if (colorClass.includes('slate-500')) return "bg-slate-500/10 border-slate-500/30";
+              if (colorClass.includes('blue-600')) return "bg-blue-600/10 border-blue-600/30";
+              if (colorClass.includes('indigo-600')) return "bg-indigo-600/10 border-indigo-600/30";
+              if (colorClass.includes('orange-500')) return "bg-orange-500/10 border-orange-500/30";
+              if (colorClass.includes('emerald-600')) return "bg-emerald-600/10 border-emerald-600/30";
+              if (colorClass.includes('slate-600')) return "bg-slate-600/10 border-slate-600/30";
+              if (colorClass.includes('purple-500')) return "bg-purple-500/10 border-purple-500/30";
+              return "bg-slate-50 border-slate-200";
+            };
+
             return (
               <Link 
                 key={item.href} 
@@ -156,18 +177,43 @@ export default function Sidebar() {
                 onClick={() => setMobileOpen(false)}
               >
                 <div className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl transition-all group",
+                  "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group relative overflow-hidden",
                   isActive 
-                    ? "bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+                    ? "text-white shadow-xl shadow-blue-500/20" 
+                    : cn(
+                        "border transition-all hover:shadow-lg hover:-translate-y-0.5",
+                        getColorStyles((item as any).color)
+                      ),
                   collapsed && "justify-center px-0"
                 )}>
-                  <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600")} strokeWidth={isActive ? 2.5 : 2} />
-                  {!collapsed && <span className="font-bold text-sm">{item.label}</span>}
+                  {/* Active Background */}
+                  {isActive && (
+                      <motion.div 
+                        layoutId="active-pill"
+                        className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600"
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      />
+                  )}
+
+                  <div className={cn(
+                    "relative z-10 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+                    isActive ? "bg-white/20" : cn("bg-slate-50 group-hover:bg-white", (item as any).color.replace('text-', 'bg-').replace('500', '50').replace('600', '100'))
+                  )}>
+                    <item.icon className={cn("w-4 h-4 transition-colors", isActive ? "text-white" : (item as any).color)} strokeWidth={isActive ? 2.5 : 2} />
+                  </div>
+
+                  {!collapsed && (
+                    <span className={cn(
+                      "text-sm font-black tracking-tight relative z-10 transition-colors", 
+                      isActive ? "text-white" : (item as any).color
+                    )}>
+                      {item.label}
+                    </span>
+                  )}
                   
-                  {/* Active Indicator */}
+                  {/* Active Indicator Dot */}
                   {isActive && !collapsed && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white relative z-10 shadow-sm" />
                   )}
                 </div>
               </Link>

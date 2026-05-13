@@ -9,11 +9,13 @@ import {
   PieChart as PieIcon,
   Calendar,
   Download,
-  RefreshCw
+  RefreshCw,
+  ArrowLeft
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import Link from 'next/link';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import CountUp from 'react-countup';
 import { getApiUrl } from '@/lib/config';
@@ -85,6 +87,11 @@ export default function ProfitAnalyticsPage() {
     <div className="min-h-screen p-6 pb-20 relative overflow-hidden">
       <AmbientBackground />
       <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+        
+        <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit">
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+            {t('back_to_analytics')}
+        </Link>
         
         {/* Header */}
         <div className="flex justify-between items-end">

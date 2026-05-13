@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart3, Calendar, ArrowDownLeft, ArrowUpRight, ClipboardList, Printer } from 'lucide-react';
+import { BarChart3, Calendar, ArrowDownLeft, ArrowUpRight, ClipboardList, Printer, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { useLanguage } from '@/components/providers/LanguageProvider';
+
 export default function SummaryPage() {
   const { t } = useLanguage();
   const [data, setData] = useState<any>(null);
@@ -46,6 +49,9 @@ export default function SummaryPage() {
     <div className="relative min-h-screen p-6 max-w-7xl mx-auto space-y-8">
        <AmbientBackground />
        <div className="relative z-10">
+       <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium print:hidden">
+           <ArrowLeft className="w-4 h-4" /> {t('back_to_analytics')}
+       </Link>
        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
               <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">

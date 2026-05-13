@@ -5,7 +5,6 @@ import { QrCode, Barcode, Printer, Download, ArrowLeft, Package, Search } from '
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import JsBarcode from 'jsbarcode';
-import { useReactToPrint } from 'react-to-print';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { getApiUrl } from '@/lib/config';
 import { cn } from '@/lib/utils';
@@ -68,10 +67,10 @@ export default function BarcodeGeneratorPage() {
   );
 
   // Print handler
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: `Label-${selectedProduct?.id || 'Product'}`,
-  } as any);
+  const handlePrint = () => {
+    if (!selectedProduct) return;
+    window.print();
+  };
 
   // Download as PNG (for QR Code)
   const handleDownload = () => {
@@ -98,15 +97,16 @@ export default function BarcodeGeneratorPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-4 md:p-8 pb-32">
-      <AmbientBackground />
+    <div className="relative min-h-screen">
+      <div className="p-4 md:p-8 pb-32 print:hidden">
+        <AmbientBackground />
 
       <div className="max-w-4xl mx-auto space-y-6 relative z-10">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Link
-            href="/dashboard"
-            className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all"
+            href="/admin"
+            className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -263,7 +263,57 @@ export default function BarcodeGeneratorPage() {
             </div>
           </div>
         </div>
+        </div>
       </div>
+
+      {/* Print Only Section */}
+      {selectedProduct && (
+        <div className="hidden print:flex flex-col items-center justify-center min-h-screen bg-white text-center p-10">
+          <div className="w-full max-w-[400px]">
+             <p className="text-xl font-bold text-black mb-6">{selectedProduct.name}</p>
+             
+             {codeType === 'qrcode' ? (
+                <div className="flex justify-center mb-6">
+                    <QRCodeSVG
+                        value={JSON.stringify({
+                            id: selectedProduct.id,
+                            name: selectedProduct.name,
+                            price: selectedProduct.price
+                        })}
+                        size={300}
+                        level="M"
+                        includeMargin
+                    />
+                </div>
+             ) : (
+                <div className="flex justify-center mb-6">
+                    {/* Re-render barcode for print with larger size */}
+                    <div className="scale-150 transform origin-center">
+                        <svg 
+                            ref={(el) => {
+                                if (el) {
+                                    JsBarcode(el, selectedProduct.id, {
+                                        format: 'CODE128',
+                                        width: 2,
+                                        height: 80,
+                                        displayValue: true,
+                                        fontSize: 14,
+                                        margin: 10
+                                    });
+                                }
+                            }}
+                        ></svg>
+                    </div>
+                </div>
+             )}
+
+             <div className="mt-8">
+                 <p className="text-lg font-bold text-black uppercase tracking-widest">{selectedProduct.location || '-'}</p>
+                 <p className="text-2xl font-black text-black mt-2">฿{selectedProduct.price?.toLocaleString()}</p>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

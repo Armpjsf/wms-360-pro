@@ -901,7 +901,9 @@ export default function POLogPage() {
                     {t('delivery_areas')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {Object.entries(locationSummary).map(([loc, count], idx) => (
+                    {Object.entries(locationSummary)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([loc, count], idx) => (
                         <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                             <p className="text-xs text-slate-400 font-bold uppercase truncate" title={loc}>{loc || "N/A"}</p>
                             <p className="text-xl font-black text-indigo-600">{count} <span className="text-[10px] text-slate-400 font-medium">ครั้ง</span></p>

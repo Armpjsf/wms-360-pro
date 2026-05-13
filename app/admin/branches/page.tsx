@@ -105,26 +105,41 @@ export default function AdminBranchesPage() {
              <AmbientBackground />
              
              <div className="max-w-5xl mx-auto relative z-10">
-                {/* Header */}
-                <div className="flex items-center gap-4 mb-10">
-                    <Link href="/admin" className="p-2 bg-white rounded-lg shadow-sm hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900">{t('branch_management_title')}</h1>
-                        <p className="text-slate-500 font-medium">{t('branch_management_subtitle')}</p>
-                    </div>
-                    <button onClick={fetchData} className="ml-auto p-2 bg-white rounded-lg shadow-sm hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-colors">
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
-                    <button 
-                        onClick={() => setIsAdding(!isAdding)}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20"
-                    >
-                        <Plus className="w-5 h-5" />
-                        {t('add_branch')}
-                    </button>
-                </div>
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-indigo-500/5 relative overflow-hidden"
+                >
+                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full" />
+                   
+                   <div className="relative z-10 flex items-center gap-6">
+                       <Link href="/admin" className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 hover:shadow-lg hover:-translate-x-1 transition-all">
+                           <ArrowLeft className="w-6 h-6" />
+                       </Link>
+                       <div>
+                           <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+                               <div className="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-3 rounded-2xl shadow-lg shadow-indigo-200">
+                                 <Building2 className="w-8 h-8" />
+                               </div>
+                               {t('branch_management_title')}
+                           </h1>
+                           <p className="text-slate-500 font-medium text-lg ml-2 mt-1">{t('branch_management_subtitle')}</p>
+                       </div>
+                   </div>
+                   
+                   <div className="flex gap-3 relative z-10">
+                        <button onClick={fetchData} className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 hover:shadow-lg transition-all active:scale-95">
+                            <RefreshCw className="w-6 h-6" />
+                        </button>
+                        <button 
+                            onClick={() => setIsAdding(!isAdding)}
+                            className="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:scale-105 active:scale-95"
+                        >
+                            <Plus className="w-6 h-6" />
+                            {t('add_branch')}
+                        </button>
+                   </div>
+                </motion.div>
 
                 <AnimatePresence>
                 {isAdding && (
@@ -221,18 +236,20 @@ export default function AdminBranchesPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-start md:items-center gap-5 group hover:border-indigo-100 transition-colors"
                             >
-                                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md", `bg-${branch.color}-500`)}>
-                                    <Building2 className="w-6 h-6" />
+                                <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg", `bg-gradient-to-br from-${branch.color}-500 to-${branch.color}-700 shadow-${branch.color}-200`)}>
+                                    <Building2 className="w-8 h-8" />
                                 </div>
                                 
                                 <div className="flex-1">
-                                    <h4 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                    <h4 className="font-black text-xl text-slate-800 flex items-center gap-3">
                                         {branch.name}
-                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-mono">{branch.id}</span>
+                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-mono font-bold tracking-wider">{branch.id}</span>
                                     </h4>
-                                    <div className="flex items-center gap-2 mt-1">
-                                         <LinkIcon className="w-3 h-3 text-slate-400" />
-                                         <code className="text-xs text-slate-400 font-mono bg-slate-50 px-1 rounded">{branch.spreadsheetId}</code>
+                                    <div className="flex items-center gap-3 mt-2">
+                                         <div className="p-1.5 bg-slate-50 rounded-lg">
+                                            <LinkIcon className="w-4 h-4 text-slate-400" />
+                                         </div>
+                                         <code className="text-xs text-slate-500 font-mono bg-slate-50 px-2 py-1 rounded-md border border-slate-100">{branch.spreadsheetId}</code>
                                     </div>
                                 </div>
 

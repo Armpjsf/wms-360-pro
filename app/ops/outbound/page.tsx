@@ -185,17 +185,19 @@ export default function OutboundPage() {
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
+            className="mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-rose-500/20 relative overflow-hidden"
         >
-           <Link href="/dashboard" className="text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+           <div className="absolute -right-20 -top-20 w-64 h-64 bg-rose-500/10 blur-3xl rounded-full" />
+           
+           <Link href="/dashboard" className="relative z-10 text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-6 transition-colors font-bold uppercase text-xs tracking-widest">
               <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
            </Link>
-           <div className="flex items-center gap-4">
-               <div className="p-4 bg-rose-100 rounded-3xl border border-rose-200 shadow-lg shadow-rose-900/10">
-                 <PackageMinus className="w-10 h-10 text-rose-600" />
+           <div className="relative z-10 flex items-center gap-6">
+               <div className="p-5 bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl shadow-xl shadow-rose-200">
+                 <PackageMinus className="w-10 h-10 text-white" />
                </div>
                <div>
-                   <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                   <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-1">
                       {t('outbound_order')}
                    </h1>
                    <p className="text-slate-500 font-medium text-lg">{t('outbound_subtitle')}</p>
@@ -274,7 +276,9 @@ export default function OutboundPage() {
                             if (p?.fifo?.maxDaysOld > 90) {
                                 return (
                                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-                                        <Calendar className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-200">
+                                            <Calendar className="w-5 h-5" />
+                                        </div>
                                         <div>
                                             <p className="text-xs font-bold text-amber-700 uppercase">
                                                 {t('fifo_recommendation')}
@@ -395,12 +399,12 @@ export default function OutboundPage() {
                             </div>
                         ) : (
                             <table className="w-full text-left text-sm text-slate-600">
-                                <thead className="bg-slate-50 text-slate-400 uppercase font-bold text-[10px] tracking-wider sticky top-0">
-                                    <tr>
-                                        <th className="p-4 rounded-l-xl">{t('product')}</th>
-                                        <th className="p-4 text-right">{t('qty')}</th>
-                                        <th className="p-4 text-right">{t('price_opt')}</th>
-                                        <th className="p-4 text-center rounded-r-xl">{t('edit')}</th>
+                                <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
+                                    <tr className="bg-gradient-to-r from-rose-600 to-pink-600 shadow-md">
+                                        <th className="p-5 rounded-l-2xl">{t('product')}</th>
+                                        <th className="p-5 text-right">{t('qty')}</th>
+                                        <th className="p-5 text-right">{t('price_opt')}</th>
+                                        <th className="p-5 text-center rounded-r-2xl">{t('edit')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">

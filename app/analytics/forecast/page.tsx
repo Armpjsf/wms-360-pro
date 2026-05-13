@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, TrendingUp, ShoppingCart, ArrowRight } from 'lucide-react';
+import { AlertTriangle, TrendingUp, ShoppingCart, ArrowRight, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function ForecastPage() {
@@ -33,11 +35,18 @@ export default function ForecastPage() {
   const reorderNeeded = data.filter(i => i.reorderAction === 'Reorder Now');
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h1 className="text-3xl font-bold text-white mb-2">{t('forecast_title')}</h1>
-            <p className="text-slate-400">{t('forecast_subtitle')}</p>
+    <div className="relative min-h-screen p-8 max-w-7xl mx-auto space-y-8">
+      <AmbientBackground />
+      <div className="relative z-10">
+        <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit">
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+            {t('back_to_analytics')}
+        </Link>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('forecast_title')}</h1>
+              <p className="text-slate-500 font-medium">{t('forecast_subtitle')}</p>
+          </div>
         </div>
       </div>
 

@@ -79,10 +79,10 @@ export function RecentTransactions({ type, refreshTrigger }: RecentTransactionsP
                         className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
                     >
                         <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                type === 'IN' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${
+                                type === 'IN' ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-200' : 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-200'
                             }`}>
-                                {type === 'IN' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                                {type === 'IN' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-slate-700 line-clamp-1 w-32 sm:w-48" title={t.product}>

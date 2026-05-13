@@ -27,12 +27,12 @@ const actions = ['All', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 'EXPORT'];
 
 const getActionColor = (action: string) => {
   switch (action) {
-    case 'CREATE': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    case 'UPDATE': return 'bg-amber-100 text-amber-700 border-amber-200';
-    case 'DELETE': return 'bg-rose-100 text-rose-700 border-rose-200';
-    case 'EXPORT': return 'bg-blue-100 text-blue-700 border-blue-200';
-    case 'VIEW': return 'bg-slate-100 text-slate-700 border-slate-200';
-    default: return 'bg-slate-100 text-slate-700';
+    case 'CREATE': return 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-transparent shadow-sm shadow-emerald-200';
+    case 'UPDATE': return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-transparent shadow-sm shadow-amber-200';
+    case 'DELETE': return 'bg-gradient-to-r from-rose-500 to-pink-600 text-white border-transparent shadow-sm shadow-rose-200';
+    case 'EXPORT': return 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-transparent shadow-sm shadow-blue-200';
+    case 'VIEW': return 'bg-gradient-to-r from-slate-600 to-slate-700 text-white border-transparent shadow-sm shadow-slate-200';
+    default: return 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border-transparent';
   }
 };
 
@@ -99,22 +99,31 @@ export default function AuditTrailPage() {
       <AmbientBackground />
 
       <div className="max-w-6xl mx-auto space-y-6 relative z-10">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link
-            href="/admin/users"
-            className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-              <History className="w-6 h-6 text-indigo-600" />
-              {t('audit_trail_title')}
-            </h1>
-            <p className="text-sm text-slate-500">{t('audit_trail_subtitle')}</p>
-          </div>
-        </div>
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-slate-900/5 relative overflow-hidden"
+        >
+           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full" />
+           
+           <div className="relative z-10 flex items-center gap-6">
+               <Link
+                href="/admin"
+                className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 hover:shadow-lg hover:-translate-x-1 transition-all"
+               >
+                <ArrowLeft className="w-6 h-6" />
+               </Link>
+               <div>
+                   <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+                       <div className="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-3 rounded-2xl shadow-lg shadow-indigo-200">
+                         <History className="w-8 h-8" />
+                       </div>
+                       {t('audit_trail_title')}
+                   </h1>
+                   <p className="text-slate-500 font-medium text-lg ml-2 mt-1">{t('audit_trail_subtitle')}</p>
+               </div>
+           </div>
+        </motion.div>
 
         {/* Filters */}
         <motion.div 

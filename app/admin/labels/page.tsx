@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/components/providers/LanguageProvider';
-import { Search, Printer, Settings, Type, Tag, MapPin, Box } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print';
+import { Search, Printer, Settings, Type, Tag, MapPin, Box, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+// Remove useReactToPrint as it's incompatible with React 19
 import Barcode from 'react-barcode';
 import QRCode from 'react-qr-code';
 
@@ -35,10 +36,10 @@ export default function LabelDesignerPage() {
       })
       .catch(err => console.error(err));
   }, []);
-
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-  });
+  
+  const handlePrint = () => {
+    window.print();
+  };
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -46,15 +47,47 @@ export default function LabelDesignerPage() {
   );
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col md:flex-row overflow-hidden bg-slate-50">
+    <div className="h-[calc(100vh-64px)] flex flex-col md:flex-row overflow-hidden bg-slate-50 print:bg-white">
+      {/* Hidden print-only section */}
+      <div className="hidden print:flex flex-col items-center justify-center min-h-screen w-full">
+         {selectedProduct && (
+             <div className="bg-white text-black p-4" style={{ width: '100mm' }}>
+                {showName && <h2 className="text-xl font-bold mb-2 leading-tight text-center">{selectedProduct.name}</h2>}
+                <div className="flex justify-center my-4">
+                    {codeType === 'BARCODE' ? (
+                        <Barcode value={selectedProduct.id} width={1.8} height={60} fontSize={16} />
+                    ) : (
+                        <QRCode value={selectedProduct.id} size={150} />
+                    )}
+                </div>
+                {showSKU && <p className="font-mono text-sm text-center mb-1">{selectedProduct.location || selectedProduct.id}</p>}
+                {showPrice && (
+                    <div className="mt-2 border-t-2 border-black pt-1 w-full text-center">
+                        <p className="text-3xl font-black">฿ {selectedProduct.price?.toLocaleString()}</p>
+                    </div>
+                )}
+             </div>
+         )}
+      </div>
+
+      {/* Main UI (Hidden during print) */}
+      <div className="flex-1 flex flex-col md:flex-row h-full w-full print:hidden">
       
       {/* LEFT: Controls & List */}
       <div className="w-full md:w-96 bg-white border-r border-slate-200 flex flex-col z-10 shadow-lg">
         <div className="p-4 border-b border-slate-100">
-           <h2 className="font-bold text-lg flex items-center gap-2 mb-4">
-             <Settings className="w-5 h-5 text-indigo-600" />
-             Label Designer
-           </h2>
+           <div className="flex items-center gap-3 mb-4">
+             <Link
+               href="/admin"
+               className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+             >
+               <ArrowLeft className="w-4 h-4" />
+             </Link>
+             <h2 className="font-bold text-lg flex items-center gap-2">
+               <Settings className="w-5 h-5 text-indigo-600" />
+               Label Designer
+             </h2>
+           </div>
 
            {/* Product Search */}
            <div className="relative mb-4">
@@ -220,10 +253,9 @@ export default function LabelDesignerPage() {
                    <p>Select a product to start designing</p>
                 </div>
             )}
-         </div>
-      </div>
+          </div>
+       </div>
     </div>
+  </div>
   );
 }
-
-
