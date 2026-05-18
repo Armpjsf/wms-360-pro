@@ -285,27 +285,54 @@ export async function getSheetPdfBlob(
   const { auth } = await getGoogleSheets();
   const token = await auth.getAccessToken();
 
-  // Construct Export URL (Matching Legacy Parameters)
-  // Legacy: scale=2 (Fit to Page?), portrait=false, A4
-  // Note: 'scale' param in new export URL might be different or 'fitToWidth'.
-  // Legacy used: scale=2. Let's try to match.
-  // Legacy: top_margin=0.75&bottom_margin=0.75&left_margin=0.75&right_margin=0.75
+  // Parse human range (e.g. \"A1:E18\" or \"SheetName!A1:E18\") into Google Sheets PDF export grid indices.
+  // This is required because Google's PDF export engine ignores the text '&range=A1:E18' parameter
+  // and instead requires 'r1', 'r2', 'c1', 'c2' grid indexing parameters to crop.
+  let gridParams = "";
+  if (range) {
+    const cleanRange = range.includes("!") ? range.split("!")[1] : range;
+    const parts = cleanRange.split(":");
+    if (parts.length === 2) {
+      const start = parts[0];
+      const end = parts[1];
+
+      const startColLetter = start.match(/[A-Z]+/)?.[0] || "A";
+      const startRowStr = start.match(/\d+/)?.[0] || "1";
+      const endColLetter = end.match(/[A-Z]+/)?.[0] || "E";
+      const endRowStr = end.match(/\d+/)?.[0] || "18";
+
+      const colToIndex = (letter: string) => {
+        let index = 0;
+        for (let i = 0; i < letter.length; i++) {
+          index = index * 26 + (letter.charCodeAt(i) - 64);
+        }
+        return index - 1;
+      };
+
+      const c1 = colToIndex(startColLetter);
+      const r1 = parseInt(startRowStr) - 1;
+      const c2 = colToIndex(endColLetter) + 1; // exclusive limit
+      const r2 = parseInt(endRowStr); // exclusive limit
+
+      gridParams = `&r1=${r1}&r2=${r2}&c1=${c1}&c2=${c2}&ir=false&ic=false`;
+    }
+  }
 
   // scale=3 is 'Fit to Width' which stretches the table to fill the page horizontally.
   // margins are reduced to 0.1 to maximize printable surface and prevent shrinking.
   const url =
     `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=pdf` +
     `&gid=${sheetId}` +
-    `&range=${range}` +
     `&size=a4` +
     `&portrait=${!landscape}` +
     `&scale=3` +
     `&gridlines=false` +
     `&printtitle=false` +
     `&sheetnames=false` +
-    `&top_margin=0.1&bottom_margin=0.1&left_margin=0.1&right_margin=0.1`;
+    `&top_margin=0.1&bottom_margin=0.1&left_margin=0.1&right_margin=0.1` +
+    gridParams;
 
-  console.log(`[PDF Export] URL: ${url.slice(0, 80)}...`);
+  console.log(`[PDF Export] URL: ${url.slice(0, 150)}...`);
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
