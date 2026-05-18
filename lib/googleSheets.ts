@@ -2582,3 +2582,111 @@ export async function findSheetTitle(
   }
   return defaultTitle;
 }
+export async function cleanupTempRollTagSheets(spreadsheetId: string) {
+  const { googleSheets, auth } = await getGoogleSheets();
+  try {
+    const meta = await googleSheets.spreadsheets.get({
+      auth: auth as any,
+      spreadsheetId,
+      fields: "sheets.properties",
+    });
+
+    const sheetsToDelete = meta.data.sheets?.filter(s => {
+      const title = s.properties?.title || "";
+      if (title.startsWith("Roll Tag")) {
+        const numPart = title.replace("Roll Tag", "").trim();
+        const num = parseInt(numPart);
+        return !isNaN(num) && num > 2;
+      }
+      return false;
+    }) || [];
+
+    if (sheetsToDelete.length > 0) {
+      console.log(`[GoogleSheets] Found ${sheetsToDelete.length} temporary Roll Tag sheets to delete.`);
+      const requests = sheetsToDelete.map(s => ({
+        deleteSheet: {
+          sheetId: s.properties?.sheetId
+        }
+      }));
+
+      await googleSheets.spreadsheets.batchUpdate({
+        auth: auth as any,
+        spreadsheetId,
+        requestBody: {
+          requests
+        }
+      });
+      console.log(`[GoogleSheets] Successfully deleted temporary Roll Tag sheets.`);
+    }
+  } catch (error) {
+    console.error("Error cleaning up temporary Roll Tag sheets:", error);
+  }
+}
+
+export async function clearRollTagForm(spreadsheetId: string, sheetName: string) {
+  const { googleSheets, auth } = await getGoogleSheets();
+  try {
+    const emptyCol9: string[][] = Array(9).fill([""]);
+    const updates = [
+      { range: `${sheetName}!B4`, values: [[""]] },
+      { range: `${sheetName}!A9:A17`, values: emptyCol9 },
+      { range: `${sheetName}!B9:B17`, values: emptyCol9 },
+      // Column C contains formulas like VLOOKUP, so we DO NOT clear it to preserve them.
+      // Once Column B is cleared, Column C's formulas will automatically display as empty.
+      { range: `${sheetName}!D9:D17`, values: emptyCol9 },
+      { range: `${sheetName}!E9:E17`, values: emptyCol9 },
+    ];
+    await googleSheets.spreadsheets.values.batchUpdate({
+      auth: auth as any,
+      spreadsheetId,
+      requestBody: {
+        valueInputOption: "USER_ENTERED",
+        data: updates,
+      },
+    });
+    console.log(`Successfully cleared data form in ${sheetName}`);
+  } catch (error) {
+    console.error(`Error clearing Roll Tag form for ${sheetName}:`, error);
+  }
+}
+
+export async function ensureRollTagSheet(spreadsheetId: string, sheetName: string) {
+  const { googleSheets, auth } = await getGoogleSheets();
+  try {
+    const sheetId = await getSheetId(spreadsheetId, sheetName);
+    if (sheetId !== null) return sheetId;
+
+    console.log(`[GoogleSheets] Sheet '${sheetName}' missing. Creating...`);
+    const numPart = sheetName.replace("Roll Tag", "").trim();
+    const num = parseInt(numPart);
+
+    if (!isNaN(num) && num > 2) {
+      const sourceSheetId = await getSheetId(spreadsheetId, "Roll Tag1");
+      if (sourceSheetId !== null) {
+        console.log(`[GoogleSheets] Duplicating 'Roll Tag1' to create '${sheetName}'...`);
+        const res = await googleSheets.spreadsheets.batchUpdate({
+          auth: auth as any,
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                duplicateSheet: {
+                  sourceSheetId,
+                  newSheetName: sheetName
+                }
+              }
+            ]
+          }
+        });
+        const newSheetId = res.data.replies?.[0]?.duplicateSheet?.properties?.sheetId;
+        return newSheetId || null;
+      }
+    }
+
+    await ensureSheetExists(spreadsheetId, sheetName);
+    return await getSheetId(spreadsheetId, sheetName);
+  } catch (error) {
+    console.error(`Error ensuring Roll Tag sheet '${sheetName}':`, error);
+    throw error;
+  }
+}

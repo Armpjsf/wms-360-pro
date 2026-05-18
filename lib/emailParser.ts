@@ -99,13 +99,15 @@ export function extractRollTagData(fileBuffer: Buffer, filename: string = "unkno
        if (orderNo) lastOrderNo = orderNo;
 
        if (itemCode && !isNaN(quantity) && quantity > 0 && lastCustomerId) {
-          if (!customerMap[lastCustomerId]) {
-             customerMap[lastCustomerId] = {
+          // Group by both customerId and orderNo so that different orders for the same customer generate separate Roll Tags
+          const groupKey = `${lastCustomerId}_${lastOrderNo}`;
+          if (!customerMap[groupKey]) {
+             customerMap[groupKey] = {
                  customerId: lastCustomerId,
                  items: []
              };
           }
-          customerMap[lastCustomerId].items.push({
+          customerMap[groupKey].items.push({
               orderNo: lastOrderNo,
               itemCode,
               quantity

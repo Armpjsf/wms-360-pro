@@ -2,12 +2,22 @@ import { NextResponse } from 'next/server';
 import { getGmailClient } from '@/lib/gmailClient';
 // force-rebuild
 import { extractRollTagData } from '@/lib/emailParser';
-import { writeRollTagData, PO_SPREADSHEET_ID } from '@/lib/googleSheets';
+import { writeRollTagData, PO_SPREADSHEET_ID, cleanupTempRollTagSheets, clearRollTagForm, ensureRollTagSheet } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
+    // 0.1 Clean up temporary sheets from previous runs and clear Roll Tag 1 & 2
+    try {
+        console.log("Starting Roll Tag sheets cleanup...");
+        await cleanupTempRollTagSheets(PO_SPREADSHEET_ID);
+        await clearRollTagForm(PO_SPREADSHEET_ID, "Roll Tag1");
+        await clearRollTagForm(PO_SPREADSHEET_ID, "Roll Tag2");
+    } catch (cleanupErr) {
+        console.error("Failed to run Roll Tag cleanup:", cleanupErr);
+    }
+
     const gmail = await getGmailClient();
     
     if (!gmail) {
@@ -97,12 +107,15 @@ export async function POST() {
                         
                         if (extractedCustomers.length > 0) {
                             for (const customerData of extractedCustomers) {
-                                if (currentRollTagIndex > 2) {
+                                if (currentRollTagIndex > 10) {
                                     results.push({ msgId: msg.id, status: "skipped_full", customer: customerData.customerId });
                                     continue;
                                 }
 
                                 const targetSheet = `Roll Tag${currentRollTagIndex}`;
+                                // Automatically ensure/duplicate sheet if it is a new temporary sheet
+                                await ensureRollTagSheet(PO_SPREADSHEET_ID, targetSheet);
+                                
                                 await writeRollTagData(PO_SPREADSHEET_ID, targetSheet, customerData);
                                 
                                 const successMsg = { 
