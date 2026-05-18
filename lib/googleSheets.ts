@@ -318,18 +318,22 @@ export async function getSheetPdfBlob(
     }
   }
 
-  // scale=3 is 'Fit to Width' which stretches the table to fill the page horizontally.
-  // margins are reduced to 0.1 to maximize printable surface and prevent shrinking.
+  // Mimic the native Google Sheets print settings exactly:
+  // - scale=1 (Normal 100% scale to preserve natural proportions)
+  // - margins are set to 1.0 (Wide margins)
+  // - align=c (Horizontal Alignment: Center)
+  // - valign=m (Vertical Alignment: Middle)
   const url =
     `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=pdf` +
     `&gid=${sheetId}` +
     `&size=a4` +
     `&portrait=${!landscape}` +
-    `&scale=3` +
+    `&scale=1` +
     `&gridlines=false` +
     `&printtitle=false` +
     `&sheetnames=false` +
-    `&top_margin=0.1&bottom_margin=0.1&left_margin=0.1&right_margin=0.1` +
+    `&top_margin=1.0&bottom_margin=1.0&left_margin=1.0&right_margin=1.0` +
+    `&align=c&valign=m` +
     gridParams;
 
   console.log(`[PDF Export] URL: ${url.slice(0, 150)}...`);
