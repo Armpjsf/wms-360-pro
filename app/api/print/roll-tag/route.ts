@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
             }, { status: 404 });
         }
 
-        // 5. Fetch PDF (A1:H20 range)
-        const pdfBuffer = await getSheetPdfBlob(ssid, gid, 'A1:H20', true);
+        // 5. Fetch PDF (A1:E18 range to perfectly fit the table columns A-E and rows 1-18)
+        const pdfBuffer = await getSheetPdfBlob(ssid, gid, 'A1:E18', true);
 
         // 6. Return as PDF Stream
         return new NextResponse(pdfBuffer, {
