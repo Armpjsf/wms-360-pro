@@ -291,17 +291,19 @@ export async function getSheetPdfBlob(
   // Legacy used: scale=2. Let's try to match.
   // Legacy: top_margin=0.75&bottom_margin=0.75&left_margin=0.75&right_margin=0.75
 
+  // scale=3 is 'Fit to Width' which stretches the table to fill the page horizontally.
+  // margins are reduced to 0.1 to maximize printable surface and prevent shrinking.
   const url =
     `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=pdf` +
     `&gid=${sheetId}` +
     `&range=${range}` +
     `&size=a4` +
     `&portrait=${!landscape}` +
-    `&scale=2` +
+    `&scale=3` +
     `&gridlines=false` +
     `&printtitle=false` +
     `&sheetnames=false` +
-    `&top_margin=0.75&bottom_margin=0.75&left_margin=0.75&right_margin=0.75`;
+    `&top_margin=0.1&bottom_margin=0.1&left_margin=0.1&right_margin=0.1`;
 
   console.log(`[PDF Export] URL: ${url.slice(0, 80)}...`);
 
