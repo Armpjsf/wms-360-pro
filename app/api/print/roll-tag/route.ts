@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
         }
 
         // 5. Fetch PDF (A1:E18 range to perfectly fit the table columns A-E and rows 1-18)
-        const pdfBuffer = await getSheetPdfBlob(ssid, gid, 'A1:E18', true);
+        // We explicitly pass scale=1, margin=1.0, align='c', valign='m' to match Ctrl+P settings only for Roll Tags.
+        const pdfBuffer = await getSheetPdfBlob(ssid, gid, 'A1:E18', true, 1, 1.0, 'c', 'm');
 
         // 6. Return as PDF Stream
         return new NextResponse(pdfBuffer, {

@@ -281,11 +281,15 @@ export async function getSheetPdfBlob(
   sheetId: number,
   range: string = "A1:H20",
   landscape: boolean = true,
+  scale: number = 2,
+  margin: number = 0.75,
+  align: string = "",
+  valign: string = "",
 ): Promise<ArrayBuffer> {
   const { auth } = await getGoogleSheets();
   const token = await auth.getAccessToken();
 
-  // Parse human range (e.g. \"A1:E18\" or \"SheetName!A1:E18\") into Google Sheets PDF export grid indices.
+  // Parse human range (e.g. "A1:E18" or "SheetName!A1:E18") into Google Sheets PDF export grid indices.
   // This is required because Google's PDF export engine ignores the text '&range=A1:E18' parameter
   // and instead requires 'r1', 'r2', 'c1', 'c2' grid indexing parameters to crop.
   let gridParams = "";
@@ -318,22 +322,23 @@ export async function getSheetPdfBlob(
     }
   }
 
-  // Mimic the native Google Sheets print settings exactly:
-  // - scale=1 (Normal 100% scale to preserve natural proportions)
-  // - margins are set to 1.0 (Wide margins)
-  // - align=c (Horizontal Alignment: Center)
-  // - valign=m (Vertical Alignment: Middle)
+  // Alignment query strings (only applied if explicitly requested, e.g. for Roll Tags)
+  let alignParams = "";
+  if (align) alignParams += `&align=${align}`;
+  if (valign) alignParams += `&valign=${valign}`;
+
+  // Use custom scale and margin if provided, otherwise fallback to perfect defaults (scale=2, margin=0.75)
   const url =
     `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=pdf` +
     `&gid=${sheetId}` +
     `&size=a4` +
     `&portrait=${!landscape}` +
-    `&scale=1` +
+    `&scale=${scale}` +
     `&gridlines=false` +
     `&printtitle=false` +
     `&sheetnames=false` +
-    `&top_margin=1.0&bottom_margin=1.0&left_margin=1.0&right_margin=1.0` +
-    `&align=c&valign=m` +
+    `&top_margin=${margin}&bottom_margin=${margin}&left_margin=${margin}&right_margin=${margin}` +
+    alignParams +
     gridParams;
 
   console.log(`[PDF Export] URL: ${url.slice(0, 150)}...`);
