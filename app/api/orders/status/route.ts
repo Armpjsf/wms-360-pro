@@ -18,6 +18,9 @@ const FORM_SHEET = "ส่งสินค้า";
 let lastGoodResponse: any = null;
 let lastFetchTime = 0;
 
+// Global Sheet Titles Cache to avoid redundant slow Sheets API calls (1 hour TTL)
+const sheetTitlesCache = new Map<string, { titles: string[], timestamp: number }>();
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -27,20 +30,35 @@ export async function GET(req: Request) {
     const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
 
+    // 0. High Performance: Intercept with a 4-second in-memory cache to solve rapid double-clicks or mobile page transition latency
+    const cacheAge = Date.now() - lastFetchTime;
+    if (lastGoodResponse && cacheAge < 4000) {
+        console.log(`[Status API] Instant Cache hit! Returning cached status (${Math.round(cacheAge/1000)}s old)`);
+        return NextResponse.json(lastGoodResponse, { headers: corsHeaders });
+    }
+
     console.log(`[Status] Fetching Roll Tags and Data Sheet for Branch: ${branchId || 'HQ'} (SSID: ${ssid})...`);
 
     const { googleSheets } = await getGoogleSheets();
 
-    // Helper: Fetch all sheet titles from USER Spreadsheet (Form Link Mail)
+    // Helper: Fetch all sheet titles from USER Spreadsheet (Form Link Mail) - Optimized Cache-First
     let userSheetTitles: string[] = [];
-    try {
-        const meta = await googleSheets.spreadsheets.get({
-            spreadsheetId: ssid,
-            fields: 'sheets.properties.title'
-        });
-        userSheetTitles = meta.data.sheets?.map((s: any) => s.properties.title) || [];
-    } catch (err) {
-        console.error("Failed to fetch sheet metadata (User):", err);
+    const cachedInfo = sheetTitlesCache.get(ssid);
+    if (cachedInfo && (Date.now() - cachedInfo.timestamp < 3600000)) { // 1 hour
+        userSheetTitles = cachedInfo.titles;
+        console.log(`[Status API] Sheet titles cache hit for SSID: ${ssid}`);
+    } else {
+        try {
+            console.log(`[Status API] Sheet titles cache miss. Querying Sheets API for SSID: ${ssid}`);
+            const meta = await googleSheets.spreadsheets.get({
+                spreadsheetId: ssid,
+                fields: 'sheets.properties.title'
+            });
+            userSheetTitles = meta.data.sheets?.map((s: any) => s.properties.title) || [];
+            sheetTitlesCache.set(ssid, { titles: userSheetTitles, timestamp: Date.now() });
+        } catch (err) {
+            console.error("Failed to fetch sheet metadata (User):", err);
+        }
     }
 
     const findSheetName = (keywords: string[]) => {

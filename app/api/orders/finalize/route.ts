@@ -43,12 +43,13 @@ export async function POST(req: Request) {
     const { resolveSpreadsheetId, addDeliveryHistory } = await import('@/lib/googleSheets');
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
     
-    // --- Pre-fetch data for Delivery History ---
-    const [custNameData, ordersData, itemsData, qtyData] = await Promise.all([
+    // --- Pre-fetch data for Delivery History & Active Job check in parallel ---
+    const [custNameData, ordersData, itemsData, qtyData, activeCheck] = await Promise.all([
         getSheetData(ssid, `'${FORM_SHEET}'!F6`),
         getSheetData(ssid, `'${FORM_SHEET}'!C10:C25`),
         getSheetData(ssid, `'${FORM_SHEET}'!D10:D25`),
-        getSheetData(ssid, `'${FORM_SHEET}'!G10:G25`)
+        getSheetData(ssid, `'${FORM_SHEET}'!G10:G25`),
+        getSheetData(ssid, `'${FORM_SHEET}'!G3:G3`)
     ]);
     const customerName = custNameData?.[0]?.[0] || "Unknown";
 
@@ -56,8 +57,6 @@ export async function POST(req: Request) {
     // 0. Check if this docNum is ALREADY the active one in 'ส่งสินค้า'
     //    If NOT, we must find it in Roll Tag 1/2 and "Promote" it to Active first.
     
-    // Read current Active DocNum from G3
-    const activeCheck = await getSheetData(ssid, `'${FORM_SHEET}'!G3:G3`);
     const currentActiveDoc = activeCheck?.[0]?.[0];
 
     if (currentActiveDoc !== docNum) {
@@ -269,10 +268,9 @@ export async function POST(req: Request) {
     }
 
     // 2.5 Construct Filename (Match Legacy Python: "ใบส่งสินค้า {OrderNos}.pdf")
-    // Fetch Order Numbers from C10:C25
-    const orderData = await getSheetData(ssid, `'${FORM_SHEET}'!C10:C25`);
+    // Reuse already pre-fetched ordersData instead of calling getSheetData again
     const uniqueOrders = Array.from(new Set(
-        orderData?.map((r: any) => r[0]?.toString().trim()).filter((x: any) => x) || []
+        ordersData?.map((r: any) => r[0]?.toString().trim()).filter((x: any) => x) || []
     ));
     
     let pdfName = uniqueOrders.length > 0
@@ -345,15 +343,15 @@ export async function POST(req: Request) {
         const tokens = deviceData?.map((r:any) => r[0]).filter((t:any) => t && t.length > 10) || [];
 
         if (messaging && tokens.length > 0) {
-             console.log(`[Finalize] Sending Signature Push to ${tokens.length} devices...`);
-             await messaging.sendEachForMulticast({
+             console.log(`[Finalize] Sending Signature Push to ${tokens.length} devices (Non-blocking background)...`);
+             messaging.sendEachForMulticast({
                 tokens,
                 notification: {
                     title: "✍️ ได้รับลายเซ็นใหม่ (Signature Received)",
                     body: `เอกสาร ${docNum} ลงนามเรียบร้อยแล้ว`,
                 },
                 android: { notification: { sound: 'default' } }
-             });
+             }).catch(notiErr => console.error("FCM Background Send Error:", notiErr));
         }
     } catch (notiErr) {
         console.warn("[Finalize] Failed to send Signature Notification:", notiErr);
@@ -376,8 +374,21 @@ export async function POST(req: Request) {
             updates.push({ range: `'${actualDataSheet}'!G${row}`, values: [['เสร็จสิ้น']] });
             updates.push({ range: `'${actualDataSheet}'!H${row}`, values: [[pdfLink]] });
         }
-        await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
-        console.log('[Finalize] Archive updated');
+
+        console.log('[Finalize] Archiving and clearing active form in parallel...');
+        // HIGH PERFORMANCE: Concurrently write all archive updates AND clear the active form ranges in one concurrent Promise.all!
+        await Promise.all([
+            ...updates.map(u => updateSheetData(ssid, u.range, u.values)),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!G3`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!F4:F5`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!D6`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!F6`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!B10:D25`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!G10:G25`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!${SIG_CELL}`),
+            clearSheetRange(ssid, `'${FORM_SHEET}'!H33`) // Clear Secret Signature URL
+        ]);
+        console.log('[Finalize] Archive updated & active form cleared in parallel successfully');
 
         // Audit Log
         try {
@@ -394,22 +405,6 @@ export async function POST(req: Request) {
             console.warn("[Finalize] Audit Log Failed:", auditErr);
         }
     }
-
-    // 5. Clear Form
-    
-    // 5. Clear Form
-    // (Transaction recording removed as it is already done in 'process' step)
-    
-    await Promise.all([
-        clearSheetRange(ssid, `'${FORM_SHEET}'!G3`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!F4:F5`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!D6`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!F6`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!B10:D25`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!G10:G25`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!${SIG_CELL}`),
-        clearSheetRange(ssid, `'${FORM_SHEET}'!H33`) // Clear Secret Signature URL
-    ]);
 
     // 6. Return PDF Blob
     return new NextResponse(Buffer.from(finalPdfBytes), {

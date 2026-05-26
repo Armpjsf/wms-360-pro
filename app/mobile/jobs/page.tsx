@@ -20,10 +20,37 @@ interface ProductLoc {
 
 export default function MobileJobsPage() {
   const { t } = useLanguage();
-  const [activeJob, setActiveJob] = useState<any>(null);
-  const [pendingJobs, setPendingJobs] = useState<any[]>([]);
-  const [waitingJobs, setWaitingJobs] = useState<any[]>([]); // New State
-  const [loading, setLoading] = useState(true);
+  
+  // Stale-While-Revalidate (SWR): Initialize states from localStorage if available to prevent skeletons
+  const [activeJob, setActiveJob] = useState<any>(() => {
+      if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('wms_cache_active_job');
+          return cached ? JSON.parse(cached) : null;
+      }
+      return null;
+  });
+  const [pendingJobs, setPendingJobs] = useState<any[]>(() => {
+      if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('wms_cache_pending_jobs');
+          return cached ? JSON.parse(cached) : [];
+      }
+      return [];
+  });
+  const [waitingJobs, setWaitingJobs] = useState<any[]>(() => {
+      if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('wms_cache_waiting_jobs');
+          return cached ? JSON.parse(cached) : [];
+      }
+      return [];
+  });
+  const [loading, setLoading] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const hasCache = localStorage.getItem('wms_cache_active_job') || localStorage.getItem('wms_cache_pending_jobs');
+          return !hasCache; // Don't show skeleton if we have cached data!
+      }
+      return true;
+  });
+
   const [productDetails, setProductDetails] = useState<Map<string, {location: string, image: string}>>(new Map());
   
   // Signature State
@@ -40,25 +67,66 @@ export default function MobileJobsPage() {
      setServerUrl(getApiUrl(''));
   }, []);
 
-  // Fetch Master Data (Products) for Location Lookup
+  // Fetch Master Data (Products) for Location Lookup - Offline First Cache
   useEffect(() => {
-      fetch(getApiUrl('/api/products'))
-        .then(res => res.json())
-        .then(data => {
-            if (Array.isArray(data)) {
-                const map = new Map();
-                data.forEach((p:any) => map.set(p.name, { 
-                    location: p.location || '-',
-                    image: p.image || ''
-                }));
-                setProductDetails(map);
-            }
-        })
-        .catch(err => console.error("Product Load Error:", err));
+      const loadProducts = async () => {
+          try {
+              // 1. Load from local IndexedDB instantly (under 10ms)
+              const { db } = await import('@/lib/db');
+              const cachedProducts = await db.products.toArray();
+              if (cachedProducts && cachedProducts.length > 0) {
+                  const map = new Map();
+                  cachedProducts.forEach((p: any) => map.set(p.name, {
+                      location: p.location || '-',
+                      image: p.image || ''
+                  }));
+                  setProductDetails(map);
+                  console.log(`[Cache] Loaded ${cachedProducts.length} products from Dexie IndexedDB`);
+              }
+          } catch (e) {
+              console.warn("Failed to load products from Dexie:", e);
+          }
+
+          // 2. Fetch from server in background to refresh cache
+          try {
+              const res = await fetch(getApiUrl('/api/products'));
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                  const map = new Map();
+                  data.forEach((p: any) => map.set(p.name, {
+                      location: p.location || '-',
+                      image: p.image || ''
+                  }));
+                  setProductDetails(map);
+
+                  // Async update Dexie in background
+                  const { db } = await import('@/lib/db');
+                  await db.products.clear();
+                  await db.products.bulkPut(data.map((p: any) => ({
+                      id: p.name,
+                      name: p.name,
+                      category: p.category || '',
+                      price: Number(p.price) || 0,
+                      stock: Number(p.stock) || 0,
+                      image: p.image || '',
+                      updatedAt: Date.now()
+                  })));
+                  console.log("[Cache] Dexie IndexedDB updated with fresh server products");
+              }
+          } catch (err) {
+              console.error("Product background sync error:", err);
+          }
+      };
+
+      loadProducts();
   }, []);
 
   const fetchJobs = async () => {
-      setLoading(true);
+      // Only set loading to true if we don't have any cached data to display
+      const hasData = activeJob || pendingJobs.length > 0 || waitingJobs.length > 0;
+      if (!hasData) {
+          setLoading(true);
+      }
       try {
           const res = await fetch(getApiUrl('/api/orders/status'), { cache: 'no-store' });
           if (res.ok) setIsConnected(true);
@@ -66,6 +134,7 @@ export default function MobileJobsPage() {
           
           if (data.activeForm) {
               setActiveJob(data.activeForm);
+              localStorage.setItem('wms_cache_active_job', JSON.stringify(data.activeForm));
               // Notify about active job
               if (data.activeForm.docNum !== activeJob?.docNum) {
                  sendNotification(t('active_job_alert').replace('{0}', data.activeForm.docNum), {
@@ -75,10 +144,24 @@ export default function MobileJobsPage() {
               }
           } else {
               setActiveJob(null);
+              localStorage.removeItem('wms_cache_active_job');
           }
           
-          if (data.pending) setPendingJobs(data.pending);
-          if (data.waiting) setWaitingJobs(data.waiting); // New: Waiting Jobs
+          if (data.pending) {
+              setPendingJobs(data.pending);
+              localStorage.setItem('wms_cache_pending_jobs', JSON.stringify(data.pending));
+          } else {
+              setPendingJobs([]);
+              localStorage.removeItem('wms_cache_pending_jobs');
+          }
+          
+          if (data.waiting) {
+              setWaitingJobs(data.waiting);
+              localStorage.setItem('wms_cache_waiting_jobs', JSON.stringify(data.waiting));
+          } else {
+              setWaitingJobs([]);
+              localStorage.removeItem('wms_cache_waiting_jobs');
+          }
           
       } catch (e) {
           console.error("Job Fetch Error", e);
