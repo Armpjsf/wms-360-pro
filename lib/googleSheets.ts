@@ -2029,15 +2029,16 @@ export interface DamageRecord {
   status: string;
   approved_by: string;
   approved_date: string;
+  sent_to_hq?: string; // Track if item was sent to Head Office
 }
 
 export async function getDamageRecords() {
-  // "Damage" Sheet
-  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A1:J1000`);
+  // "Damage" Sheet - A to K range
+  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A1:K1000`);
   if (!data || data.length < 2) return [];
 
   const rows = data.slice(1);
-  // Columns: Date, Name, Qty, Unit, Reason, Notes, Reporter, Status, Approver, ApproveDate
+  // Columns: Date, Name, Qty, Unit, Reason, Notes, Reporter, Status, Approver, ApproveDate, SentToHq
   return rows.map((r, i) => ({
     rowIndex: i + 2, // Header is 1, so data starts at 2
     date: r[0],
@@ -2050,11 +2051,12 @@ export async function getDamageRecords() {
     status: r[7] || "Pending",
     approved_by: r[8],
     approved_date: r[9],
+    sent_to_hq: r[10] || "ยังไม่ส่ง", // Parse column K
   }));
 }
 
 export async function addDamageRecord(data: DamageRecord) {
-  // Format: Date, Name, Qty, Unit, Reason, Notes, Reporter, Status, Approver, ApproveDate
+  // Format: Date, Name, Qty, Unit, Reason, Notes, Reporter, Status, Approver, ApproveDate, SentToHq
   const row = [
     data.date,
     data.product_name,
@@ -2066,8 +2068,9 @@ export async function addDamageRecord(data: DamageRecord) {
     data.status,
     data.approved_by,
     data.approved_date,
+    data.sent_to_hq || "ยังไม่ส่ง",
   ];
-  await appendSheetRow(SPREADSHEET_ID, "'Damage'!A:J", row);
+  await appendSheetRow(SPREADSHEET_ID, "'Damage'!A:K", row);
   return true;
 }
 
@@ -2081,6 +2084,19 @@ export async function updateDamageStatusByRow(
   const date = new Date().toISOString().split("T")[0];
   const range = `'Damage'!H${rowNumber}:J${rowNumber}`; // H=Status, I=Approver, J=Date
   const values = [[status, approver, date]];
+
+  await updateSheetData(SPREADSHEET_ID, range, values);
+  return true;
+}
+
+export async function updateDamageHqStatusByRow(
+  rowNumber: number,
+  sentToHq: string
+) {
+  if (rowNumber < 2) return false;
+
+  const range = `'Damage'!K${rowNumber}:K${rowNumber}`; // K=SentToHq
+  const values = [[sentToHq]];
 
   await updateSheetData(SPREADSHEET_ID, range, values);
   return true;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Plus, CheckCircle, XCircle, Search, Filter, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Plus, CheckCircle, XCircle, Search, Filter, ArrowLeft, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -17,6 +17,7 @@ interface DamageRecord {
   status: string;
   approved_by: string;
   approved_date: string;
+  sent_to_hq?: string; // New field to track sent to Head Office status
 }
 
 export default function DamagePage() {
@@ -100,6 +101,28 @@ export default function DamagePage() {
           });
           if (res.ok) {
               fetchRecords();
+          }
+      } catch (e) {
+          alert("Error updating status");
+      }
+  };
+
+  const handleSendToHq = async (index: number) => {
+      if (!confirm("ยืนยันส่งสินค้าชำรุดนี้กลับสำนักงานใหญ่?")) return;
+
+      try {
+          const res = await fetch('/api/damage', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  rowIndex: index,
+                  sent_to_hq: 'ส่งกลับแล้ว'
+              })
+          });
+          if (res.ok) {
+              fetchRecords();
+          } else {
+              alert("Failed to update HQ status");
           }
       } catch (e) {
           alert("Error updating status");
@@ -237,14 +260,15 @@ export default function DamagePage() {
                         <th className="p-4">{t('col_category')}</th>
                         <th className="p-4">{t('reporter')}</th>
                         <th className="p-4 text-center">{t('col_status')}</th>
-                        <th className="p-4 text-center">{t('edit')}</th>
+                        <th className="p-4 text-center">{t('sent_to_hq')}</th>
+                        <th className="p-4 text-center">{t('col_actions')}</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                     {loading ? (
-                         <tr><td colSpan={7} className="p-8 text-center animate-pulse">{t('processing')}</td></tr>
+                         <tr><td colSpan={8} className="p-8 text-center animate-pulse">{t('processing')}</td></tr>
                     ) : records.length === 0 ? (
-                         <tr><td colSpan={7} className="p-8 text-center">{t('no_logs')}</td></tr>
+                         <tr><td colSpan={8} className="p-8 text-center">{t('no_logs')}</td></tr>
                     ) : (
                         records.map((r, i) => (
                             <tr key={i} className="hover:bg-slate-800/50 transition-colors">
@@ -255,21 +279,48 @@ export default function DamagePage() {
                                 <td className="p-4">{r.reported_by}</td>
                                 <td className="p-4 text-center">
                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                        r.status === 'อนุมัติแล้ว' || r.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-yellow-500/10 text-yellow-500'
+                                        r.status === 'อนุมัติแล้ว' || r.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
                                     }`}>
                                         {r.status === 'อนุมัติแล้ว' || r.status === 'Approved' ? t('status_approved') : t('status_pending')}
                                     </span>
                                 </td>
                                 <td className="p-4 text-center">
-                                    {(r.status !== 'อนุมัติแล้ว' && r.status !== 'Approved') && (
-                                        <button 
-                                            onClick={() => handleApprove(i, r.status)}
-                                            className="p-2 bg-slate-800 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors group"
-                                            title={t('approve_btn')}
-                                        >
-                                            <CheckCircle className="w-4 h-4 text-slate-400 group-hover:text-white" />
-                                        </button>
-                                    )}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                        r.sent_to_hq === 'ส่งกลับแล้ว' || r.sent_to_hq === 'Sent' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                                    }`}>
+                                        {r.sent_to_hq === 'ส่งกลับแล้ว' || r.sent_to_hq === 'Sent' ? t('status_sent') : t('status_not_sent')}
+                                    </span>
+                                </td>
+                                <td className="p-4 text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                        {(r.status !== 'อนุมัติแล้ว' && r.status !== 'Approved') ? (
+                                            <button 
+                                                onClick={() => handleApprove(i, r.status)}
+                                                className="p-2 bg-slate-800 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors group"
+                                                title={t('approve_btn')}
+                                            >
+                                                <CheckCircle className="w-4 h-4 text-slate-400 group-hover:text-white" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-emerald-400 flex items-center gap-1 text-xs font-bold bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                                                <CheckCircle className="w-3.5 h-3.5" /> {t('status_approved')}
+                                            </span>
+                                        )}
+                                        
+                                        {(r.sent_to_hq !== 'ส่งกลับแล้ว' && r.sent_to_hq !== 'Sent') ? (
+                                            <button 
+                                                onClick={() => handleSendToHq(i)}
+                                                className="p-2 bg-slate-800 hover:bg-orange-600 hover:text-white rounded-lg transition-colors group"
+                                                title={t('mark_as_sent')}
+                                            >
+                                                <Truck className="w-4 h-4 text-slate-400 group-hover:text-white" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-emerald-400 flex items-center gap-1 text-xs font-bold bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                                                <Truck className="w-3.5 h-3.5" /> {t('status_sent')}
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))

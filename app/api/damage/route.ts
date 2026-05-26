@@ -65,23 +65,32 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { rowIndex, status, approver } = body;
+        const { rowIndex, status, approver, sent_to_hq } = body;
 
-        if (!rowIndex || !status) {
-            return NextResponse.json({ error: 'Missing rowIndex or status' }, { status: 400 });
+        // Note: rowIndex is 0-based array index from frontend
+        if (rowIndex === undefined) {
+            return NextResponse.json({ error: 'Missing rowIndex' }, { status: 400 });
         }
 
-        // rowIndex comes from frontend index + 2 (Header is 1, array is 0-based)
-        // Wait, if we return array from getDamageRecords, index 0 is row 2.
-        // So sheet row = index + 2.
         const sheetRow = rowIndex + 2;
 
-        const success = await updateDamageStatusByRow(sheetRow, status, approver || 'Admin');
-        
-        if (success) {
-            return NextResponse.json({ message: 'Status updated' });
+        if (sent_to_hq) {
+            const { updateDamageHqStatusByRow } = await import('@/lib/googleSheets');
+            const success = await updateDamageHqStatusByRow(sheetRow, sent_to_hq);
+            if (success) {
+                return NextResponse.json({ message: 'HQ status updated successfully' });
+            } else {
+                return NextResponse.json({ error: 'Failed to update HQ status' }, { status: 500 });
+            }
+        } else if (status) {
+            const success = await updateDamageStatusByRow(sheetRow, status, approver || 'Admin');
+            if (success) {
+                return NextResponse.json({ message: 'Status updated' });
+            } else {
+                 return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
+            }
         } else {
-             return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
+            return NextResponse.json({ error: 'Missing status or sent_to_hq' }, { status: 400 });
         }
 
     } catch (error) {
