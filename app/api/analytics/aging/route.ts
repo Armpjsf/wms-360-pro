@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProducts, getTransactions } from '@/lib/googleSheets';
+import { getProducts, getTransactions, getSheetData, PRODUCT_SPREADSHEET_ID } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +8,22 @@ export async function GET(request: Request) {
     const products = await getProducts();
     const outbound = await getTransactions('OUT');
     const inbound = await getTransactions('IN'); // To calculate simple stock for value
+
+    // Fetch Product Master Price to match Col C of 'ชื่อสินค้า'
+    const priceMap = new Map<string, number>();
+    try {
+        const productMasterRaw = await getSheetData(PRODUCT_SPREADSHEET_ID, "'ชื่อสินค้า'!A:E");
+        productMasterRaw?.slice(1).forEach((row: any[]) => {
+            const key1 = row[0]; // Potential Code/Name
+            const key2 = row[1]; // Potential Name/Code
+            const costPrice = parseFloat(row[2]?.replace(/,/g, '') || "0"); // Col C: Cost Price
+            
+            if (key1) priceMap.set(key1.trim(), costPrice);
+            if (key2) priceMap.set(key2.trim(), costPrice);
+        });
+    } catch (e) {
+        console.error("Failed to load Product Master for price map in aging api:", e);
+    }
 
     // 1. Calculate Stock Levels & Find First Received Dates
     const stockMap = new Map<string, number>();
@@ -92,6 +108,7 @@ export async function GET(request: Request) {
         }
 
         const stockNode = p.stock;
+        const price = priceMap.get(p.name) || p.price || 0;
         
         return {
             id: p.id,
@@ -99,8 +116,8 @@ export async function GET(request: Request) {
             category: p.category,
             location: p.location,
             stock: stockNode,
-            price: p.price,
-            value: stockNode * p.price,
+            price: price,
+            value: stockNode * price,
             lastSoldDate: lastSold ? lastSold.toISOString().split('T')[0] : null,
             daysSinceLastSale,
             movementStatus
