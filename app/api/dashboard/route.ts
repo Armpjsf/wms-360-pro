@@ -216,7 +216,29 @@ export async function GET(req: Request) {
               else if (daysDiff <= 180) computedStatus = "Very Slow Moving";
               else computedStatus = "Deadstock";
            } else {
-              computedStatus = "Deadstock"; // Default if no sales and no sheet value
+              // Never sold - check first receive date
+              const receives = receiveByProductMap.get(name);
+              let firstReceived: number | null = null;
+              if (receives && receives.length > 0) {
+                  receives.forEach(r => {
+                      const d = new Date(r.date).getTime();
+                      if (!isNaN(d)) {
+                          if (firstReceived === null || d < firstReceived) {
+                              firstReceived = d;
+                          }
+                      }
+                  });
+              }
+
+              if (firstReceived !== null) {
+                  const daysDiff = Math.floor((now - firstReceived) / DAY_MS);
+                  if (daysDiff <= 90) computedStatus = "Normal Moving";
+                  else if (daysDiff <= 180) computedStatus = "Very Slow Moving";
+                  else computedStatus = "Deadstock";
+              } else {
+                  // Never received and never sold
+                  computedStatus = "Normal Moving";
+              }
            }
        }
        
