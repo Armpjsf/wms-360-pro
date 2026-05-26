@@ -7,7 +7,7 @@ import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 export default function AgingPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(90); // Default 3 months
@@ -33,9 +33,29 @@ export default function AgingPage() {
     fetchData();
   }, []);
 
-  // Filter Logic
-  const deadstock = data.filter(item => item.daysSinceLastSale > period && item.stock > 0);
-  const activeObs = data.filter(item => item.daysSinceLastSale <= period);
+  // Filter Logic: Bucket-based (Non-cumulative)
+  const getFilteredData = (periodVal: number) => {
+    return data.filter(item => {
+        if (item.stock <= 0) return false;
+        
+        const days = item.daysSinceLastSale;
+        if (periodVal === 30) {
+            return days >= 30 && days < 60;
+        } else if (periodVal === 60) {
+            return days >= 60 && days < 90;
+        } else if (periodVal === 90) {
+            return days >= 90 && days < 180;
+        } else if (periodVal === 180) {
+            return days >= 180 && days < 365;
+        } else if (periodVal === 365) {
+            return days >= 365;
+        }
+        return false;
+    });
+  };
+
+  const deadstock = getFilteredData(period);
+  const activeObs = data.filter(item => item.daysSinceLastSale < 30 && item.stock > 0);
   
   const deadstockValue = deadstock.reduce((sum, item) => sum + item.value, 0);
 
@@ -80,21 +100,30 @@ export default function AgingPage() {
                 <p className="text-slate-500 font-medium mt-2">{t('aging_subtitle')}</p>
              </div>
            
-           <div className="bg-slate-900 border border-slate-800 p-1 rounded-lg flex">
-               {[30, 60, 90, 180, 365].map((d) => (
-                   <button
-                      key={d}
-                      onClick={() => setPeriod(d)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                          period === d 
-                          ? 'bg-amber-500 text-white shadow-lg' 
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                   >
-                       {d > 300 ? t('period_year') : t('period_days').replace('{0}', String(d))}
-                   </button>
-               ))}
-           </div>
+            <div className="bg-slate-900 border border-slate-800 p-1 rounded-lg flex flex-wrap gap-1">
+                {[30, 60, 90, 180, 365].map((d) => {
+                    const getPeriodLabel = (val: number) => {
+                      if (val === 30) return language === 'en' ? '30-59 Days' : '30-59 วัน';
+                      if (val === 60) return language === 'en' ? '60-89 Days' : '60-89 วัน';
+                      if (val === 90) return language === 'en' ? '90-179 Days' : '90-179 วัน';
+                      if (val === 180) return language === 'en' ? '180-364 Days' : '180-364 วัน';
+                      return language === 'en' ? '365+ Days' : '365 วันขึ้นไป';
+                    };
+                    return (
+                        <button
+                           key={d}
+                           onClick={() => setPeriod(d)}
+                           className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                               period === d 
+                               ? 'bg-amber-500 text-white shadow-lg' 
+                               : 'text-slate-400 hover:text-white'
+                           }`}
+                        >
+                            {getPeriodLabel(d)}
+                        </button>
+                    );
+                })}
+            </div>
        </div>
 
        {/* KPIs */}
@@ -105,10 +134,14 @@ export default function AgingPage() {
                    {loading ? '...' : deadstock.length}
                    <span className="text-xs font-normal text-slate-500">{t('ai_unit')}</span>
                </div>
-               <div className="mt-4 flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-3 py-1 rounded-full w-fit">
-                   <AlertCircle className="w-3 h-3" />
-                   {t('stagnant_desc').replace('{0}', String(period))}
-               </div>
+                    <div className="mt-4 flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-3 py-1 rounded-full w-fit">
+                        <AlertCircle className="w-3 h-3" />
+                        {period === 30 ? (language === 'en' ? 'Inactive for 30 - 59 days' : 'ช่วงไม่เคลื่อนไหว 30 - 59 วัน') :
+                         period === 60 ? (language === 'en' ? 'Inactive for 60 - 89 days' : 'ช่วงไม่เคลื่อนไหว 60 - 89 วัน') :
+                         period === 90 ? (language === 'en' ? 'Inactive for 90 - 179 days' : 'ช่วงไม่เคลื่อนไหว 90 - 179 วัน') :
+                         period === 180 ? (language === 'en' ? 'Inactive for 180 - 364 days' : 'ช่วงไม่เคลื่อนไหว 180 - 364 วัน') :
+                         (language === 'en' ? 'Stagnant for 365+ days' : 'ไม่เคลื่อนไหวเกิน 365 วันขึ้นไป')}
+                    </div>
            </div>
 
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
