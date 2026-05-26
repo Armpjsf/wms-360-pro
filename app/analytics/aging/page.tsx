@@ -33,31 +33,16 @@ export default function AgingPage() {
     fetchData();
   }, []);
 
-  // Filter Logic: Bucket-based (Non-cumulative)
-  const getFilteredData = (periodVal: number) => {
-    return data.filter(item => {
-        if (item.stock <= 0) return false;
-        
-        const days = item.daysSinceLastSale;
-        if (periodVal === 30) {
-            return days >= 30 && days < 60;
-        } else if (periodVal === 60) {
-            return days >= 60 && days < 90;
-        } else if (periodVal === 90) {
-            return days >= 90 && days < 180;
-        } else if (periodVal === 180) {
-            return days >= 180 && days < 365;
-        } else if (periodVal === 365) {
-            return days >= 365;
-        }
-        return false;
-    });
-  };
-
-  const deadstock = getFilteredData(period);
-  const activeObs = data.filter(item => item.daysSinceLastSale < 30 && item.stock > 0);
-  
+  // Filter Logic: Cumulative (>= selected period)
+  const deadstock = data.filter(item => item.daysSinceLastSale >= period && item.stock > 0);
   const deadstockValue = deadstock.reduce((sum, item) => sum + item.value, 0);
+
+  // Fixed True Deadstock (>= 365 days)
+  const trueDeadstock = data.filter(item => item.daysSinceLastSale >= 365 && item.stock > 0);
+  const trueDeadstockValue = trueDeadstock.reduce((sum, item) => sum + item.value, 0);
+
+  // Active items (< 30 days)
+  const activeObs = data.filter(item => item.daysSinceLastSale < 30 && item.stock > 0);
 
   const tableData = viewMode === 'DEADSTOCK' ? deadstock : data;
 
@@ -103,17 +88,17 @@ export default function AgingPage() {
             <div className="bg-slate-900 border border-slate-800 p-1 rounded-lg flex flex-wrap gap-1">
                 {[30, 60, 90, 180, 365].map((d) => {
                     const getPeriodLabel = (val: number) => {
-                      if (val === 30) return language === 'en' ? '30-59 Days' : '30-59 วัน';
-                      if (val === 60) return language === 'en' ? '60-89 Days' : '60-89 วัน';
-                      if (val === 90) return language === 'en' ? '90-179 Days' : '90-179 วัน';
-                      if (val === 180) return language === 'en' ? '180-364 Days' : '180-364 วัน';
-                      return language === 'en' ? '365+ Days' : '365 วันขึ้นไป';
+                      if (val === 30) return language === 'en' ? '30 Days+' : '30 วัน+';
+                      if (val === 60) return language === 'en' ? '60 Days+' : '60 วัน+';
+                      if (val === 90) return language === 'en' ? '90 Days+' : '90 วัน+';
+                      if (val === 180) return language === 'en' ? '180 Days+' : '180 วัน+';
+                      return language === 'en' ? '1 Year+ (Dead)' : '1 ปี+ (Dead)';
                     };
                     return (
                         <button
                            key={d}
                            onClick={() => setPeriod(d)}
-                           className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                           className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
                                period === d 
                                ? 'bg-amber-500 text-white shadow-lg' 
                                : 'text-slate-400 hover:text-white'
@@ -129,42 +114,46 @@ export default function AgingPage() {
        {/* KPIs */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-               <h3 className="text-slate-400 text-sm mb-2">{t('deadstock_items')}</h3>
+               <h3 className="text-amber-400 text-sm font-semibold mb-2">
+                   {language === 'en' ? `Stagnant Items (> ${period} Days)` : `สินค้าไม่เคลื่อนไหวเกิน ${period} วัน`}
+               </h3>
                <div className="text-3xl font-bold text-white flex items-center gap-2">
                    {loading ? '...' : deadstock.length}
                    <span className="text-xs font-normal text-slate-500">{t('ai_unit')}</span>
                </div>
-                    <div className="mt-4 flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-3 py-1 rounded-full w-fit">
-                        <AlertCircle className="w-3 h-3" />
-                        {period === 30 ? (language === 'en' ? 'Inactive for 30 - 59 days' : 'ช่วงไม่เคลื่อนไหว 30 - 59 วัน') :
-                         period === 60 ? (language === 'en' ? 'Inactive for 60 - 89 days' : 'ช่วงไม่เคลื่อนไหว 60 - 89 วัน') :
-                         period === 90 ? (language === 'en' ? 'Inactive for 90 - 179 days' : 'ช่วงไม่เคลื่อนไหว 90 - 179 วัน') :
-                         period === 180 ? (language === 'en' ? 'Inactive for 180 - 364 days' : 'ช่วงไม่เคลื่อนไหว 180 - 364 วัน') :
-                         (language === 'en' ? 'Stagnant for 365+ days' : 'ไม่เคลื่อนไหวเกิน 365 วันขึ้นไป')}
-                    </div>
+               <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full w-fit">
+                   <AlertCircle className="w-3 h-3" />
+                   {language === 'en' ? `Inactive for at least ${period} days` : `ไม่มีการเคลื่อนไหวอย่างน้อย ${period} วันขึ้นไป`}
+               </div>
            </div>
 
            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-               <h3 className="text-slate-400 text-sm mb-2">{t('deadstock_value')}</h3>
+               <h3 className="text-amber-400 text-sm font-semibold mb-2">
+                   {language === 'en' ? `Stagnant Value (> ${period} Days)` : `มูลค่าสินค้าไม่เคลื่อนไหว (> ${period} วัน)`}
+               </h3>
                <div className="text-3xl font-bold text-white flex items-center gap-2">
                    ฿{loading ? '...' : deadstockValue.toLocaleString()}
                    <span className="text-xs font-normal text-slate-500">THB</span>
                </div>
-               <div className="mt-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full w-fit">
-                   <Clock className="w-3 h-3" />
-                   {t('capital_tied_up')}
+               <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 bg-slate-800 px-3 py-1 rounded-full w-fit">
+                   <Clock className="w-3 h-3 text-slate-500" />
+                   {language === 'en' ? 'Capital tied up in this range' : 'ทุนจมที่ควรเร่งระบายในกลุ่มนี้'}
                </div>
            </div>
 
-           <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-               <h3 className="text-slate-400 text-sm mb-2">{t('kpi_active_items')}</h3>
+           <div className="bg-slate-900 border border-red-500/30 p-6 rounded-xl relative overflow-hidden group hover:border-red-500/60 transition-colors">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:bg-red-500/10 transition-colors" />
+               <h3 className="text-red-400 text-sm font-bold flex items-center gap-1.5 mb-2">
+                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                   {language === 'en' ? 'True Deadstock (1 Year+)' : 'สินค้าค้างสต็อกแท้ (Deadstock 1 ปี+)'}
+               </h3>
                <div className="text-3xl font-bold text-white flex items-center gap-2">
-                   {loading ? '...' : activeObs.length}
-                   <span className="text-xs font-normal text-slate-500">SKUs</span>
+                   {loading ? '...' : trueDeadstock.length}
+                   <span className="text-xs font-normal text-slate-500">{t('ai_unit')}</span>
                </div>
-               <div className="mt-4 flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full w-fit">
-                   <CheckCircle className="w-3 h-3" />
-                   {t('filter_normal_moving')}
+               <div className="mt-4 text-xs text-red-300 font-medium">
+                   {language === 'en' ? 'Total Frozen Capital: ' : 'เงินจมสะสมวิกฤต: '}
+                   <span className="text-red-400 font-bold text-sm">฿{loading ? '...' : trueDeadstockValue.toLocaleString()}</span>
                </div>
            </div>
        </div>
