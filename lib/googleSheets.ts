@@ -952,7 +952,7 @@ export async function getProductsUncached(
 
     const idxName = getColIndex(["ชื่อสินค้า", "product_name", "item_name"]);
     const idxCat = getColIndex(["กลุ่มสินค้า", "category", "group"]);
-    const idxPrice = getColIndex(["ราคามาตรฐาน", "ราคา", "price", "cost"]);
+    const idxPrice = getColIndex(["ราคามาตรฐาน", "ราคา", "price", "cost", "ต้นทุนเฉลี่ยต่อชิ้น", "ต้นทุน"]);
     const idxStock = getColIndex([
       "จำนวนสินค้าคงเหลือ",
       "จำนวนคงเหลือ",
