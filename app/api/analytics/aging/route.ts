@@ -91,7 +91,7 @@ export async function GET(request: Request) {
             }
         }
 
-        const stockNode = stockMap.get(p.name) || 0;
+        const stockNode = p.stock;
         
         return {
             id: p.id,

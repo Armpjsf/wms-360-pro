@@ -152,7 +152,7 @@ export async function GET(req: Request) {
     console.log(`[Dashboard] Inventory Columns: Name=${idxName}, Stock=${idxStock}, Movement=${idxMovement}`);
 
     const lastSoldMap = new Map<string, number>();
-    issueRaw?.slice(1).forEach((row: any[]) => {
+    issueRawFullData?.slice(1).forEach((row: any[]) => {
         const dateStr = row[0];
         const name = row[1];
         if (dateStr && name) {
