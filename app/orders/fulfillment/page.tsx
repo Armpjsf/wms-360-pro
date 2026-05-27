@@ -24,9 +24,28 @@ export default function OrderFulfillmentPage() {
 
   useEffect(() => { fetchStatus(); }, []);
 
-  const handleProcess = async (type: string) => {
-      // Placeholder for full logic
-      alert("This would trigger the Roll Tag -> Form Data Copy process. (Requires full matrix mapping implementation)");
+  const handleProcess = async (tagId: string) => {
+      if (!confirm(`Are you sure you want to process ${tagId}?`)) return;
+      
+      setProcessing(true);
+      try {
+          const res = await fetch('/api/orders/process', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tagId })
+          });
+          const data = await res.json();
+          if (res.ok) {
+              alert(`Successfully processed order! (DocNum: ${data.docId})`);
+              fetchStatus();
+          } else {
+              alert("Error processing: " + (data.error || 'Server error'));
+          }
+      } catch (e: any) {
+          alert("Error: " + e.message);
+      } finally {
+          setProcessing(false);
+      }
   };
 
   const handleGeneratePDF = async () => {
@@ -77,37 +96,37 @@ export default function OrderFulfillmentPage() {
                    </button>
                </div>
 
-               <div className="space-y-4">
-                   {/* Roll Tag 1 */}
-                   <div className={`p-4 rounded-xl border flex justify-between items-center ${status?.rt1_pending ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-950 border-slate-800'}`}>
-                       <div>
-                           <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Roll Tag 1</div>
-                           <div className={`font-bold text-lg ${status?.rt1_pending ? 'text-emerald-400' : 'text-slate-600'}`}>
-                               {status?.rt1_pending ? `Order: ${status.rt1_pending}` : 'Empty'}
-                           </div>
-                       </div>
-                       {status?.rt1_pending && (
-                           <button onClick={() => handleProcess('Roll Tag1')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-sm shadow-lg shadow-emerald-900/20">
-                               Create Note
-                           </button>
-                       )}
-                   </div>
-
-                    {/* Roll Tag 2 */}
-                   <div className={`p-4 rounded-xl border flex justify-between items-center ${status?.rt2_pending ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-950 border-slate-800'}`}>
-                       <div>
-                           <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Roll Tag 2</div>
-                           <div className={`font-bold text-lg ${status?.rt2_pending ? 'text-emerald-400' : 'text-slate-600'}`}>
-                               {status?.rt2_pending ? `Order: ${status.rt2_pending}` : 'Empty'}
-                           </div>
-                       </div>
-                       {status?.rt2_pending && (
-                           <button onClick={() => handleProcess('Roll Tag2')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-sm shadow-lg shadow-emerald-900/20">
-                               Create Note
-                           </button>
-                       )}
-                   </div>
-               </div>
+                <div className="space-y-4">
+                    {loading ? (
+                        <div className="text-center py-6 text-slate-500">Loading tasks...</div>
+                    ) : !status?.pending_tasks || status.pending_tasks.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 bg-slate-950 border border-slate-800 rounded-xl">
+                            <CheckCircle className="w-12 h-12 mx-auto mb-2 text-slate-700" />
+                            <p className="font-medium text-slate-400">No Pending Tasks</p>
+                            <p className="text-xs text-slate-500 mt-1">All Roll Tags are clear</p>
+                        </div>
+                    ) : (
+                        status.pending_tasks.map((task: any) => (
+                            <div key={task.tagId} className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex justify-between items-center transition-all duration-200 hover:scale-[1.01]">
+                                <div>
+                                    <div className="text-xs text-emerald-400 uppercase font-bold tracking-wider mb-1">
+                                        {task.name || `Roll Tag ${task.tagId.replace("RT", "")}`}
+                                    </div>
+                                    <div className="font-bold text-lg text-white">
+                                        Order: {task.customerId || task.customerName}
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => handleProcess(task.tagId)}
+                                    disabled={processing}
+                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-sm shadow-lg shadow-emerald-950/20 transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                                >
+                                    Create Note
+                                </button>
+                            </div>
+                        ))
+                    )}
+                </div>
            </div>
 
            {/* Section 2: Active Form */}

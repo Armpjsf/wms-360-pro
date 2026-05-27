@@ -108,13 +108,13 @@ export async function POST(req: Request) {
             return { sheet: sheetName, data: data, isTagID: true };
         };
 
-        // Check RT1 / RT2
+        // Check RT dynamic
         let sourceInfo = null;
-        if (docNum === 'RT1') sourceInfo = await findInRollTag(ROLL_TAG_1);
-        else if (docNum === 'RT2') sourceInfo = await findInRollTag(ROLL_TAG_2);
-        
-        // If not explicit RT ID, maybe user passed actual Order ID? Use fallback?
-        // For now, assume Frontend sends 'RT1'/'RT2' for pending.
+        if (docNum && /^RT\d+$/i.test(docNum)) {
+            const tagNum = docNum.replace(/RT/i, "").trim();
+            const sheetName = `Roll Tag${tagNum}`;
+            sourceInfo = await findInRollTag(sheetName);
+        }
         
         if (sourceInfo) {
              console.log(`[Finalize] Found job in ${sourceInfo.sheet}. Promoting to ${FORM_SHEET}...`);
@@ -350,7 +350,13 @@ export async function POST(req: Request) {
                     title: "✍️ ได้รับลายเซ็นใหม่ (Signature Received)",
                     body: `เอกสาร ${docNum} ลงนามเรียบร้อยแล้ว`,
                 },
-                android: { notification: { sound: 'default' } }
+                android: {
+                    priority: 'high',
+                    notification: {
+                        sound: 'default',
+                        clickAction: 'FCM_PLUGIN_ACTIVITY'
+                    }
+                }
              }).catch(notiErr => console.error("FCM Background Send Error:", notiErr));
         }
     } catch (notiErr) {

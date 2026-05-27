@@ -31,17 +31,60 @@ export async function GET(request: Request) {
         }
         const SHEET_ID = process.env.PO_SPREADSHEET_ID;
 
-        // Check Pending Logic
-        const rt1 = await getSheetData(SHEET_ID, `'${SHEET_ROLL_TAG_1}'!B4`);
-        const rt2 = await getSheetData(SHEET_ID, `'${SHEET_ROLL_TAG_2}'!B4`);
-        
-        // Check if Form has active job
-        const formCheck = await getSheetData(SHEET_ID, `'${SHEET_FORM}'!G3`);
+        // Get all sheet titles dynamically
+        const { googleSheets } = await getGoogleSheets();
+        const meta = await googleSheets.spreadsheets.get({
+            spreadsheetId: SHEET_ID,
+            fields: 'sheets.properties.title'
+        });
+        const userSheetTitles = meta.data.sheets?.map((s: any) => s.properties.title) || [];
+
+        // Find all sheets that start with "Roll Tag" (case-insensitive, optionally with space, followed by digits)
+        const rollTagSheets = userSheetTitles
+          .filter(title => /^Roll\s*Tag\s*(\d+)$/i.test(title))
+          .sort((a, b) => {
+            const aNum = parseInt(a.match(/^Roll\s*Tag\s*(\d+)$/i)?.[1] || "0", 10);
+            const bNum = parseInt(b.match(/^Roll\s*Tag\s*(\d+)$/i)?.[1] || "0", 10);
+            return aNum - bNum;
+          });
+
+        // Query data for all discovered Roll Tag sheets in parallel
+        const fetchPromises = rollTagSheets.map(sheetName => getSheetData(SHEET_ID, `'${sheetName}'!B4:B5`));
+        const [rollTagDataList, formCheck] = await Promise.all([
+            Promise.all(fetchPromises),
+            getSheetData(SHEET_ID, `'${SHEET_FORM}'!G3`)
+        ]);
+
+        const pending_tasks = [];
+        for (let i = 0; i < rollTagSheets.length; i++) {
+            const sheetName = rollTagSheets[i];
+            const data = rollTagDataList[i];
+            const customerId = data?.[0]?.[0] || null;
+            const customerName = data?.[1]?.[0] || customerId;
+            const match = sheetName.match(/^Roll\s*Tag\s*(\d+)$/i);
+            const num = match ? match[1] : (i + 1).toString();
+            const tagId = `RT${num}`;
+
+            if (customerId) {
+                pending_tasks.push({
+                    tagId,
+                    sheetName,
+                    customerId,
+                    customerName,
+                    name: sheetName
+                });
+            }
+        }
+
+        // Backwards compatibility for RT1 and RT2
+        const rt1Item = pending_tasks.find(t => t.tagId === 'RT1');
+        const rt2Item = pending_tasks.find(t => t.tagId === 'RT2');
 
         return NextResponse.json({
-            rt1_pending: rt1?.[0]?.[0] || null,
-            rt2_pending: rt2?.[0]?.[0] || null,
-            form_active_doc: formCheck?.[0]?.[0] || null
+            rt1_pending: rt1Item ? rt1Item.customerId : null,
+            rt2_pending: rt2Item ? rt2Item.customerId : null,
+            form_active_doc: formCheck?.[0]?.[0] || null,
+            pending_tasks
         });
 
     } catch (error: any) {

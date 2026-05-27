@@ -29,8 +29,9 @@ export async function POST(request: Request) {
 
     console.log(`[Process] Starting for Tag: ${tagId}, Branch: ${branchId || 'HQ'}, SS_ID: ${ssId}`);
     
-    // 1. Determine Source Sheet
-    const sourceSheet = tagId === 'RT1' ? ROLL_TAG_1 : ROLL_TAG_2;
+    // 1. Determine Source Sheet dynamically
+    const tagNum = tagId.replace("RT", "").trim();
+    const sourceSheet = `Roll Tag${tagNum}`;
     
     // 2. Check "Form" Availability First
     const formCheck = await getSheetData(ssId, `${FORM_SHEET}!G3:G3`);
@@ -238,7 +239,13 @@ export async function POST(request: Request) {
                     type: 'new_job',
                     docId: newDocId
                 },
-                android: { notification: { sound: 'default' } }
+                android: {
+                    priority: 'high',
+                    notification: {
+                        sound: 'default',
+                        clickAction: 'FCM_PLUGIN_ACTIVITY'
+                    }
+                }
             });
         }
     } catch (notifyErr) {

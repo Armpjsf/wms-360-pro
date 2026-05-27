@@ -87,9 +87,26 @@ export async function GET(req: Request) {
     };
     
     // 1. Check Pending Tasks (Roll Tags) - FROM BRANCH SPREADSHEET
-    const [rt1Data, rt2Data, formCheck] = await Promise.all([
-        fetchDynamic(['Roll Tag', '1'], 'A4:F17', 'Roll Tag1'),
-        fetchDynamic(['Roll Tag', '2'], 'A4:F17', 'Roll Tag2'),
+    // Find all sheets that start with "Roll Tag" (case-insensitive, optionally with space, followed by digits)
+    const rollTagSheets = userSheetTitles
+      .filter(title => /^Roll\s*Tag\s*(\d+)$/i.test(title))
+      .sort((a, b) => {
+        const aNum = parseInt(a.match(/^Roll\s*Tag\s*(\d+)$/i)?.[1] || "0", 10);
+        const bNum = parseInt(b.match(/^Roll\s*Tag\s*(\d+)$/i)?.[1] || "0", 10);
+        return aNum - bNum;
+      });
+
+    // If for some reason metadata API failed and returned 0 sheets, fall back to default Roll Tag1 and Roll Tag2
+    const sheetsToQuery = rollTagSheets.length > 0 ? rollTagSheets : ['Roll Tag1', 'Roll Tag2'];
+
+    const fetchPromises = sheetsToQuery.map(sheetName => {
+        const match = sheetName.match(/^Roll\s*Tag\s*(\d+)$/i);
+        const num = match ? match[1] : "1";
+        return fetchDynamic(['Roll Tag', num], 'A4:F17', sheetName);
+    });
+
+    const [rollTagDataList, formCheck] = await Promise.all([
+        Promise.all(fetchPromises),
         fetchDynamic(['ส่งสินค้า'], 'G3:G3', 'ส่งสินค้า')
     ]);
 
@@ -154,11 +171,17 @@ export async function GET(req: Request) {
     };
 
     const pendingTasks = [];
-    const rt1 = parseRollTag('RT1', ROLL_TAG_1, rt1Data || []);
-    const rt2 = parseRollTag('RT2', ROLL_TAG_2, rt2Data || []);
-    
-    if (rt1) pendingTasks.push(rt1);
-    if (rt2) pendingTasks.push(rt2);
+    for (let i = 0; i < sheetsToQuery.length; i++) {
+        const sheetName = sheetsToQuery[i];
+        const match = sheetName.match(/^Roll\s*Tag\s*(\d+)$/i);
+        const num = match ? match[1] : (i + 1).toString();
+        const id = `RT${num}`;
+        const data = rollTagDataList[i] || [];
+        const parsed = parseRollTag(id, sheetName, data);
+        if (parsed) {
+            pendingTasks.push(parsed);
+        }
+    }
 
     // 2. Check Active Form (ส่งสินค้า sheet)
     let activeForm = null;

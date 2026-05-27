@@ -15,9 +15,10 @@ export async function GET(request: NextRequest) {
         const ssid = await resolveSpreadsheetId(branchId, 'doc');
         console.log(`[Print RollTag] Branch: ${branchId || 'HQ'}, SSID: ${ssid}, Tag: ${tagId}`);
 
-        // 2. Map tagId to keywords and default name
-        const keywords = tagId === 'RT2' ? ['Roll Tag', '2'] : ['Roll Tag', '1'];
-        const defaultName = tagId === 'RT2' ? 'Roll Tag2' : 'Roll Tag1';
+        // 2. Map tagId to keywords and default name dynamically
+        const tagNum = tagId.replace("RT", "").trim();
+        const keywords = ['Roll Tag', tagNum];
+        const defaultName = `Roll Tag${tagNum}`;
 
         // 3. Find the actual sheet title (robustly)
         const sheetName = await findSheetTitle(ssid, keywords, defaultName);
