@@ -8,7 +8,8 @@ import {
     PO_SPREADSHEET_ID,
     getSheetData,
     addTransaction,
-    getProducts
+    getProducts,
+    appendSheetRow
 } from '@/lib/googleSheets';
 import { PDFDocument } from 'pdf-lib';
 
@@ -190,6 +191,47 @@ export async function POST(req: Request) {
                  
                  await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
                  
+                 // ** WRITE TO ARCHIVE (คลังข้อมูล) & TRANSACTIONS ON DIRECT SIGNATURE **
+                 try {
+                     const today = getThaiDate();
+                     const archiveRows = items.map((it, idx) => [
+                         finalDocNum,       // A: DocNum
+                         customerName,     // B: CustName
+                         idx + 1,          // C: Seq
+                         it.orderNo,       // D: OrderNo
+                         it.itemCode,      // E: ItemCode
+                         it.qty,           // F: Qty
+                         "กำลังดำเนินการ", // G: Status (found & updated to เสร็จสิ้น later in this request!)
+                         "",               // H: PDF Link
+                         today             // I: Date
+                     ]);
+
+                     for (const row of archiveRows) {
+                         const cleanRow = row.map(d => (d === undefined || d === null) ? "" : d);
+                         await appendSheetRow(ssid, `'${DATA_SHEET}'!A:A`, cleanRow);
+                     }
+                     console.log(`[Finalize] Direct sign: Wrote ${archiveRows.length} rows to คลังข้อมูล as 'กำลังดำเนินการ'`);
+
+                     // Write transactions (Reduce inventory!)
+                     const { writeTransactionData } = await import('@/lib/transactionUtils');
+                     const invSSID = await resolveSpreadsheetId(branchId, 'inventory');
+                     
+                     const transactionItems = items.map(it => ({
+                         itemCode: it.itemCode,
+                         quantity: Number(it.qty) || 0,
+                         orderNumber: it.orderNo,
+                         docNumber: finalDocNum
+                     })).filter(it => it.itemCode);
+
+                     if (transactionItems.length > 0) {
+                         console.log(`[Finalize] Direct sign: Writing ${transactionItems.length} items to Transaction (SSID: ${invSSID})...`);
+                         await writeTransactionData(transactionItems, invSSID);
+                         console.log(`[Finalize] ✅ Direct sign: Transaction write successful`);
+                     }
+                 } catch (archiveErr) {
+                     console.error("[Finalize] Failed to write initial archive/transaction rows:", archiveErr);
+                 }
+
                  // Update local variable to use the REAL docNum for PDF generation and status update
                  docNum = finalDocNum;
                  
