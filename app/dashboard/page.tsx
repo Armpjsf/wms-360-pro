@@ -308,7 +308,7 @@ export default function Dashboard() {
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.28 }}>
                             <KpiCard 
-                              label="Flow Ratio (In/Out)" 
+                              label={t('kpi_flow_ratio')} 
                               value={data?.summary?.inboundPeriod && data?.summary?.outboundPeriod ? (data.summary.inboundPeriod / (data.summary.outboundPeriod || 1)).toFixed(2) : "1.08"} 
                               icon={Activity} 
                               bg="bg-indigo-50" 
@@ -326,7 +326,7 @@ export default function Dashboard() {
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.45 }}>
                             <KpiCard 
-                              label="Space Occupancy" 
+                              label={t('kpi_space_occupancy')} 
                               value={`${(data?.executive?.spaceEfficiency || 84.2).toFixed(1)}%`} 
                               icon={MapPin} 
                               bg="bg-violet-50" 
