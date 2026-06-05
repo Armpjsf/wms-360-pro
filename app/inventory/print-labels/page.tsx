@@ -27,6 +27,8 @@ function PrintLabelsContent() {
   const name = searchParams.get('name') || 'Unknown Product';
   const price = searchParams.get('price') || '0';
   const code = searchParams.get('code') || sku; // Use 'code' for barcode value, fallback to SKU
+  const stock = Number(searchParams.get('stock') || '0');
+  const location = searchParams.get('location') || '';
   
   const [copies, setCopies] = useState(1);
   const [labelSize, setLabelSize] = useState<'standard' | 'small' | 'large'>('standard');
@@ -152,6 +154,7 @@ function PrintLabelsContent() {
       </div>
 
       {/* Preview Area */}
+      {/* (Omit unmodified surrounding elements but target the Label props inside the loop) */}
       <div className="flex-1 bg-slate-100 p-8 overflow-y-auto flex justify-center items-start">
         <div className="w-full max-w-3xl">
             <div className="mb-4 flex items-center justify-between print:hidden">
@@ -174,15 +177,17 @@ function PrintLabelsContent() {
                 <div className="grid grid-cols-1 gap-4 print:block"> {/* Grid for preview, block for print flow */}
                      {Array.from({ length: copies }).map((_, i) => (
                         <div key={i} className="inline-block p-2 print:p-0">
-                             <Label 
-                                sku={sku} 
-                                name={name} 
-                                price={price}
-                                code={code} 
-                                size={labelSize} 
-                                showPrice={showPrice} 
-                                showQR={showQR}
-                             />
+                              <Label 
+                                 sku={sku} 
+                                 name={name} 
+                                 price={price}
+                                 code={code} 
+                                 size={labelSize} 
+                                 showPrice={showPrice} 
+                                 showQR={showQR}
+                                 stock={stock}
+                                 location={location}
+                              />
                         </div>
                      ))}
                 </div>
@@ -193,7 +198,7 @@ function PrintLabelsContent() {
   );
 }
 
-function Label({ sku, name, price, code, size, showPrice, showQR }: any) {
+function Label({ sku, name, price, code, size, showPrice, showQR, stock, location }: any) {
     // Size configurations
     const sizeConfig = {
         small: { w: '200px', h: '120px', text: 'text-xs', title: 'text-sm', p: 'p-2' },
@@ -217,7 +222,7 @@ function Label({ sku, name, price, code, size, showPrice, showQR }: any) {
 
             <div className="flex-1 flex items-center justify-center w-full py-1">
                 {showQR ? (
-                    <QRCodeSVG value={code} size={size === 'small' ? 60 : 80} level={"H"} />
+                    <QRCodeSVG value={JSON.stringify({loc: location || '-', name, stock: Number(stock)})} size={size === 'small' ? 60 : 80} level={"H"} />
                 ) : (
                     <div className="w-full flex justify-center overflow-hidden">
                         <Barcode 

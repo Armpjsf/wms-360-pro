@@ -57,7 +57,7 @@ export default function LabelDesignerPage() {
                     {codeType === 'BARCODE' ? (
                         <Barcode value={selectedProduct.id} width={1.8} height={60} fontSize={16} />
                     ) : (
-                        <QRCode value={selectedProduct.id} size={150} />
+                        <QRCode value={JSON.stringify({loc: selectedProduct.location || '-', name: selectedProduct.name, stock: selectedProduct.stock})} size={150} />
                     )}
                 </div>
                 {showSKU && <p className="font-mono text-sm text-center mb-1">{selectedProduct.location || selectedProduct.id}</p>}
@@ -234,7 +234,7 @@ export default function LabelDesignerPage() {
                             {codeType === 'BARCODE' ? (
                                 <Barcode value={selectedProduct.id} width={1.5} height={50} fontSize={14} />
                             ) : (
-                                <QRCode value={selectedProduct.id} size={120} />
+                                <QRCode value={JSON.stringify({loc: selectedProduct.location || '-', name: selectedProduct.name, stock: selectedProduct.stock})} size={120} />
                             )}
                         </div>
 

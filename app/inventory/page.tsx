@@ -366,7 +366,7 @@ function InventoryContent() {
                                                     <Maximize2 className="w-4 h-4" />
                                                 </button>
                                                 <Link 
-                                                    href={`/inventory/print-labels?sku=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&code=${encodeURIComponent(product.location || product.id)}`}
+                                                    href={`/inventory/print-labels?sku=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&code=${encodeURIComponent(product.location || product.id)}&stock=${product.stock}&location=${encodeURIComponent(product.location || '')}`}
                                                     target="_blank"
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="p-2 bg-white/20 hover:bg-white text-white hover:text-slate-900 rounded-lg transition-colors backdrop-blur-md pointer-events-auto"
@@ -460,7 +460,7 @@ function InventoryContent() {
                                 <div className="flex items-center gap-2">
                                     <div className="md:hidden flex items-center gap-2">
                                         <Link 
-                                            href={`/inventory/print-labels?sku=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&code=${encodeURIComponent(product.location || product.id)}`}
+                                            href={`/inventory/print-labels?sku=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&code=${encodeURIComponent(product.location || product.id)}&stock=${product.stock}&location=${encodeURIComponent(product.location || '')}`}
                                             target="_blank"
                                             className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 active:scale-90 transition-all border border-slate-200"
                                         >

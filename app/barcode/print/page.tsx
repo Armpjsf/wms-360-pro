@@ -160,7 +160,7 @@ export default function BarcodePrintPage() {
                       </div>
 
                       <div className="w-full flex justify-center py-4 bg-white">
-                          <QRCode value={JSON.stringify({id: selectedProduct.id, name: selectedProduct.name})} size={150} />
+                          <QRCode value={JSON.stringify({loc: selectedProduct.location || '-', name: selectedProduct.name, stock: selectedProduct.stock})} size={150} />
                       </div>
                       
                       <div className="w-full grid grid-cols-2 border-t-2 border-black pt-4 mt-auto">

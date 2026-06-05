@@ -214,9 +214,9 @@ export default function BarcodeGeneratorPage() {
                         <QRCodeSVG
                           id="qr-code-svg"
                           value={JSON.stringify({
-                            id: selectedProduct.id,
+                            loc: selectedProduct.location || '-',
                             name: selectedProduct.name,
-                            price: selectedProduct.price
+                            stock: selectedProduct.stock
                           })}
                           size={180}
                           level="M"
@@ -276,9 +276,9 @@ export default function BarcodeGeneratorPage() {
                 <div className="flex justify-center mb-6">
                     <QRCodeSVG
                         value={JSON.stringify({
-                            id: selectedProduct.id,
+                            loc: selectedProduct.location || '-',
                             name: selectedProduct.name,
-                            price: selectedProduct.price
+                            stock: selectedProduct.stock
                         })}
                         size={300}
                         level="M"

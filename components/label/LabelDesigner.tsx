@@ -148,7 +148,7 @@ export default function LabelDesigner({ product, isOpen, onClose }: LabelDesigne
 
                       {labelSize === 'qr' && (
                          <div className="w-[40mm] h-[40mm] p-2 flex flex-col items-center justify-center bg-white border border-slate-100/50">
-                            <QRCodeSVG value={JSON.stringify({id: product.id, name: product.name})} size={100} />
+                            <QRCodeSVG value={JSON.stringify({loc: (product as any).location || '-', name: product.name, stock: product.stock})} size={100} />
                             {showName && <div className="text-[8px] mt-1 font-bold text-center w-full truncate">{product.name}</div>}
                          </div>
                       )}
