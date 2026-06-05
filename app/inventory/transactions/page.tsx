@@ -47,7 +47,7 @@ export default function TransactionsPage() {
   }
 
   // Helper: Normalize for flexible search (remove special chars, lower case)
-  const normalize = (val: string) => val ? val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
+  const normalize = (val: string) => val ? val.toLowerCase().replace(/[\s\-_./\\()'"[\]{}|+,;:?<>`~!@#$%^&*]/g, '') : '';
 
   // Filter Logic: Includes Location Search with Normalization
   const filtered = data.filter(item => {
@@ -125,16 +125,21 @@ export default function TransactionsPage() {
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-         <div className="relative flex-1 max-w-md">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-             <input 
-                type="text" 
-                placeholder={t('search_logs_placeholder')} 
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none"
-             />
-         </div>
+          <div className="flex flex-1 gap-3 items-center w-full max-w-xl">
+             <div className="relative flex-1">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                 <input 
+                    type="text" 
+                    placeholder={t('search_logs_placeholder')} 
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none"
+                 />
+             </div>
+             <span className="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs font-bold whitespace-nowrap shadow-sm">
+                 {search ? `ค้นพบ ${filtered.length.toLocaleString()} รายการ` : `ทั้งหมด ${filtered.length.toLocaleString()} รายการ`}
+             </span>
+          </div>
          <button 
                 onClick={exportCSV}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg flex items-center gap-2 transition-colors border border-slate-200 font-bold"

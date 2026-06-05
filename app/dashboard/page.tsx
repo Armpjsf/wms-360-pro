@@ -290,7 +290,7 @@ export default function Dashboard() {
                           <KpiCard label={t('kpi_dead_stock')} value={data?.summary?.deadStockCount || 0} icon={Clock} bg="bg-slate-100" color="text-slate-500" href="/inventory?movement=Deadstock" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.35 }}>
-                          <KpiCard label={t('kpi_aging_stock')} value={data?.summary?.agingStockCount || 0} icon={Clock} bg="bg-rose-50" color="text-rose-600" border={data?.summary?.agingStockCount > 10 ? "border-rose-200" : ""} />
+                          <KpiCard label={t('kpi_aging_stock')} value={data?.summary?.agingStockCount || 0} icon={Clock} bg="bg-rose-50" color="text-rose-600" border={data?.summary?.agingStockCount > 10 ? "border-rose-200" : ""} href="/analytics/aging" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.4 }}>
                            <KpiCard label={t('kpi_low_stock')} value={data?.summary?.lowStockCount || 0} icon={AlertTriangle} bg="bg-rose-50" color="text-rose-500" border={data?.summary?.lowStockCount > 0 ? "border-rose-200" : ""} href="/inventory?status=LOW" />

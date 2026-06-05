@@ -136,7 +136,11 @@ function InventoryContent() {
 
   // Filter Logic
   const filtered = products.filter(p => {
-    if (!showInactive && isInactive(p.status)) return false;
+    if (filterStatus === 'INACTIVE') {
+      if (!isInactive(p.status)) return false;
+    } else {
+      if (!showInactive && isInactive(p.status)) return false;
+    }
     const normalize = (val: string) => val ? val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
     const term = normalize(search);
 
@@ -144,7 +148,10 @@ function InventoryContent() {
                         normalize(p.id).includes(term) ||
                         normalize(p.location).includes(term);
     const stockStatus = p.stock <= p.minStock ? 'LOW' : 'OK'; 
-    const matchStatus = filterStatus === 'ALL' || (filterStatus === 'LOW' && stockStatus === 'LOW') || (filterStatus === 'OK' && stockStatus === 'OK');
+    const matchStatus = filterStatus === 'ALL' || 
+                        (filterStatus === 'LOW' && stockStatus === 'LOW') || 
+                        (filterStatus === 'OK' && stockStatus === 'OK') ||
+                        (filterStatus === 'INACTIVE');
     
     // Robust movement matching (Trim + Case Insensitive + Handle Empty)
     const pMovement = (p.movementStatus || '').trim().toLowerCase();
@@ -251,21 +258,26 @@ function InventoryContent() {
         </motion.div>
 
         <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-col md:flex-row gap-4 mb-8 max-w-7xl mx-auto"
-        >
-           <div className="flex-1 relative group">
-               <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
-               <input 
-                  type="text" 
-                  placeholder={t('search_placeholder')}
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium"
-               />
-           </div>
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.1 }}
+             className="flex flex-col md:flex-row gap-4 mb-8 max-w-7xl mx-auto items-center"
+         >
+            <div className="flex-1 relative group w-full flex gap-3 items-center">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                    <input 
+                       type="text" 
+                       placeholder={t('search_placeholder')}
+                       value={search}
+                       onChange={e => setSearch(e.target.value)}
+                       className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium"
+                    />
+                </div>
+                <span className="px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-sm font-bold whitespace-nowrap shadow-sm">
+                    {search ? `ค้นพบ ${filtered.length.toLocaleString()} รายการ` : `ทั้งหมด ${filtered.length.toLocaleString()} รายการ`}
+                </span>
+            </div>
            
            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                 <button 
@@ -295,6 +307,7 @@ function InventoryContent() {
                     <option value="ALL">{t('filter_all_status')}</option>
                     <option value="LOW">{t('filter_low_stock')}</option>
                     <option value="OK">{t('filter_in_stock')}</option>
+                    <option value="INACTIVE">{t('filter_inactive')}</option>
                 </select>
                 
                 <button 
