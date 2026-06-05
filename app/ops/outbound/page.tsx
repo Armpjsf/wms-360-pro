@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Loader2, PackageMinus, Plus, Trash2, Calendar, FileText, Info } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, PackageMinus, Plus, Trash2, Calendar, FileText, Info, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchableSelect } from '@/components/SearchableSelect';
@@ -14,6 +14,7 @@ import { useLanguage } from '@/components/providers/LanguageProvider';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { db } from '@/lib/db';
 import { toast } from 'react-hot-toast';
+import { ImportTransactionsModal } from '@/components/ImportTransactionsModal';
 
 export default function OutboundPage() {
   const { t } = useLanguage();
@@ -22,6 +23,7 @@ export default function OutboundPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   
   // Cart
   const [items, setItems] = useState<any[]>([]);
@@ -192,17 +194,27 @@ export default function OutboundPage() {
            <Link href="/dashboard" className="relative z-10 text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-6 transition-colors font-bold uppercase text-xs tracking-widest">
               <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
            </Link>
-           <div className="relative z-10 flex items-center gap-6">
-               <div className="p-5 bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl shadow-xl shadow-rose-200">
-                 <PackageMinus className="w-10 h-10 text-white" />
-               </div>
-               <div>
-                   <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-1">
-                      {t('outbound_order')}
-                   </h1>
-                   <p className="text-slate-500 font-medium text-lg">{t('outbound_subtitle')}</p>
-               </div>
-           </div>
+           <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div className="flex items-center gap-6">
+                   <div className="p-5 bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl shadow-xl shadow-rose-200">
+                     <PackageMinus className="w-10 h-10 text-white" />
+                   </div>
+                   <div>
+                       <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-1">
+                          {t('outbound_order')}
+                       </h1>
+                       <p className="text-slate-500 font-medium text-lg">{t('outbound_subtitle')}</p>
+                   </div>
+                </div>
+                
+                <button
+                    onClick={() => setIsImportOpen(true)}
+                    className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-3.5 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                    <FileSpreadsheet className="w-5 h-5 text-rose-500" />
+                    <span>{t('import_excel')}</span>
+                </button>
+            </div>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -457,6 +469,14 @@ export default function OutboundPage() {
              <RecentTransactions type="OUT" refreshTrigger={items.length} />
         </motion.div>
       </div>
+
+      <ImportTransactionsModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          type="OUT"
+          products={products}
+          onImported={(importedItems) => setItems(prev => [...prev, ...importedItems])}
+      />
     </div>
   );
 }

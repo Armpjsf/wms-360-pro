@@ -143,6 +143,8 @@ export const translations = {
     confirm_prep_finished: "Are you sure preparation is finished?",
     success_inbound: "Inbound Recorded",
     success_outbound: "Outbound Recorded",
+    import_excel: "Import Excel/CSV",
+    import_desc: "Upload spreadsheet to batch process transactions",
 
     // Mobile Pages
     mobile_my_jobs: "My Jobs",
@@ -694,6 +696,8 @@ export const translations = {
     confirm_prep_finished: "คุณจัดเตรียมสินค้าเสร็จแล้วใช่ไหม?",
     success_inbound: "บันทึกรับเข้าสำเร็จ!",
     success_outbound: "บันทึกเบิกจ่ายสำเร็จ!",
+    import_excel: "นำเข้าจากไฟล์ Excel/CSV",
+    import_desc: "อัปโหลดไฟล์ Excel/CSV เพื่อทำรายการแบบกลุ่ม",
 
     // Mobile Pages
     mobile_my_jobs: "งานของฉัน",
