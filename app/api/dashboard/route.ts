@@ -309,7 +309,7 @@ export async function GET(req: Request) {
     
     const totalValue = inventory.reduce((sum, item) => sum + (item.stock * item.price), 0);
     const lowStockCount = inventory.filter(i => i.stock <= i.minQty && !isInactive(i.masterStatus)).length;
-    const deadStockCount = inventory.filter(i => i.status === 'Deadstock').length; // NEW
+    const deadStockCount = inventory.filter(i => i.status === 'Deadstock' && !isInactive(i.masterStatus)).length; // Filter out inactive items
 
     // 7. Calculate Empty Locations (Locations with NO Product Name)
     // defined by User: Location exists but Name is empty
@@ -503,7 +503,7 @@ export async function GET(req: Request) {
         
         const fifoResult = calculateFIFOLayers(item.stock, inboundLogs);
         
-        if (fifoResult.maxDaysOld > 90) {
+        if (fifoResult.maxDaysOld > 90 && !isInactive(item.masterStatus)) {
             agingStockCount++;
         }
 

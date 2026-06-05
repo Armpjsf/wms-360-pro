@@ -313,6 +313,7 @@ export default function Dashboard() {
                               icon={Activity} 
                               bg="bg-indigo-50" 
                               color="text-indigo-600" 
+                              title={t('tooltip_flow_ratio') || "อัตราส่วนระหว่างยอดรับเข้าสะสมเทียบกับยอดจ่ายออกสะสมในช่วงเวลาที่เลือก (Inbound Total / Outbound Total)"}
                             />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.3 }}>
@@ -334,7 +335,14 @@ export default function Dashboard() {
                             />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.5 }}>
-                           <KpiCard label={t('kpi_turnover_rate')} value={`${(data?.summary?.turnoverRate || 0).toFixed(1)}%`} icon={Activity} bg="bg-emerald-50" color="text-emerald-500" />
+                           <KpiCard 
+                             label={t('kpi_turnover_rate')} 
+                             value={`${(data?.summary?.turnoverRate || 0).toFixed(1)}%`} 
+                             icon={Activity} 
+                             bg="bg-emerald-50" 
+                             color="text-emerald-500" 
+                             title={t('tooltip_turnover_rate') || "อัตราส่วนการหมุนเวียนสินค้าคำนวณจาก ยอดจ่ายออกสะสม / ยอดสินค้าคงเหลือทั้งหมด (Outbound Period / Total Stock)"}
+                           />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.6 }}>
                            <KpiCard 
