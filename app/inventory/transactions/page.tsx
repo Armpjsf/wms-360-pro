@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Search, ArrowDownLeft, ArrowUpRight, History, AlertTriangle } from 'lucide-react';
+import { Download, Search, ArrowDownLeft, ArrowUpRight, History, AlertTriangle, Calendar } from 'lucide-react';
 
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -21,12 +21,14 @@ export default function TransactionsPage() {
   const [data, setData] = useState<Log[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, search]);
+  }, [activeTab, search, startDate, endDate]);
 
   useEffect(() => {
     fetchLogs(activeTab);
@@ -49,10 +51,22 @@ export default function TransactionsPage() {
   // Helper: Normalize for flexible search (remove special chars, lower case)
   const normalize = (val: string) => val ? val.toLowerCase().replace(/[\s\-_./\\()'"[\]{}|+,;:?<>`~!@#$%^&*]/g, '') : '';
 
-  // Filter Logic: Includes Location Search with Normalization
+  // Filter Logic: Includes Date Range and Location Search with Normalization
   const filtered = data.filter(item => {
+      // 1. Date Range Filtering
+      if (startDate) {
+          const itemTime = new Date(item.date).getTime();
+          const startLimit = new Date(startDate).getTime(); // 00:00:00 of start date
+          if (isNaN(itemTime) || itemTime < startLimit) return false;
+      }
+      if (endDate) {
+          const itemTime = new Date(item.date).getTime();
+          const endLimit = new Date(endDate).getTime() + (24 * 60 * 60 * 1000) - 1; // 23:59:59 of end date
+          if (isNaN(itemTime) || itemTime > endLimit) return false;
+      }
+
+      // 2. Search Text Filtering
       const term = normalize(search);
-      // If search has spaces, usually splitting by space is good, but for ID flexibility we focus on stripping.
       if (!term) return true;
 
       const matchProduct = normalize(item.product).includes(term);
@@ -124,8 +138,8 @@ export default function TransactionsPage() {
       </header>
 
       {/* Controls */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex flex-1 gap-3 items-center w-full max-w-xl">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm items-stretch lg:items-center">
+          <div className="flex flex-col md:flex-row flex-1 gap-3 items-stretch md:items-center w-full max-w-5xl">
              <div className="relative flex-1">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                  <input 
@@ -136,16 +150,45 @@ export default function TransactionsPage() {
                     className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none"
                  />
              </div>
-             <span className="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs font-bold whitespace-nowrap shadow-sm">
-                 {search ? `ค้นพบ ${filtered.length.toLocaleString()} รายการ` : `ทั้งหมด ${filtered.length.toLocaleString()} รายการ`}
+             
+             {/* Date Range Inputs */}
+             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg shadow-inner">
+                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                <input 
+                   type="date" 
+                   value={startDate}
+                   onChange={(e) => setStartDate(e.target.value)}
+                   className="bg-transparent border-none text-xs font-semibold text-slate-600 outline-none cursor-pointer"
+                   placeholder="Start Date"
+                />
+                <span className="text-slate-300 text-xs font-bold">→</span>
+                <input 
+                   type="date" 
+                   value={endDate}
+                   onChange={(e) => setEndDate(e.target.value)}
+                   className="bg-transparent border-none text-xs font-semibold text-slate-600 outline-none cursor-pointer"
+                   placeholder="End Date"
+                />
+                {(startDate || endDate) && (
+                   <button 
+                      onClick={() => { setStartDate(''); setEndDate(''); }}
+                      className="text-slate-400 hover:text-slate-600 ml-1 text-xs font-bold"
+                   >
+                      ✕
+                   </button>
+                )}
+             </div>
+
+             <span className="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs font-bold whitespace-nowrap shadow-sm text-center">
+                 {search || startDate || endDate ? `ค้นพบ ${filtered.length.toLocaleString()} รายการ` : `ทั้งหมด ${filtered.length.toLocaleString()} รายการ`}
              </span>
           </div>
-         <button 
-                onClick={exportCSV}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg flex items-center gap-2 transition-colors border border-slate-200 font-bold"
-            >
-                <Download className="w-4 h-4" /> {t('export_current_view')}
-         </button>
+          <button 
+                 onClick={exportCSV}
+                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg flex items-center gap-2 transition-colors border border-slate-200 font-bold w-full lg:w-auto justify-center"
+             >
+                 <Download className="w-4 h-4" /> {t('export_current_view')}
+          </button>
       </div>
 
       {/* Table */}

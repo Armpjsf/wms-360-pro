@@ -262,16 +262,21 @@ export async function POST(req: Request) {
             const existingPdfBytes = new Uint8Array(rawPdfBuffer);
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             
-            // Embed the signature image
-            // Signature is "data:image/png;base64,..."
-            let pngImageBytes: ArrayBuffer;
+            // Embed the signature image (supports data URI for both PNG and JPEG)
+            let imageBytes: ArrayBuffer;
+            let isPng = true;
             if (signature.startsWith('data:')) {
+                const mime = signature.match(/data:([^;]+);/)?.[1] || 'image/png';
+                isPng = mime === 'image/png';
                 const base64 = signature.split(',')[1];
-                pngImageBytes = Buffer.from(base64, 'base64').buffer;
+                imageBytes = Buffer.from(base64, 'base64').buffer;
             } else {
-                pngImageBytes = await fetch(signature).then((res) => res.arrayBuffer());
+                isPng = !signature.toLowerCase().endsWith('.jpg') && !signature.toLowerCase().endsWith('.jpeg');
+                imageBytes = await fetch(signature).then((res) => res.arrayBuffer());
             }
-            const pngImage = await pdfDoc.embedPng(pngImageBytes);
+            const pngImage = isPng 
+                ? await pdfDoc.embedPng(imageBytes)
+                : await pdfDoc.embedJpg(imageBytes);
             
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];

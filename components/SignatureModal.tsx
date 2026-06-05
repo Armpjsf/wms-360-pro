@@ -105,7 +105,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
         setSaving(true);
         try {
-            const dataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png');
+            const dataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/jpeg', 0.6);
             await onSave(dataUrl);
             onClose();
         } catch (error) {

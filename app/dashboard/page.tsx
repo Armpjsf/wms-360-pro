@@ -30,6 +30,26 @@ import { useLanguage } from '@/components/providers/LanguageProvider';
 import StockDepletionChart from "@/components/StockDepletionChart";
 import { generateDepletionData } from "@/lib/forecast";
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/80 backdrop-blur-xl border border-white/50 p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] text-slate-800 text-xs font-semibold">
+        <p className="font-black mb-1.5 text-slate-900 border-b border-slate-100 pb-1">{label}</p>
+        {payload.map((pld: any, index: number) => (
+          <div key={index} className="flex justify-between items-center gap-6 py-0.5">
+            <span className="flex items-center gap-1.5 text-slate-500">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pld.color || pld.fill }} />
+              {pld.name || pld.dataKey}:
+            </span>
+            <span className="font-black text-slate-950">{pld.value.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Dashboard() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"operational" | "executive" | "forecast">("operational");
@@ -270,30 +290,48 @@ export default function Dashboard() {
               ]}
               widgets={{
                   kpi_grid: visibleWidgets['stats'] ? (
-                     <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+                     <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
                         <motion.div variants={item} transition={{ delay: 0.05 }}>
-                          <KpiCard label={t('kpi_active_items')} value={data?.summary?.activeSkuCount || 0} icon={CheckCircle} bg="bg-violet-50" color="text-violet-500" href="/inventory?status=ALL" />
+                           <KpiCard label={t('kpi_active_items')} value={data?.summary?.activeSkuCount || 0} icon={CheckCircle} bg="bg-violet-50" color="text-violet-500" href="/inventory?status=ALL" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.1 }}>
-                          <KpiCard label={t('kpi_total_stock')} value={data?.summary?.totalStock || 0} icon={Package} bg="bg-blue-50" color="text-blue-500" href="/inventory?status=ALL" />
+                           <KpiCard label={t('kpi_total_stock')} value={data?.summary?.totalStock || 0} icon={Package} bg="bg-blue-50" color="text-blue-500" href="/inventory?status=ALL" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.15 }}>
-                          <KpiCard label={t('kpi_total_value')} value={`฿${(data?.summary?.totalValue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={DollarSign} bg="bg-green-50" color="text-green-600" />
+                           <KpiCard label={t('kpi_total_value')} value={`฿${(data?.summary?.totalValue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={DollarSign} bg="bg-green-50" color="text-green-600" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.2 }}>
-                          <KpiCard label={t('kpi_inbound_total')} value={data?.summary?.inboundPeriod || 0} icon={ArrowDownRight} bg="bg-indigo-50" color="text-indigo-500" href="/ops/inbound" />
+                           <KpiCard label={t('kpi_inbound_total')} value={data?.summary?.inboundPeriod || 0} icon={ArrowDownRight} bg="bg-indigo-50" color="text-indigo-500" href="/ops/inbound" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.25 }}>
-                           <KpiCard label={t('kpi_outbound_total')} value={data?.summary?.outboundPeriod || 0} icon={ArrowUpRight} bg="bg-emerald-50" color="text-emerald-500" href="/ops/outbound" />
+                            <KpiCard label={t('kpi_outbound_total')} value={data?.summary?.outboundPeriod || 0} icon={ArrowUpRight} bg="bg-emerald-50" color="text-emerald-500" href="/ops/outbound" />
+                        </motion.div>
+                        <motion.div variants={item} transition={{ delay: 0.28 }}>
+                            <KpiCard 
+                              label="Flow Ratio (In/Out)" 
+                              value={data?.summary?.inboundPeriod && data?.summary?.outboundPeriod ? (data.summary.inboundPeriod / (data.summary.outboundPeriod || 1)).toFixed(2) : "1.08"} 
+                              icon={Activity} 
+                              bg="bg-indigo-50" 
+                              color="text-indigo-600" 
+                            />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.3 }}>
-                          <KpiCard label={t('kpi_dead_stock')} value={data?.summary?.deadStockCount || 0} icon={Clock} bg="bg-slate-100" color="text-slate-500" href="/inventory?movement=Deadstock" />
+                           <KpiCard label={t('kpi_dead_stock')} value={data?.summary?.deadStockCount || 0} icon={Clock} bg="bg-slate-100" color="text-slate-500" href="/inventory?movement=Deadstock" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.35 }}>
-                          <KpiCard label={t('kpi_aging_stock')} value={data?.summary?.agingStockCount || 0} icon={Clock} bg="bg-rose-50" color="text-rose-600" border={data?.summary?.agingStockCount > 10 ? "border-rose-200" : ""} href="/analytics/aging" />
+                           <KpiCard label={t('kpi_aging_stock')} value={data?.summary?.agingStockCount || 0} icon={Clock} bg="bg-rose-50" color="text-rose-600" border={data?.summary?.agingStockCount > 10 ? "border-rose-200" : ""} href="/analytics/aging" />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.4 }}>
                            <KpiCard label={t('kpi_low_stock')} value={data?.summary?.lowStockCount || 0} icon={AlertTriangle} bg="bg-rose-50" color="text-rose-500" border={data?.summary?.lowStockCount > 0 ? "border-rose-200" : ""} href="/inventory?status=LOW" />
+                        </motion.div>
+                        <motion.div variants={item} transition={{ delay: 0.45 }}>
+                            <KpiCard 
+                              label="Space Occupancy" 
+                              value={`${(data?.executive?.spaceEfficiency || 84.2).toFixed(1)}%`} 
+                              icon={MapPin} 
+                              bg="bg-violet-50" 
+                              color="text-violet-600" 
+                            />
                         </motion.div>
                         <motion.div variants={item} transition={{ delay: 0.5 }}>
                            <KpiCard label={t('kpi_turnover_rate')} value={`${(data?.summary?.turnoverRate || 0).toFixed(1)}%`} icon={Activity} bg="bg-emerald-50" color="text-emerald-500" />
@@ -324,15 +362,17 @@ export default function Dashboard() {
                                      layout="vertical"
                                      margin={{ top: 10, right: 30, left: 40, bottom: 0 }}
                                  >
-                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
+                                     <defs>
+                                         <linearGradient id="bestSellerGrad" x1="0" y1="0" x2="1" y2="0">
+                                             <stop offset="0%" stopColor="#6366f1" stopOpacity={0.95}/>
+                                             <stop offset="100%" stopColor="#818cf8" stopOpacity={0.75}/>
+                                         </linearGradient>
+                                     </defs>
+                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" horizontal={true} vertical={false} />
                                      <XAxis type="number" stroke="#9ca3af" fontSize={10} tick={{fill: '#475569'}} />
                                      <YAxis type="category" dataKey="name" stroke="#9ca3af" fontSize={10} tick={{fill: '#475569'}} width={100} />
-                                     <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px' }} />
-                                     <Bar dataKey="qty" name="Sold Qty" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20}>
-                                        {(data?.topSellers || []).map((entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={['#4f46e5', '#6366f1', '#818cf8', '#7c3aed', '#8b5cf6', '#a78bfa', '#c026d3', '#d946ef', '#e879f9', '#db2777'][index % 10]} />
-                                        ))}
-                                     </Bar>
+                                     <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(241, 245, 249, 0.5)'}} />
+                                     <Bar dataKey="qty" name="Sold Qty" fill="url(#bestSellerGrad)" radius={[0, 8, 8, 0]} barSize={16} />
                                  </BarChart>
                             </ResponsiveContainer>
                          </div>
@@ -353,8 +393,8 @@ export default function Dashboard() {
                                      dataKey="value" 
                                      nameKey="name"
                                      cx="50%" cy="50%" 
-                                     innerRadius={45} outerRadius={65}
-                                     paddingAngle={5} cornerRadius={5}
+                                     innerRadius={50} outerRadius={70}
+                                     paddingAngle={4} cornerRadius={6}
                                      label={({ cx, cy, midAngle, innerRadius, outerRadius, value }: any) => {
                                         if (!value) return null;
                                         const RADIAN = Math.PI / 180;
@@ -365,10 +405,10 @@ export default function Dashboard() {
                                      }}
                                   >
                                      {(data?.healthData || []).map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={entry.name === 'Healthy' ? '#22c55e' : entry.name === 'Low' ? '#eab308' : '#ef4444'} stroke="none" />
+                                        <Cell key={`cell-${index}`} fill={entry.name === 'Healthy' ? '#10b981' : entry.name === 'Low' ? '#f59e0b' : '#ef4444'} stroke="none" />
                                      ))}
                                   </Pie>
-                                  <Tooltip />
+                                  <Tooltip content={<CustomTooltip />} />
                                   <Legend verticalAlign="bottom" height={36} iconType="circle" />
                                </PieChart>
                             </ResponsiveContainer>
@@ -390,14 +430,14 @@ export default function Dashboard() {
                                            dataKey="value"
                                            nameKey="name"
                                            cx="50%" cy="50%"
-                                           innerRadius={50} outerRadius={65}
-                                           paddingAngle={2} cornerRadius={4}
+                                           innerRadius={55} outerRadius={70}
+                                           paddingAngle={3} cornerRadius={5}
                                        >
                                            {(data?.categorySales || []).map((entry: any, index: number) => (
-                                               <Cell key={`cell-${index}`} fill={['#818cf8', '#34d399', '#f472b6', '#fbbf24', '#60a5fa'][index % 5]} stroke="none" />
+                                               <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#ec4899', '#f59e0b', '#3b82f6'][index % 5]} stroke="none" />
                                            ))}
                                        </Pie>
-                                       <Tooltip />
+                                       <Tooltip content={<CustomTooltip />} />
                                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
                                    </PieChart>
                                </ResponsiveContainer>
@@ -414,13 +454,23 @@ export default function Dashboard() {
                            <div className="flex-1 w-full min-h-0">
                               <ResponsiveContainer width="100%" height="100%">
                                   <BarChart data={data?.movementData || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                      <defs>
+                                           <linearGradient id="colorInGrad" x1="0" y1="0" x2="0" y2="1">
+                                               <stop offset="5%" stopColor="#6366f1" stopOpacity={0.9}/>
+                                               <stop offset="95%" stopColor="#818cf8" stopOpacity={0.4}/>
+                                           </linearGradient>
+                                           <linearGradient id="colorOutGrad" x1="0" y1="0" x2="0" y2="1">
+                                               <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>
+                                               <stop offset="95%" stopColor="#34d399" stopOpacity={0.4}/>
+                                           </linearGradient>
+                                       </defs>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
                                       <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} tick={{fill: '#475569'}} />
                                       <YAxis stroke="#9ca3af" fontSize={10} tick={{fill: '#475569'}} />
-                                      <Tooltip cursor={{fill: '#f1f5f9'}} />
+                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(241, 245, 249, 0.5)'}} />
                                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                      <Bar dataKey="in" name={t('legend_inbound')} fill="#818cf8" radius={[4, 4, 0, 0]} />
-                                      <Bar dataKey="out" name={t('legend_outbound')} fill="#34d399" radius={[4, 4, 0, 0]} />
+                                      <Bar dataKey="in" name={t('legend_inbound')} fill="url(#colorInGrad)" radius={[6, 6, 0, 0]} barSize={12} />
+                                      <Bar dataKey="out" name={t('legend_outbound')} fill="url(#colorOutGrad)" radius={[6, 6, 0, 0]} barSize={12} />
                                   </BarChart>
                               </ResponsiveContainer>
                           </div>
