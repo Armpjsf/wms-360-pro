@@ -94,12 +94,26 @@ export default function BarcodeScannerPage() {
     }
     setIsScanning(false);
   };
-
   const handleScanSuccess = (code: string) => {
     // Play beep sound
     if (soundEnabled) {
-      const audio = new Audio('/beep.mp3');
-      audio.play().catch(() => {});
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        oscillator.start();
+        setTimeout(() => {
+          oscillator.stop();
+          audioCtx.close();
+        }, 150);
+      } catch (e) {
+        console.error("Audio beep error:", e);
+      }
     }
 
     // Find matching product

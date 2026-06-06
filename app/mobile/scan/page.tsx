@@ -53,9 +53,22 @@ export default function MobileScanPage() {
   const handleScanSuccess = useCallback((code: string) => {
     // Play beep
     try {
-      const audio = new Audio('/beep.mp3');
-      audio.play().catch(() => {});
-    } catch {}
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime); // 1000Hz tone
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // volume
+      oscillator.start();
+      setTimeout(() => {
+        oscillator.stop();
+        audioCtx.close();
+      }, 150); // 150ms duration
+    } catch (e) {
+      console.error("Audio beep error:", e);
+    }
 
     setProducts(prevProducts => {
        // Find product using latest state
