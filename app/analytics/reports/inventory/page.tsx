@@ -15,6 +15,10 @@ interface Transaction {
     location: string;
     user: string;
     reason?: string;
+    product?: string;
+    qty?: number;
+    docRef?: string;
+    owner?: string;
 }
 
 export default function InventoryReportPage() {
@@ -65,12 +69,12 @@ export default function InventoryReportPage() {
         const headers = ['Date', 'Transaction ID', 'Type', 'Product', 'Quantity', 'Location', 'User', 'Reason'];
         const rows = transactions.map(t => [
             t.date,
-            t.transaction_id,
+            t.transaction_id || t.docRef || '-',
             t.type,
-            `"${t.product_name.replace(/"/g, '""')}"`, // Escape quotes
-            t.quantity,
+            `"${(t.product_name || t.product || '').replace(/"/g, '""')}"`, // Escape quotes
+            t.quantity ?? t.qty ?? 0,
             t.location,
-            t.user,
+            t.user || t.owner || '-',
             `"${(t.reason || '').replace(/"/g, '""')}"`
         ]);
 
@@ -215,7 +219,7 @@ export default function InventoryReportPage() {
                                             className="hover:bg-blue-50/60 transition-colors text-sm text-slate-600"
                                         >
                                             <td className="p-4 whitespace-nowrap">{transaction.date}</td>
-                                            <td className="p-4 font-mono text-xs text-slate-500">{transaction.transaction_id}</td>
+                                            <td className="p-4 font-mono text-xs text-slate-500">{transaction.transaction_id || transaction.docRef || '-'}</td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-1 rounded-md text-xs font-bold ${
                                                     transaction.type === 'IN' 
@@ -225,10 +229,10 @@ export default function InventoryReportPage() {
                                                     {transaction.type === 'IN' ? t('inbound_receive') : t('outbound_issue')}
                                                 </span>
                                             </td>
-                                            <td className="p-4 font-bold text-slate-900">{transaction.product_name}</td>
-                                            <td className="p-4 text-right font-mono text-blue-700 font-bold">{transaction.quantity.toLocaleString()}</td>
+                                            <td className="p-4 font-bold text-slate-900">{transaction.product_name || transaction.product}</td>
+                                            <td className="p-4 text-right font-mono text-blue-700 font-bold">{(transaction.quantity ?? transaction.qty ?? 0).toLocaleString()}</td>
                                             <td className="p-4">{transaction.location}</td>
-                                            <td className="p-4 text-slate-500 text-xs">{transaction.user}</td>
+                                            <td className="p-4 text-slate-500 text-xs">{transaction.user || transaction.owner || '-'}</td>
                                         </motion.tr>
                                     ))
                                 )}
