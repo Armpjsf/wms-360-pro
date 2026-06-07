@@ -5,13 +5,13 @@ import { ArrowLeft, Save, Loader2, ClipboardCheck, Check, X, AlertTriangle, Refr
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
-import { SearchableSelect } from '@/components/SearchableSelect';
 import { getApiUrl } from '@/lib/config';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { toast } from 'react-hot-toast';
 
 interface CountItem {
     sku: string;
+    location: string;
     systemQty: number;
     actualQty: string;
     variance: number;
@@ -39,6 +39,7 @@ export default function CycleCountPage() {
                 // Initialize count items
                 const items: CountItem[] = data.map((p: any) => ({
                     sku: p.name,
+                    location: p.location || '-',
                     systemQty: p.stock || 0,
                     actualQty: '',
                     variance: 0,
@@ -134,8 +135,8 @@ export default function CycleCountPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-7"
                 >
-                    <Link href="/ops" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 mb-4">
-                        <ArrowLeft className="w-4 h-4" /> กลับ Operations
+                    <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 mb-4">
+                        <ArrowLeft className="w-4 h-4" /> กลับ Dashboard
                     </Link>
                     <div className="relative overflow-hidden rounded-[1.75rem] border border-amber-200 bg-white/85 p-6 shadow-xl shadow-amber-900/10 backdrop-blur-xl flex items-center gap-4">
                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-teal-500 to-blue-600" />
@@ -212,27 +213,34 @@ export default function CycleCountPage() {
                     </div>
                 </div>
 
-                {/* Count Table */}
+                {/* Count Table Container */}
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="bg-white/95 border border-slate-200 rounded-2xl overflow-hidden shadow-xl shadow-slate-900/5"
                 >
-                    <div className="overflow-x-auto max-h-[60vh]">
+                    {/* Desktop Table (Hidden on mobile) */}
+                    <div className="hidden md:block overflow-x-auto max-h-[60vh]">
                         <table className="w-full text-sm">
                             <thead className="bg-slate-900 text-white border-b border-slate-800 sticky top-0">
                                 <tr>
-                                    <th className="text-left px-4 py-3 font-bold text-slate-600 w-1/3">สินค้า</th>
-                                    <th className="text-right px-4 py-3 font-bold text-slate-600">ระบบ</th>
-                                    <th className="text-center px-4 py-3 font-bold text-slate-600 w-32">นับจริง</th>
-                                    <th className="text-right px-4 py-3 font-bold text-slate-600">ผลต่าง</th>
-                                    <th className="text-center px-4 py-3 font-bold text-slate-600">สถานะ</th>
+                                    <th className="text-left px-4 py-3 font-bold text-slate-400 w-1/3">สินค้า</th>
+                                    <th className="text-left px-4 py-3 font-bold text-slate-400">{t('col_location')}</th>
+                                    <th className="text-right px-4 py-3 font-bold text-slate-400">ระบบ</th>
+                                    <th className="text-center px-4 py-3 font-bold text-slate-400 w-32">นับจริง</th>
+                                    <th className="text-right px-4 py-3 font-bold text-slate-400">ผลต่าง</th>
+                                    <th className="text-center px-4 py-3 font-bold text-slate-400">สถานะ</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {displayItems.map((item, idx) => (
                                     <tr key={item.sku} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                         <td className="px-4 py-3 font-medium text-slate-900">{item.sku}</td>
+                                        <td className="px-4 py-3 text-left">
+                                            <span className="bg-slate-100 px-2 py-1 rounded text-xs font-semibold text-slate-600 border border-slate-200">
+                                                📍 {item.location}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3 text-right font-bold text-slate-600">{item.systemQty.toLocaleString()}</td>
                                         <td className="px-4 py-3">
                                             <input 
@@ -270,6 +278,64 @@ export default function CycleCountPage() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Mobile Card List (Hidden on desktop) */}
+                    <div className="block md:hidden space-y-4 max-h-[60vh] overflow-y-auto p-4">
+                        {displayItems.map((item, idx) => (
+                            <div key={item.sku} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="font-bold text-slate-900 text-sm line-clamp-2 pr-2">{item.sku}</div>
+                                    <div>
+                                        {item.status === 'match' && (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold whitespace-nowrap">
+                                                <Check className="w-3 h-3" /> ตรงกัน
+                                            </span>
+                                        )}
+                                        {item.status === 'variance' && (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-bold whitespace-nowrap">
+                                                <AlertTriangle className="w-3 h-3" /> ผลต่าง
+                                            </span>
+                                        )}
+                                        {item.status === 'pending' && (
+                                            <span className="text-slate-400 text-xs bg-slate-100 px-2.5 py-1 rounded-full font-bold whitespace-nowrap">รอนับ</span>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-2 items-center text-xs text-slate-500">
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded font-semibold border border-slate-200 text-slate-600">📍 {item.location}</span>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 items-center">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block font-semibold">ระบบ</span>
+                                        <span className="font-bold text-slate-700 text-sm">{item.systemQty.toLocaleString()}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block font-semibold">นับจริง</span>
+                                        <input 
+                                            type="number"
+                                            value={item.actualQty}
+                                            onChange={e => updateActualQty(item.sku, e.target.value)}
+                                            placeholder="-"
+                                            className="w-full text-center px-1 py-1 border border-slate-200 rounded-lg bg-slate-50 font-bold text-slate-800 text-sm focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10"
+                                        />
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[10px] text-slate-400 block font-semibold">ผลต่าง</span>
+                                        <span className={`font-bold text-sm ${
+                                            item.variance > 0 ? 'text-emerald-600' : 
+                                            item.variance < 0 ? 'text-rose-600' : 'text-slate-400'
+                                        }`}>
+                                            {item.actualQty !== '' ? (
+                                                item.variance > 0 ? `+${item.variance}` : item.variance
+                                            ) : '-'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </motion.div>
             </div>

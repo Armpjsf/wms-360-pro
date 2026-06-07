@@ -24,6 +24,7 @@ interface DailyCountItem {
 
 interface LogEntry {
   product_name: string;
+  location?: string;
   count_date: string;
   inspector: string;
   system_qty: number;
@@ -534,7 +535,14 @@ export default function CycleCountPage() {
                     logs.map((log, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors">
                         <td className="p-4 text-xs font-mono text-slate-500">{log.count_date}</td>
-                        <td className="p-4 font-bold text-slate-900 text-xs max-w-[120px] truncate">{log.product_name}</td>
+                        <td className="p-4 font-bold text-slate-900 text-xs max-w-[120px]">
+                          <div className="truncate">{log.product_name}</div>
+                          {log.location && (
+                            <div className="text-[10px] text-slate-400 font-semibold mt-0.5 whitespace-nowrap">
+                              📍 {log.location}
+                            </div>
+                          )}
+                        </td>
                         <td className="p-4 text-right font-mono">{log.system_qty}</td>
                         <td className="p-4 text-right font-mono text-indigo-600 font-bold">{log.actual_qty}</td>
                         <td className={cn("p-4 text-right font-black font-mono", log.variance === 0 ? 'text-slate-300' : log.variance > 0 ? 'text-emerald-500' : 'text-rose-500')}>
