@@ -2,12 +2,11 @@
 
 import { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { User, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const errorParam = searchParams.get('error');
@@ -34,7 +33,9 @@ function LoginForm() {
         setLoading(false);
       } else {
         // Force full reload to ensure session is picked up and state is cleared
-        window.location.href = callbackUrl;
+        const isMobile = window.innerWidth < 768 || Boolean((window as any).Capacitor);
+        const isGenericCallback = callbackUrl === '/' || callbackUrl === '/dashboard';
+        window.location.href = isMobile && isGenericCallback ? '/mobile/jobs' : callbackUrl;
       }
     } catch (err) {
       console.error(err);
