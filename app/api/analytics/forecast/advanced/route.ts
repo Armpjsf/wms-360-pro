@@ -24,7 +24,7 @@ export async function GET() {
 
         outbound.forEach(t => {
             const d = new Date(t.date);
-            if(d >= threeMonthsAgo) {
+            if(d >= threeMonthsAgo && t.product) {
                 productSales.set(t.product, (productSales.get(t.product) || 0) + t.qty);
             }
         });

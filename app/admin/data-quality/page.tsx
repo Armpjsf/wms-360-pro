@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ShieldAlert, AlertTriangle, CheckCircle, Search, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 interface Issue {
     type: string;
@@ -59,11 +60,14 @@ export default function DataQualityPage() {
   const reconcileErrorCount = issues.filter(i => i.type === 'Stock Mismatch').length;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
+    <div className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:p-8">
+      <AmbientBackground />
+      <div className="relative z-10 mx-auto max-w-7xl space-y-8">
        <Link href="/admin" className="text-slate-500 hover:text-rose-600 flex items-center gap-2 mb-4 transition-colors font-medium">
          <ArrowLeft className="w-4 h-4" /> {t('back_to_admin')}
        </Link>
-       <header>
+       <header className="overflow-hidden rounded-[1.75rem] border border-rose-200 bg-white/85 p-6 shadow-xl shadow-rose-900/10 backdrop-blur-xl">
+          <div className="h-1 bg-gradient-to-r from-rose-600 via-amber-500 to-blue-600 -mx-6 -mt-6 mb-6" />
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
              <div className="p-2 bg-rose-500/10 rounded-lg">
                 <ShieldAlert className="w-8 h-8 text-rose-500" />
@@ -109,20 +113,19 @@ export default function DataQualityPage() {
        </div>
 
        {/* AI Watchdog Section */}
-       <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl overflow-hidden shadow-lg border border-slate-700 text-white relative">
-           <div className="absolute top-0 right-0 p-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+       <div className="bg-white/90 rounded-2xl overflow-hidden shadow-xl shadow-slate-900/5 border border-slate-200 text-slate-700 relative">
            
-           <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
+           <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
                <div className="flex items-center gap-3">
                    <div className="p-2 bg-indigo-500/20 rounded-lg">
                        <ShieldAlert className="w-6 h-6 text-indigo-400" />
                    </div>
                    <div>
-                       <h3 className="text-lg font-bold">AI Watchdog</h3>
-                       <p className="text-sm text-slate-400">Automated Integrity Checks</p>
+                       <h3 className="text-lg font-bold text-slate-950">AI Watchdog</h3>
+                       <p className="text-sm text-slate-500">Automated Integrity Checks</p>
                    </div>
                </div>
-               <div className="text-sm text-slate-400 font-mono">
+               <div className="text-sm text-slate-500 font-mono">
                    {anomalies.length} Issues Detected
                </div>
            </div>
@@ -132,12 +135,12 @@ export default function DataQualityPage() {
            ) : anomalies.length === 0 ? (
              <div className="p-8 flex flex-col items-center gap-2">
                  <CheckCircle className="w-10 h-10 text-emerald-400" />
-                 <p className="font-medium text-emerald-100">All Systems Healthy</p>
+                 <p className="font-medium text-emerald-700">All Systems Healthy</p>
              </div>
            ) : (
-             <div className="divide-y divide-slate-700/50 max-h-[400px] overflow-y-auto">
+             <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
                  {anomalies.map((a) => (
-                     <div key={a.id} className="p-4 hover:bg-white/5 transition-colors flex gap-4">
+                     <div key={a.id} className="p-4 hover:bg-slate-50 transition-colors flex gap-4">
                          <div className="mt-1">
                              {a.type === 'CRITICAL' && <AlertTriangle className="w-5 h-5 text-rose-500" />}
                              {a.type === 'WARNING' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
@@ -152,10 +155,10 @@ export default function DataQualityPage() {
                                  }`}>
                                      {a.type}
                                  </span>
-                                 <span className="text-xs text-slate-300 font-mono truncate">{a.entityName}</span>
+                                     <span className="text-xs text-slate-500 font-mono truncate">{a.entityName}</span>
                              </div>
-                             <h4 className="font-bold text-sm text-slate-100">{a.title}</h4>
-                             <p className="text-xs text-slate-400 mt-0.5">{a.description}</p>
+                             <h4 className="font-bold text-sm text-slate-900">{a.title}</h4>
+                             <p className="text-xs text-slate-500 mt-0.5">{a.description}</p>
                          </div>
                          {a.action === 'FIX_STOCK' && (
                              <button className="self-center px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition-colors">
@@ -215,6 +218,7 @@ export default function DataQualityPage() {
                </div>
            )}
        </div>
+      </div>
     </div>
   );
 }

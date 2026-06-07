@@ -189,6 +189,7 @@ export default function CycleCountPage() {
       <div className="relative z-10 max-w-md mx-auto">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl p-6 border-b border-white/50 shadow-sm sticky top-0 z-20">
+        <div className="h-1 bg-gradient-to-r from-indigo-600 via-teal-500 to-amber-500 -mx-6 -mt-6 mb-5" />
         <div className="flex items-center justify-between gap-3 mb-2">
            <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-50 rounded-xl">
@@ -270,7 +271,7 @@ export default function CycleCountPage() {
                                 : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300"
                           )}
                         >
-                          {zone === 'All' ? `🌐 ${t('all_zones')}` : `📍 ${t('zone_label').replace('{0}', zone)}`}
+                          {zone === 'All' ? t('all_zones') : t('zone_label').replace('{0}', zone)}
                         </button>
                       ))}
                     </div>
@@ -314,7 +315,7 @@ export default function CycleCountPage() {
                         onClick={() => setSelectedProduct(item)}
                         className="bg-white border border-slate-200 rounded-[2rem] p-5 active:scale-[0.98] transition-all shadow-sm hover:shadow-md relative overflow-hidden group cursor-pointer"
                       >
-                         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-50 to-transparent rounded-bl-full -mr-4 -mt-4 opacity-50" />
+                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-teal-500 to-amber-500" />
                          
                         <div className="flex justify-between items-start mb-3 relative z-10">
                           <span className="text-[10px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
@@ -443,7 +444,7 @@ export default function CycleCountPage() {
                       <form onSubmit={handleCountSubmit} className="space-y-8">
                         {/* Product Header */}
                         <div className="relative overflow-hidden rounded-[2rem] bg-indigo-600 p-8 text-white shadow-xl shadow-indigo-600/20">
-                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
+                           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-teal-500 to-amber-500" />
                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-xl -ml-8 -mb-8" />
                            
                            <div className="relative z-10 text-center">

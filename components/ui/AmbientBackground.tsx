@@ -1,39 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 export const AmbientBackground = () => {
   return (
     <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
-      {/* Top Right - Indigo/Blue */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.4 }}
-        transition={{ duration: 2 }}
-        className="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] rounded-full blur-[100px] bg-gradient-to-br from-indigo-200 to-blue-200"
-      />
-      
-      {/* Bottom Left - Rose/Orange */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.3 }}
-        transition={{ duration: 2, delay: 0.5 }}
-        className="absolute -bottom-[10%] -left-[10%] w-[50%] h-[50%] rounded-full blur-[100px] bg-gradient-to-tr from-rose-100 to-orange-100"
-      />
-
-      {/* Center - Subtle Pulse */}
-      <motion.div
-        animate={{ 
-          scale: [1, 1.1, 1],
-          opacity: [0.1, 0.2, 0.1]
-        }}
-        transition={{ 
-          duration: 10, 
-          repeat: Infinity,
-          ease: "easeInOut" 
-        }}
-        className="absolute top-[30%] left-[30%] w-[40%] h-[40%] rounded-full blur-[120px] bg-slate-200"
-      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,#f7fafc_0%,#eef6f2_46%,#f8fafc_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(80%_55%_at_18%_0%,rgba(29,78,216,0.14),transparent_58%),radial-gradient(70%_52%_at_88%_12%,rgba(13,148,136,0.16),transparent_56%),radial-gradient(62%_46%_at_58%_100%,rgba(217,119,6,0.10),transparent_60%)]" />
+      <div className="absolute inset-x-0 top-0 h-56 bg-[linear-gradient(115deg,rgba(255,255,255,0.74),rgba(255,255,255,0.18)_45%,rgba(255,255,255,0.58))]" />
+      <div className="absolute left-0 top-0 h-full w-full opacity-[0.38] [background-image:linear-gradient(135deg,rgba(15,23,42,0.055)_0%,transparent_32%,rgba(15,118,110,0.055)_62%,transparent_100%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(0deg,rgba(255,255,255,0.86),transparent)]" />
     </div>
   );
 };

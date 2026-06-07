@@ -124,25 +124,27 @@ export default function CycleCountPage() {
     }
 
     return (
-        <div className="relative min-h-screen p-6 pb-20">
+        <div className="relative min-h-screen px-4 py-6 pb-20 sm:px-6 lg:p-8">
             <AmbientBackground />
             
-            <div className="max-w-6xl mx-auto relative z-10">
+            <div className="max-w-[1500px] mx-auto relative z-10">
                 {/* Header */}
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    className="mb-7"
                 >
-                    <Link href="/ops" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+                    <Link href="/ops" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 mb-4">
                         <ArrowLeft className="w-4 h-4" /> กลับ Operations
                     </Link>
-                    <div className="flex items-center gap-4">
-                        <div className="p-4 bg-amber-100 rounded-3xl border border-amber-200 shadow-lg shadow-amber-900/10">
-                            <ClipboardCheck className="w-10 h-10 text-amber-600" />
+                    <div className="relative overflow-hidden rounded-[1.75rem] border border-amber-200 bg-white/85 p-6 shadow-xl shadow-amber-900/10 backdrop-blur-xl flex items-center gap-4">
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-teal-500 to-blue-600" />
+                        <div className="p-4 bg-gradient-to-br from-amber-500 to-teal-600 rounded-3xl shadow-lg shadow-amber-900/20">
+                            <ClipboardCheck className="w-10 h-10 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                            <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Counting Workstation</p>
+                            <h1 className="text-4xl font-black text-slate-950 tracking-tight">
                                 Cycle Count
                             </h1>
                             <p className="text-slate-500 font-medium text-lg">ตรวจนับสต๊อคจริง เทียบกับระบบ</p>
@@ -151,40 +153,40 @@ export default function CycleCountPage() {
                 </motion.div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center">
+                <div className="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
+                    <div className="bg-white/90 border border-slate-200 rounded-2xl p-4 text-center shadow-lg shadow-slate-900/5">
                         <p className="text-3xl font-black text-slate-900">{summary.total}</p>
                         <p className="text-sm text-slate-500">สินค้าทั้งหมด</p>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center shadow-lg shadow-blue-900/5">
                         <p className="text-3xl font-black text-blue-600">{summary.counted}</p>
                         <p className="text-sm text-blue-600">นับแล้ว</p>
                     </div>
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center shadow-lg shadow-emerald-900/5">
                         <p className="text-3xl font-black text-emerald-600">{summary.matches}</p>
                         <p className="text-sm text-emerald-600">✓ ตรงกัน</p>
                     </div>
-                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-center">
+                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-center shadow-lg shadow-rose-900/5">
                         <p className="text-3xl font-black text-rose-600">{summary.variances}</p>
                         <p className="text-sm text-rose-600">⚠ มีผลต่าง</p>
                     </div>
                 </div>
 
                 {/* Info & Actions */}
-                <div className="flex flex-wrap gap-4 mb-6 items-center justify-between">
+                <div className="flex flex-wrap gap-4 mb-6 items-center justify-between rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-xl">
                     <div className="flex gap-4 items-center">
                         <input 
                             type="date" 
                             value={countDate} 
                             onChange={e => setCountDate(e.target.value)}
-                            className="px-4 py-2 border border-slate-200 rounded-xl"
+                            className="px-4 py-2 border border-slate-200 rounded-xl bg-white font-bold text-slate-700"
                         />
                         <input 
                             type="text" 
                             value={countNote} 
                             onChange={e => setCountNote(e.target.value)}
                             placeholder="หมายเหตุ (ถ้ามี)"
-                            className="px-4 py-2 border border-slate-200 rounded-xl w-64"
+                            className="px-4 py-2 border border-slate-200 rounded-xl w-64 bg-white font-semibold text-slate-700"
                         />
                     </div>
                     <div className="flex gap-3">
@@ -202,7 +204,7 @@ export default function CycleCountPage() {
                         <button 
                             onClick={handleSave}
                             disabled={saving || summary.counted === 0}
-                            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 disabled:opacity-50 transition-all"
+                            className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl flex items-center gap-2 disabled:opacity-50 transition-all shadow-lg shadow-emerald-900/10"
                         >
                             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                             บันทึก Cycle Count
@@ -214,11 +216,11 @@ export default function CycleCountPage() {
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden"
+                    className="bg-white/95 border border-slate-200 rounded-2xl overflow-hidden shadow-xl shadow-slate-900/5"
                 >
                     <div className="overflow-x-auto max-h-[60vh]">
                         <table className="w-full text-sm">
-                            <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
+                            <thead className="bg-slate-900 text-white border-b border-slate-800 sticky top-0">
                                 <tr>
                                     <th className="text-left px-4 py-3 font-bold text-slate-600 w-1/3">สินค้า</th>
                                     <th className="text-right px-4 py-3 font-bold text-slate-600">ระบบ</th>

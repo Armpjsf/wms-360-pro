@@ -211,30 +211,31 @@ function InventoryContent() {
   };
 
   return (
-    <div className="min-h-screen relative p-8 pb-32">
+    <div className="min-h-screen relative px-4 py-6 pb-32 sm:px-6 lg:p-8">
         <AmbientBackground />
         
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(79,70,229,0.05)] max-w-7xl mx-auto overflow-hidden relative"
+            className="relative mx-auto mb-7 flex max-w-[1500px] flex-col gap-5 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/85 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl md:flex-row md:items-center md:justify-between"
         >
-           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full" />
+           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-600 via-blue-600 to-amber-500" />
            
            <div className="relative z-10">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2 flex items-center gap-3">
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-3 rounded-2xl shadow-lg shadow-indigo-200">
+              <p className="mb-1 ml-1 text-[11px] font-black uppercase tracking-[0.2em] text-teal-700">Inventory Control</p>
+              <h1 className="text-4xl font-black text-slate-950 tracking-tight mb-2 flex items-center gap-3">
+                <div className="bg-gradient-to-br from-teal-700 to-blue-700 text-white p-3 rounded-2xl shadow-lg shadow-teal-900/20">
                     <Package className="w-8 h-8" />
                 </div>
                 {t('inventory_title')}
               </h1>
-              <p className="text-slate-500 font-medium text-lg ml-2">{t('inventory_subtitle')}</p>
+              <p className="text-slate-500 font-semibold text-sm ml-2">{t('inventory_subtitle')}</p>
            </div>
            
            <div className="flex gap-3 relative z-10">
               <button 
                   onClick={openAddModal}
-                  className="hidden md:flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:scale-105 active:scale-95"
+                  className="hidden md:flex items-center gap-2 bg-gradient-to-r from-teal-700 to-emerald-600 text-white px-7 py-4 rounded-2xl font-bold hover:shadow-xl hover:shadow-teal-700/25 transition-all active:scale-95"
               >
                   <Plus className="w-5 h-5" />
                   {t('add_product')}
@@ -242,14 +243,14 @@ function InventoryContent() {
 
               <button 
                 onClick={fetchData} 
-                className={cn("p-4 rounded-2xl transition-all hover:scale-105 active:scale-95", loading ? "bg-slate-100 text-slate-400" : "bg-white text-indigo-600 shadow-xl shadow-indigo-500/10 border border-indigo-50")}
+                className={cn("p-4 rounded-2xl transition-all active:scale-95", loading ? "bg-slate-100 text-slate-400" : "bg-white text-blue-700 shadow-lg shadow-slate-900/5 border border-blue-100 hover:bg-blue-50")}
               >
                   <RefreshCcw className={cn("w-6 h-6", loading && "animate-spin")} />
               </button>
               
                <button 
                   onClick={exportCSV}
-                  className="flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-slate-900/20"
+                  className="flex items-center gap-2 bg-slate-900 text-white px-7 py-4 rounded-2xl font-bold hover:bg-blue-900 transition-all active:scale-95 shadow-xl shadow-slate-900/15"
                >
                   <Download className="w-5 h-5" />
                   {t('export_csv')}
@@ -261,7 +262,7 @@ function InventoryContent() {
              initial={{ opacity: 0, y: 20 }}
              animate={{ opacity: 1, y: 0 }}
              transition={{ delay: 0.1 }}
-             className="flex flex-col md:flex-row gap-4 mb-8 max-w-7xl mx-auto items-center"
+             className="mx-auto mb-7 flex max-w-[1500px] flex-col gap-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-xl md:flex-row md:items-center"
          >
             <div className="flex-1 relative group w-full flex gap-3 items-center">
                 <div className="relative flex-1">
@@ -271,7 +272,7 @@ function InventoryContent() {
                        placeholder={t('search_placeholder')}
                        value={search}
                        onChange={e => setSearch(e.target.value)}
-                       className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium"
+                       className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:border-teal-500/50 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-semibold"
                     />
                 </div>
                 <span className="px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-sm font-bold whitespace-nowrap shadow-sm">
@@ -290,7 +291,7 @@ function InventoryContent() {
                 <select 
                     value={filterMovement}
                     onChange={e => setFilterMovement(e.target.value)}
-                    className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 font-medium outline-none focus:border-indigo-500/50 hover:bg-white transition-colors cursor-pointer"
+                    className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold outline-none focus:border-teal-500/50 hover:bg-teal-50 transition-colors cursor-pointer"
                 >
                     <option value="ALL">{t('filter_all_movements')}</option>
                     <option value="Fast Moving">{t('filter_fast_moving')}</option>
@@ -302,7 +303,7 @@ function InventoryContent() {
                 <select 
                     value={filterStatus}
                     onChange={e => setFilterStatus(e.target.value)}
-                    className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 font-medium outline-none focus:border-indigo-500/50 hover:bg-white transition-colors cursor-pointer"
+                    className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold outline-none focus:border-teal-500/50 hover:bg-teal-50 transition-colors cursor-pointer"
                 >
                     <option value="ALL">{t('filter_all_status')}</option>
                     <option value="LOW">{t('filter_low_stock')}</option>
@@ -325,7 +326,7 @@ function InventoryContent() {
         </motion.div>
 
         {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                {[...Array(12)].map((_, i) => (
                    <Skeleton key={i} className="h-[280px] w-full rounded-[2rem]" />
                ))}
@@ -335,7 +336,7 @@ function InventoryContent() {
              variants={container}
              initial="hidden"
              animate="show"
-             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+             className="mx-auto grid max-w-[1500px] grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
            >
               <AnimatePresence mode='popLayout'>
               {filtered.map((product) => {
@@ -345,10 +346,10 @@ function InventoryContent() {
                         key={product.id}
                         variants={item}
                         layout
-                        className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+                        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-lg shadow-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                     >
                         <div className="h-full relative z-10">
-                            <Link href={`/stock-card?search=${encodeURIComponent(product.name)}`} className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100 duration-500 z-0" />
+                            <div className={cn("absolute inset-x-0 top-0 h-1.5", product.stock <= product.minStock ? "bg-gradient-to-r from-rose-500 to-amber-500" : "bg-gradient-to-r from-teal-500 to-blue-500")} />
                             
                             <div className="relative z-10 h-full flex flex-col justify-between">
                                 <div>
@@ -416,11 +417,11 @@ function InventoryContent() {
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-4">
-                                            <div className="bg-slate-50 p-2 rounded-lg">
+                                            <div className="bg-slate-50 p-2 rounded-lg ring-1 ring-slate-100">
                                                 <span className="block text-slate-400 text-[10px] uppercase font-bold mb-0.5">{t('col_category')}</span>
                                                 <span className="font-semibold text-slate-700 truncate block" title={product.category}>{product.category}</span>
                                             </div>
-                                            <div className="bg-slate-50 p-2 rounded-lg">
+                                            <div className="bg-slate-50 p-2 rounded-lg ring-1 ring-slate-100">
                                                 <span className="block text-slate-400 text-[10px] uppercase font-bold mb-0.5">{t('no_loc')}</span>
                                                 <span className="font-semibold text-slate-700 truncate block">{product.location || '-'}</span>
                                             </div>
@@ -447,16 +448,7 @@ function InventoryContent() {
                                 </Link>
                             </div>
 
-                            <div className="mt-auto pt-3 pb-3 px-4 border-t border-slate-50 flex justify-between items-center bg-white">
-                                <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
-                                    <tr className="bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md">
-                                        <th className="p-5 rounded-l-2xl">{t('product')}</th>
-                                        <th className="p-5 text-right">{t('qty')}</th>
-                                        <th className="p-5 text-right">{t('cost_opt')}</th>
-                                        <th className="p-5 text-center rounded-r-2xl">{t('edit')}</th>
-                                    </tr>
-                                </thead>
-                                
+                            <div className="mt-auto flex items-center justify-between border-t border-slate-100 bg-white px-4 pb-3 pt-3">
                                 <div className="flex items-center gap-2">
                                     <div className="md:hidden flex items-center gap-2">
                                         <Link 

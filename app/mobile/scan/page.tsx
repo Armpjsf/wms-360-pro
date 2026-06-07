@@ -130,11 +130,11 @@ export default function MobileScanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-slate-800/50">
+      <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
         <h1 className="text-lg font-bold flex items-center gap-2">
-          <QrCode className="w-5 h-5 text-indigo-400" />
+          <QrCode className="w-5 h-5 text-teal-400" />
           Quick Scan
         </h1>
         <Link href="/dashboard" className="text-slate-400 hover:text-white text-sm">
@@ -150,10 +150,10 @@ export default function MobileScanPage() {
             {/* Scan Frame Overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-72 h-72 border-2 border-white/30 rounded-2xl relative">
-                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-indigo-500 rounded-tl-xl"></div>
-                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-indigo-500 rounded-tr-xl"></div>
-                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-indigo-500 rounded-bl-xl"></div>
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-indigo-500 rounded-br-xl"></div>
+                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-teal-400 rounded-tl-xl"></div>
+                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-amber-400 rounded-tr-xl"></div>
+                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-xl"></div>
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-xl"></div>
               </div>
             </div>
             <p className="absolute bottom-8 left-0 right-0 text-center text-white/70 text-sm">
@@ -184,7 +184,7 @@ export default function MobileScanPage() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="absolute inset-0 bg-slate-900 p-6"
+              className="absolute inset-0 bg-slate-950 p-6"
             >
               {scanResult.product ? (
                 <div className="h-full flex flex-col">
@@ -200,7 +200,7 @@ export default function MobileScanPage() {
                     </p>
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-slate-800 rounded-2xl p-4 text-center">
+                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
                         <p className="text-xs text-slate-400 mb-1">สต็อก</p>
                         <p className={cn(
                           "text-3xl font-black",
@@ -211,7 +211,7 @@ export default function MobileScanPage() {
                           {scanResult.product.stock}
                         </p>
                       </div>
-                      <div className="bg-slate-800 rounded-2xl p-4 text-center">
+                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
                         <p className="text-xs text-slate-400 mb-1">ตำแหน่ง</p>
                         <p className="text-lg font-bold text-white">
                           {scanResult.product.location || '-'}

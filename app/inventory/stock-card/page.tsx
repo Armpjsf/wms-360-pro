@@ -105,27 +105,29 @@ function StockCardContent() {
   };
 
   return (
-    <div className="relative min-h-screen p-6 pb-20">
+    <div className="relative min-h-screen px-4 py-6 pb-20 sm:px-6 lg:p-8">
       <AmbientBackground />
       
-      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-         <Link href="/inventory" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
+      <div className="max-w-[1500px] mx-auto space-y-7 relative z-10">
+         <Link href="/inventory" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700">
              <ArrowLeft className="w-4 h-4" /> {t('back_to_inventory')}
          </Link>
          {/* Header */}
          <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between"
+            className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/85 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl"
          >
+             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-cyan-500 to-teal-500" />
              <div>
-                 <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                    <span className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/20">
+                 <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">Movement Ledger</p>
+                 <h1 className="text-4xl font-black text-slate-950 tracking-tight flex items-center gap-3">
+                    <span className="p-3 bg-gradient-to-br from-blue-700 to-cyan-600 rounded-2xl text-white shadow-lg shadow-blue-900/20">
                         <History className="w-8 h-8" />
                     </span>
                     {t('stock_card_title')}
                  </h1>
-                 <p className="text-slate-500 mt-2 font-medium ml-1">{t('stock_card_subtitle')}</p>
+                 <p className="text-slate-500 mt-2 font-semibold ml-1">{t('stock_card_subtitle')}</p>
              </div>
          </motion.div>
 
@@ -134,7 +136,7 @@ function StockCardContent() {
            initial={{ opacity: 0, y: 10 }}
            animate={{ opacity: 1, y: 0 }}
            transition={{ delay: 0.1 }}
-           className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-[2rem] p-8 shadow-sm"
+           className="rounded-[1.5rem] border border-slate-200 bg-white/85 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl"
          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                 <div className="space-y-4">
@@ -155,7 +157,7 @@ function StockCardContent() {
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-300 transition-all"
                       />
                    </div>
                    <div>
@@ -164,7 +166,7 @@ function StockCardContent() {
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-300 transition-all"
                       />
                    </div>
                 </div>
@@ -177,7 +179,7 @@ function StockCardContent() {
                          {/* Edit Button */}
                          <button 
                             onClick={() => setShowEditModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 font-bold rounded-xl hover:bg-amber-100 transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 font-bold rounded-xl ring-1 ring-amber-200 hover:bg-amber-100 transition-colors"
                         >
                             <Edit className="w-5 h-5" />
                             แก้ไขสินค้า
@@ -187,7 +189,7 @@ function StockCardContent() {
                     <Link 
                         href={`/inventory/print-labels?sku=${selectedProduct.id}&name=${encodeURIComponent(selectedProduct.name)}&price=${selectedProduct.price}`}
                         target="_blank"
-                        className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition-colors"
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-700 font-bold rounded-xl ring-1 ring-blue-200 hover:bg-blue-100 transition-colors"
                     >
                         <Printer className="w-5 h-5" />
                         {t('print_barcode_btn')}
@@ -199,7 +201,7 @@ function StockCardContent() {
                 {selectedProduct && (
                     <button
                         onClick={() => setShowLabelDesigner(true)}
-                        className="bg-white border-2 border-slate-200 hover:border-indigo-600 hover:text-indigo-600 text-slate-600 px-6 py-4 rounded-xl font-bold flex items-center gap-3 transition-all active:scale-[0.98]"
+                        className="bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-6 py-4 rounded-xl font-bold flex items-center gap-3 transition-all active:scale-[0.98]"
                     >
                         <Printer className="w-5 h-5" />
                         {t('print_label_btn')}
@@ -208,7 +210,7 @@ function StockCardContent() {
                 <button 
                   onClick={fetchStockCard}
                   disabled={!selectedProduct || loading}
-                  className="bg-slate-900 hover:bg-indigo-600 disabled:opacity-50 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]"
+                  className="bg-gradient-to-r from-blue-700 to-teal-600 hover:from-blue-800 hover:to-teal-700 disabled:opacity-50 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98]"
                 >
                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
                    {t('generate_report')}
@@ -248,13 +250,13 @@ function StockCardContent() {
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="grid grid-cols-1 lg:grid-cols-4 gap-8"
+                    className="grid grid-cols-1 gap-6 lg:grid-cols-4"
                 >
                     {/* Summary Cards */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                        <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5">
                              <h3 className="text-slate-400 font-bold text-xs uppercase tracking-wider mb-4">{t('period_summary')}</h3>
-                             <div className="space-y-6">
+                             <div className="space-y-5">
                                  <div className="flex items-center gap-4">
                                      <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl">
                                          <TrendingUp className="w-6 h-6" />
@@ -295,7 +297,7 @@ function StockCardContent() {
                         </div>
 
                         {movements[0]?.balance !== undefined && (
-                             <div className="bg-slate-900 p-6 rounded-3xl shadow-lg shadow-slate-900/20">
+                             <div className="bg-gradient-to-br from-slate-900 to-blue-900 p-6 rounded-2xl shadow-lg shadow-slate-900/20">
                                  <p className="text-slate-400 font-bold text-xs uppercase tracking-wider mb-1">{t('current_balance')}</p>
                                  <p className="text-4xl font-black text-white tabular-nums">{movements[movements.length-1].balance.toLocaleString()}</p>
                              </div>
@@ -303,9 +305,9 @@ function StockCardContent() {
                     </div>
 
                     {/* Timeline */}
-                    <div className="lg:col-span-3 bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
-                        <h3 className="text-slate-800 font-bold text-lg mb-8 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-indigo-500" /> {t('transaction_history')}
+                    <div className="lg:col-span-3 rounded-[1.5rem] border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5">
+                        <h3 className="text-slate-900 font-black text-lg mb-8 flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-blue-600" /> {t('transaction_history')}
                         </h3>
                         
                         <div className="relative border-l-2 border-slate-100 ml-3 space-y-8 pl-8 pb-4">
@@ -328,7 +330,7 @@ function StockCardContent() {
                                      )}
 
 
-                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-white hover:bg-slate-50 transition-colors border border-slate-100">
                                          <div>
                                              <div className="flex items-center gap-3 mb-1">
                                                  <span className={cn(

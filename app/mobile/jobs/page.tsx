@@ -278,13 +278,13 @@ export default function MobileJobsPage() {
       const nextJob = waitingJobs.length > 0 ? waitingJobs[0] : (pendingJobs.length > 0 ? pendingJobs[0] : null);
 
       return (
-          <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-emerald-950 text-white text-center relative overflow-hidden">
+          <div className="flex flex-col items-center justify-center min-h-screen p-6 text-slate-950 text-center relative overflow-hidden">
                <AmbientBackground />
-              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/50 animate-bounce relative z-10">
+              <div className="w-24 h-24 bg-emerald-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/30 relative z-10">
                   <Check className="w-12 h-12 text-white" />
               </div>
               <h1 className="text-4xl font-black mb-2 relative z-10">{t('mobile_job_complete')}</h1>
-              <p className="text-emerald-200 mb-8 max-w-xs mx-auto relative z-10">
+              <p className="text-slate-500 mb-8 max-w-xs mx-auto relative z-10">
                   {t('document_finalized').replace('{0}', successData.docNum)}<br/>
                   <span className="text-sm opacity-75">{t('pdf_sent_dashboard')}</span>
               </p>
@@ -303,7 +303,7 @@ export default function MobileJobsPage() {
               
               <button 
                   onClick={handleDismissSuccess}
-                  className="w-full bg-emerald-900/50 border border-emerald-500/30 text-emerald-100 font-bold py-4 rounded-3xl flex items-center justify-center gap-2 relative z-10"
+                  className="w-full bg-white/85 border border-emerald-200 text-emerald-700 font-bold py-4 rounded-3xl flex items-center justify-center gap-2 relative z-10 shadow-sm"
               >
                   {t('mobile_close_next')}
               </button>
@@ -363,9 +363,8 @@ export default function MobileJobsPage() {
                     <h2 className="text-emerald-600 font-bold uppercase tracking-wider text-xs">{t('mobile_active_job')}</h2>
                 </div>
                 
-                <div className="bg-white border-2 border-indigo-100 rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group">
-                    {/* Decorative Blob */}
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10" />
+                <div className="bg-white border-2 border-indigo-100 rounded-[2rem] p-6 shadow-xl relative overflow-hidden group">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-emerald-500 to-amber-500" />
                     
                     <div className="flex justify-between items-start mb-6 relative z-10">
                         <div>

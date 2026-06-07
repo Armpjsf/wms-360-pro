@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 interface SlottingInsight {
     productId: string;
@@ -42,12 +43,15 @@ export default function SlottingPage() {
   }, []);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
+    <div className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:p-8">
+      <AmbientBackground />
+      <div className="relative z-10 mx-auto max-w-7xl space-y-8">
        <Link href="/admin" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium">
          <ArrowLeft className="w-4 h-4" /> {t('back_to_admin')}
        </Link>
        {/* Header */}
-       <header>
+       <header className="overflow-hidden rounded-[1.75rem] border border-indigo-200 bg-white/85 p-6 shadow-xl shadow-indigo-900/10 backdrop-blur-xl">
+          <div className="h-1 bg-gradient-to-r from-indigo-600 via-emerald-500 to-amber-500 -mx-6 -mt-6 mb-6" />
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
              <div className="p-2 bg-indigo-500/10 rounded-lg">
                 <LayoutGrid className="w-8 h-8 text-indigo-600" />
@@ -91,7 +95,7 @@ export default function SlottingPage() {
 
        {/* Recommendations */}
        {data?.recommendations && data.recommendations.length > 0 && (
-           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+           <div className="bg-white/90 rounded-2xl border border-slate-200 shadow-xl shadow-slate-900/5 overflow-hidden">
                <div className="p-6 border-b border-slate-100 bg-slate-50">
                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
                        <MoveRight className="w-5 h-5 text-indigo-600" />
@@ -132,7 +136,7 @@ export default function SlottingPage() {
        )}
 
        {/* Full List (Optional, or just top items) */}
-       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+       <div className="bg-white/90 rounded-2xl border border-slate-200 p-6 shadow-xl shadow-slate-900/5">
            <h3 className="font-bold text-slate-800 mb-4">Velocity Analysis</h3>
            {loading ? (
                <div className="text-center py-10 text-slate-400">Analyzing thousands of transactions...</div>
@@ -170,6 +174,7 @@ export default function SlottingPage() {
                 </div>
            )}
        </div>
+      </div>
     </div>
   );
 }

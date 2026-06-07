@@ -104,7 +104,7 @@ export default function AuditTrailPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-slate-900/5 relative overflow-hidden"
         >
-           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full" />
+           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-blue-700 to-slate-800" />
            
            <div className="relative z-10 flex items-center gap-6">
                <Link
@@ -129,7 +129,7 @@ export default function AuditTrailPage() {
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm"
+          className="bg-white/90 rounded-2xl border border-slate-200 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-xl"
         >
           <div className="flex flex-wrap gap-4">
             {/* Search */}
@@ -176,7 +176,7 @@ export default function AuditTrailPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"
+          className="bg-white/90 rounded-2xl border border-slate-200 overflow-hidden shadow-xl shadow-slate-900/5 backdrop-blur-xl"
         >
           <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
             <span className="text-sm font-bold text-slate-700">

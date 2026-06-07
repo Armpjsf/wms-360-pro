@@ -30,12 +30,14 @@ export async function GET() {
 
     // 2. Check SKU existence (Legacy: "SKU ไม่อยู่ในมาสเตอร์")
     inbound.forEach((t, idx) => {
-        if (!validSkus.has(t.product.trim())) {
+        const productName = t.product?.trim();
+        if (productName && !validSkus.has(productName)) {
              issues.push({ type: 'Unknown SKU', source: 'Inbound', row: idx + 2, description: `SKU not in master: ${t.product}` });
         }
     });
     outbound.forEach((t, idx) => {
-        if (!validSkus.has(t.product.trim())) {
+        const productName = t.product?.trim();
+        if (productName && !validSkus.has(productName)) {
              issues.push({ type: 'Unknown SKU', source: 'Outbound', row: idx + 2, description: `SKU not in master: ${t.product}` });
         }
     });
@@ -61,7 +63,8 @@ export async function GET() {
 
     // Add Inbound
     inbound.forEach(t => {
-        const key = t.product.trim().toLowerCase();
+        const key = t.product?.trim().toLowerCase();
+        if (!key) return;
         // If product doesn't exist in master, we skip (it's already flagged as Unknown SKU)
         if (stockFlow.has(key)) {
             stockFlow.set(key, (stockFlow.get(key) || 0) + t.qty);
@@ -70,7 +73,8 @@ export async function GET() {
 
     // Subtract Outbound
     outbound.forEach(t => {
-        const key = t.product.trim().toLowerCase();
+        const key = t.product?.trim().toLowerCase();
+        if (!key) return;
         if (stockFlow.has(key)) {
             stockFlow.set(key, (stockFlow.get(key) || 0) - t.qty);
         }

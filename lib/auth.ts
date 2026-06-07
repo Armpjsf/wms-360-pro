@@ -21,6 +21,7 @@ export const authOptions: NextAuthOptions = {
               name: user.username,
               email: user.role, // Hack: Storing Role in Email field since next-auth default user object has email
               allowedBranches: user.allowedBranches,
+              allowedOwners: user.allowedOwners,
           }
         }
         return null
@@ -54,5 +55,5 @@ export const authOptions: NextAuthOptions = {
       strategy: "jwt",
       maxAge: 24 * 60 * 60, // 24 hours
   },
-  secret: process.env.NEXTAUTH_SECRET || 'secret-key-change-me-in-production',
+  secret: process.env.NEXTAUTH_SECRET,
 }

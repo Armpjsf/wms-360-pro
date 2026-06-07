@@ -38,19 +38,20 @@ export default function BarcodePrintPage() {
   ).slice(0, 5);
 
   return (
-    <div className="min-h-screen p-8 pb-32">
+    <div className="min-h-screen px-4 py-6 pb-32 sm:px-6 lg:p-8">
       <AmbientBackground />
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         
         {/* Left: Controls */}
         <div className="lg:col-span-1 space-y-6">
-          <div>
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-teal-200 bg-white/85 p-6 shadow-xl shadow-teal-900/10 backdrop-blur-xl">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-600 via-blue-700 to-amber-500" />
             <h1 className="text-3xl font-black text-slate-900 mb-2">Print Labels</h1>
             <p className="text-slate-500">สร้างสติ๊กเกอร์บาร์โค้ดสินค้า</p>
           </div>
 
           {/* Product Search */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="bg-white/90 p-6 rounded-2xl border border-slate-200 shadow-lg shadow-slate-900/5">
             <h3 className="font-bold text-slate-800 mb-4">1. Select Product</h3>
             <div className="relative mb-4">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -85,7 +86,7 @@ export default function BarcodePrintPage() {
           </div>
 
           {/* Config */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="bg-white/90 p-6 rounded-2xl border border-slate-200 shadow-lg shadow-slate-900/5">
              <h3 className="font-bold text-slate-800 mb-4">2. Configuration</h3>
              
              <div className="space-y-4">
@@ -131,14 +132,14 @@ export default function BarcodePrintPage() {
           <button
              onClick={handlePrint}
              disabled={!selectedProduct}
-             className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+             className="w-full py-4 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-teal-700/20 flex items-center justify-center gap-2 transition-all active:scale-95"
           >
              <Printer className="w-5 h-5" /> Print Now
           </button>
         </div>
 
         {/* Right: Preview */}
-        <div className="lg:col-span-2 bg-slate-100 rounded-3xl border border-slate-200 p-8 flex items-center justify-center overflow-auto min-h-[600px]">
+        <div className="lg:col-span-2 bg-white/80 rounded-2xl border border-slate-200 p-8 flex items-center justify-center overflow-auto min-h-[600px] shadow-xl shadow-slate-900/5 backdrop-blur-xl">
            {!selectedProduct ? (
               <div className="text-center text-slate-400">
                  <Printer className="w-16 h-16 mx-auto mb-4 opacity-20" />

@@ -6,7 +6,7 @@ import { translations, Language } from '@/lib/i18n';
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof typeof translations['en']) => string;
+  t: (key: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -28,8 +28,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('wms-language', lang);
   };
 
-  const t = (key: keyof typeof translations['en']) => {
-    return translations[language][key] || key;
+  const t = (key: string) => {
+    const current = translations[language] as Record<string, string>;
+    return current[key] || key;
   };
 
   if (!mounted) {

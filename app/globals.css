@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f8fb;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #eef2f7;
+  --border-subtle: #d9e2ef;
+  --brand-primary: #1e40af;
+  --brand-accent: #0f766e;
+  --brand-warn: #b45309;
+  --brand-danger: #be123c;
 }
 
 @theme inline {
@@ -20,10 +27,43 @@
 }
 
 body {
-  background-color: #f8fafc; /* Slate-50 */
-  color: #0f172a; /* Slate-900 */
+  background:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.85) 0%, rgba(248, 250, 252, 0.95) 36%, rgba(246, 248, 251, 1) 100%);
+  color: #0f172a;
   font-family: var(--font-prompt), ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+::selection {
+  background: rgba(30, 64, 175, 0.18);
+}
+
+button,
+a,
+select,
+summary,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .tabular-nums {

@@ -64,20 +64,22 @@ export default function AgingPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-6 max-w-7xl mx-auto space-y-8">
+    <div className="relative min-h-screen px-4 py-6 sm:px-6 lg:p-8">
        <AmbientBackground />
        
-       <div className="relative z-10">
-         <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit">
+       <div className="relative z-10 mx-auto max-w-[1500px] space-y-7">
+         <Link href="/analytics" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700">
              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
              {t('back_to_analytics')}
          </Link>
 
          {/* Header */}
-         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+         <div className="relative overflow-hidden rounded-[1.75rem] border border-amber-200 bg-white/85 p-6 shadow-xl shadow-amber-900/10 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-rose-500 to-slate-700" />
              <div>
-                <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-                   <div className="p-2 bg-amber-500/10 rounded-lg">
+                <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Aging Risk</p>
+                <h1 className="text-3xl font-black text-slate-950 flex items-center gap-3">
+                   <div className="p-2 bg-amber-50 rounded-xl ring-1 ring-amber-200">
                       <Clock className="w-8 h-8 text-amber-500" />
                    </div>
                    {t('aging_title')}
@@ -85,7 +87,7 @@ export default function AgingPage() {
                 <p className="text-slate-500 font-medium mt-2">{t('aging_subtitle')}</p>
              </div>
            
-            <div className="bg-slate-900 border border-slate-800 p-1 rounded-lg flex flex-wrap gap-1">
+            <div className="bg-white border border-slate-200 p-1.5 rounded-2xl flex flex-wrap gap-1 shadow-inner shadow-slate-100">
                 {[30, 60, 90, 180, 365].map((d) => {
                     const getPeriodLabel = (val: number) => {
                       if (val === 30) return language === 'en' ? '30 Days+' : '30 วัน+';
@@ -100,8 +102,8 @@ export default function AgingPage() {
                            onClick={() => setPeriod(d)}
                            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
                                period === d 
-                               ? 'bg-amber-500 text-white shadow-lg' 
-                               : 'text-slate-400 hover:text-white'
+                               ? 'bg-amber-600 text-white shadow-lg' 
+                               : 'text-slate-600 hover:text-amber-700 hover:bg-amber-50'
                            }`}
                         >
                             {getPeriodLabel(d)}
@@ -113,11 +115,11 @@ export default function AgingPage() {
 
        {/* KPIs */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+           <div className="bg-white/90 border border-amber-100 p-6 rounded-2xl shadow-lg shadow-amber-900/5">
                <h3 className="text-amber-400 text-sm font-semibold mb-2">
                    {language === 'en' ? `Stagnant Items (> ${period} Days)` : `สินค้าไม่เคลื่อนไหวเกิน ${period} วัน`}
                </h3>
-               <div className="text-3xl font-bold text-white flex items-center gap-2">
+               <div className="text-3xl font-black text-slate-950 flex items-center gap-2">
                    {loading ? '...' : deadstock.length}
                    <span className="text-xs font-normal text-slate-500">{t('ai_unit')}</span>
                </div>
@@ -127,27 +129,26 @@ export default function AgingPage() {
                </div>
            </div>
 
-           <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+           <div className="bg-white/90 border border-blue-100 p-6 rounded-2xl shadow-lg shadow-blue-900/5">
                <h3 className="text-amber-400 text-sm font-semibold mb-2">
                    {language === 'en' ? `Stagnant Value (> ${period} Days)` : `มูลค่าสินค้าไม่เคลื่อนไหว (> ${period} วัน)`}
                </h3>
-               <div className="text-3xl font-bold text-white flex items-center gap-2">
+               <div className="text-3xl font-black text-slate-950 flex items-center gap-2">
                    ฿{loading ? '...' : deadstockValue.toLocaleString()}
                    <span className="text-xs font-normal text-slate-500">THB</span>
                </div>
-               <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 bg-slate-800 px-3 py-1 rounded-full w-fit">
+               <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full w-fit">
                    <Clock className="w-3 h-3 text-slate-500" />
                    {language === 'en' ? 'Capital tied up in this range' : 'ทุนจมที่ควรเร่งระบายในกลุ่มนี้'}
                </div>
            </div>
 
-           <div className="bg-slate-900 border border-red-500/30 p-6 rounded-xl relative overflow-hidden group hover:border-red-500/60 transition-colors">
-               <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:bg-red-500/10 transition-colors" />
+           <div className="bg-white/90 border border-rose-200 p-6 rounded-2xl relative overflow-hidden group hover:border-rose-300 transition-colors shadow-lg shadow-rose-900/5">
                <h3 className="text-red-400 text-sm font-bold flex items-center gap-1.5 mb-2">
                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                    {language === 'en' ? 'True Deadstock (1 Year+)' : 'สินค้าค้างสต็อกแท้ (Deadstock 1 ปี+)'}
                </h3>
-               <div className="text-3xl font-bold text-white flex items-center gap-2">
+               <div className="text-3xl font-black text-slate-950 flex items-center gap-2">
                    {loading ? '...' : trueDeadstock.length}
                    <span className="text-xs font-normal text-slate-500">{t('ai_unit')}</span>
                </div>
@@ -159,33 +160,33 @@ export default function AgingPage() {
        </div>
 
        {/* Detailed Table */}
-       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-           <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+       <div className="bg-white/90 border border-slate-200 rounded-2xl overflow-hidden shadow-xl shadow-slate-900/5 backdrop-blur-xl">
+           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                <div className="flex items-center gap-4">
-                   <h3 className="text-white font-medium">{t('inventory_list')}</h3>
-                   <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800">
+                   <h3 className="text-slate-950 font-black">{t('inventory_list')}</h3>
+                   <div className="flex bg-slate-100 rounded-lg p-1 border border-slate-200">
                        <button 
                          onClick={() => setViewMode('DEADSTOCK')}
-                         className={`px-3 py-1 text-xs rounded-md font-bold transition-colors ${viewMode === 'DEADSTOCK' ? 'bg-red-500/20 text-red-400' : 'text-slate-500 hover:text-slate-300'}`}
+                         className={`px-3 py-1 text-xs rounded-md font-bold transition-colors ${viewMode === 'DEADSTOCK' ? 'bg-rose-600 text-white' : 'text-slate-500 hover:text-rose-700'}`}
                        >
                          {t('deadstock_only')}
                        </button>
                        <button 
                          onClick={() => setViewMode('ALL')}
-                         className={`px-3 py-1 text-xs rounded-md font-bold transition-colors ${viewMode === 'ALL' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}
+                         className={`px-3 py-1 text-xs rounded-md font-bold transition-colors ${viewMode === 'ALL' ? 'bg-blue-700 text-white' : 'text-slate-500 hover:text-blue-700'}`}
                        >
                          {t('show_all')}
                        </button>
                    </div>
                </div>
-               <button onClick={exportCSV} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm">
+               <button onClick={exportCSV} className="text-slate-500 hover:text-amber-700 flex items-center gap-2 text-sm font-bold">
                    <Download className="w-4 h-4" /> {t('export_csv')}
                </button>
            </div>
            
            <div className="overflow-x-auto">
-               <table className="w-full text-left text-slate-300">
-                   <thead className="bg-slate-950 text-slate-400 text-xs uppercase tracking-wider">
+               <table className="w-full text-left text-slate-600">
+                   <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                        <tr>
                            <th className="px-6 py-4">{t('product')}</th>
                            <th className="px-6 py-4">{t('delivery_location')}</th>
@@ -196,16 +197,16 @@ export default function AgingPage() {
                            <th className="px-6 py-4">{t('col_days_inactive')}</th>
                        </tr>
                    </thead>
-                   <tbody className="divide-y divide-slate-800">
+                   <tbody className="divide-y divide-slate-100">
                        {loading ? (
                            <tr><td colSpan={7} className="p-8 text-center text-slate-500">{t('loading')}</td></tr>
                        ) : tableData.length === 0 ? (
                            <tr><td colSpan={7} className="p-8 text-center text-slate-500">{t('no_products_found')}</td></tr>
                        ) : (
                            tableData.map((item) => (
-                               <tr key={item.id} className="hover:bg-slate-800/50">
-                                   <td className="px-6 py-4 font-medium text-white">{item.name}</td>
-                                   <td className="px-6 py-4 font-mono text-indigo-400">{item.location || '-'}</td>
+                               <tr key={item.id} className="hover:bg-amber-50/50">
+                                   <td className="px-6 py-4 font-bold text-slate-950">{item.name}</td>
+                                   <td className="px-6 py-4 font-mono text-blue-700">{item.location || '-'}</td>
                                    <td className="px-6 py-4">{item.stock.toLocaleString()}</td>
                                    <td className="px-6 py-4">฿{item.value.toLocaleString()}</td>
                                    <td className="px-6 py-4 text-center">

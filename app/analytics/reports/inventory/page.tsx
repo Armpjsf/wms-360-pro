@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Filter, Search, Calendar } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface Transaction {
     transaction_id: string;
@@ -17,6 +18,8 @@ interface Transaction {
 }
 
 export default function InventoryReportPage() {
+    const { t } = useLanguage();
+
     // State
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -87,55 +90,57 @@ export default function InventoryReportPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white p-6 relative overflow-hidden">
+        <div className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:p-8">
             <AmbientBackground />
             
             <div className="relative z-10 max-w-7xl mx-auto space-y-6">
                 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="relative overflow-hidden rounded-[1.75rem] border border-blue-200 bg-white/85 p-6 shadow-xl shadow-blue-900/10 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-cyan-500 to-emerald-500" />
                     <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">Inventory Movement</p>
+                        <h1 className="text-3xl font-black text-slate-950">
                             {t('inventory_report_title')}
                         </h1>
-                        <p className="text-slate-400 text-sm mt-1">
+                        <p className="text-slate-500 text-sm mt-1 font-semibold">
                             {t('inventory_report_subtitle')}
                         </p>
                     </div>
                     <button 
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20"
+                        className="relative z-10 flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-xl transition-colors text-sm font-bold text-white shadow-lg shadow-blue-500/20"
                     >
                         <Download className="w-4 h-4" /> {t('export_csv')}
                     </button>
                 </div>
 
                 {/* Filters */}
-                <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-end">
+                <div className="bg-white/85 backdrop-blur-xl border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-end shadow-sm">
                     
                     {/* Date Range */}
                     <div className="flex gap-2">
                         <div className="space-y-1">
-                            <label className="text-xs text-slate-500 font-medium ml-1">{t('date_start')}</label>
+                            <label className="text-xs text-slate-500 font-bold ml-1">{t('date_start')}</label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                                 <input 
                                     type="date"
                                     value={filters.startDate}
                                     onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                                    className="pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-40 text-slate-300"
+                                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none w-40 text-slate-700"
                                 />
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs text-slate-500 font-medium ml-1">{t('date_end')}</label>
+                            <label className="text-xs text-slate-500 font-bold ml-1">{t('date_end')}</label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                                 <input 
                                     type="date"
                                     value={filters.endDate}
                                     onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                                    className="pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-40 text-slate-300"
+                                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none w-40 text-slate-700"
                                 />
                             </div>
                         </div>
@@ -143,11 +148,11 @@ export default function InventoryReportPage() {
 
                     {/* Type Filter */}
                     <div className="space-y-1">
-                        <label className="text-xs text-slate-500 font-medium ml-1">{t('col_type')}</label>
+                        <label className="text-xs text-slate-500 font-bold ml-1">{t('col_type')}</label>
                         <select 
                             value={filters.type}
                             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                            className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-32 text-slate-300"
+                            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none w-32 text-slate-700"
                         >
                             <option value="ALL">{t('all_types')}</option>
                             <option value="IN">{t('inbound_receive')}</option>
@@ -157,7 +162,7 @@ export default function InventoryReportPage() {
 
                     {/* Search */}
                     <div className="flex-1 space-y-1 w-full">
-                         <label className="text-xs text-slate-500 font-medium ml-1">{t('search')}</label>
+                         <label className="text-xs text-slate-500 font-bold ml-1">{t('search')}</label>
                          <div className="relative">
                             <Search className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
                             <input 
@@ -165,18 +170,18 @@ export default function InventoryReportPage() {
                                 placeholder={t('search_placeholder')}
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                                className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-300 placeholder-slate-500"
+                                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-700 placeholder-slate-400"
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* Table */}
-                <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl overflow-hidden shadow-xl shadow-slate-900/5">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                                     <th className="p-4 font-medium">{t('col_date')}</th>
                                     <th className="p-4 font-medium">{t('col_id')}</th>
                                     <th className="p-4 font-medium">{t('col_type')}</th>
@@ -186,7 +191,7 @@ export default function InventoryReportPage() {
                                     <th className="p-4 font-medium">{t('col_user')}</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800">
+                            <tbody className="divide-y divide-slate-100">
                                 {loading ? (
                                     <tr>
                                         <td colSpan={7} className="p-8 text-center text-slate-500">
@@ -201,29 +206,29 @@ export default function InventoryReportPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    transactions.map((t, i) => (
+                                    transactions.map((transaction, i) => (
                                         <motion.tr 
                                             key={i}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.05 }}
-                                            className="hover:bg-slate-800/30 transition-colors text-sm text-slate-300"
+                                            className="hover:bg-blue-50/60 transition-colors text-sm text-slate-600"
                                         >
-                                            <td className="p-4 whitespace-nowrap">{t.date}</td>
-                                            <td className="p-4 font-mono text-xs text-slate-500">{t.transaction_id}</td>
+                                            <td className="p-4 whitespace-nowrap">{transaction.date}</td>
+                                            <td className="p-4 font-mono text-xs text-slate-500">{transaction.transaction_id}</td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-1 rounded-md text-xs font-bold ${
-                                                    t.type === 'IN' 
+                                                    transaction.type === 'IN' 
                                                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                                                     : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                                 }`}>
-                                                    {t.type === 'IN' ? t('inbound') || 'RECEIVE' : t('outbound') || 'ISSUE'}
+                                                    {transaction.type === 'IN' ? t('inbound_receive') : t('outbound_issue')}
                                                 </span>
                                             </td>
-                                            <td className="p-4 font-medium text-white">{t.product_name}</td>
-                                            <td className="p-4 text-right font-mono text-indigo-300">{t.quantity.toLocaleString()}</td>
-                                            <td className="p-4">{t.location}</td>
-                                            <td className="p-4 text-slate-500 text-xs">{t.user}</td>
+                                            <td className="p-4 font-bold text-slate-900">{transaction.product_name}</td>
+                                            <td className="p-4 text-right font-mono text-blue-700 font-bold">{transaction.quantity.toLocaleString()}</td>
+                                            <td className="p-4">{transaction.location}</td>
+                                            <td className="p-4 text-slate-500 text-xs">{transaction.user}</td>
                                         </motion.tr>
                                     ))
                                 )}

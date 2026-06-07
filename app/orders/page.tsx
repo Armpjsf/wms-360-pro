@@ -5,6 +5,7 @@ import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clo
 import { getApiUrl } from '@/lib/config';
 import SignatureModal from '@/components/SignatureModal';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 // ============================================================================
 // TYPES
@@ -67,10 +68,12 @@ interface OrderStatus {
 export default function OrdersPage() {
   const { t } = useLanguage();
   return (
-    <div className="min-h-screen p-6 text-slate-800">
-      <div className="max-w-7xl mx-auto">
+    <div className="relative min-h-screen px-4 py-6 text-slate-800 sm:px-6 lg:p-8">
+      <AmbientBackground />
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 relative overflow-hidden rounded-[1.75rem] border border-blue-200 bg-white/85 p-6 shadow-xl shadow-blue-900/10 backdrop-blur-xl">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-teal-500 to-amber-500" />
           <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
             <FileText className="w-8 h-8 text-indigo-600" />
             {t('orders_title')}
@@ -455,29 +458,29 @@ function LinePreviewModal({ message, onClose }: { message: string; onClose: () =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-          <h3 className="font-bold text-white flex items-center gap-2">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <h3 className="font-bold text-slate-950 flex items-center gap-2">
             <Mail className="w-5 h-5 text-green-400" />
             LINE Message Preview
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
             <X className="w-5 h-5" />
           </button>
         </div>
         
         <div className="p-4">
           <textarea 
-            className="w-full h-64 bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-300 font-mono text-sm resize-none focus:ring-1 focus:ring-green-500 outline-none"
+            className="w-full h-64 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 font-mono text-sm resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
             value={message}
             readOnly
           />
         </div>
 
-        <div className="p-4 border-t border-slate-700 grid grid-cols-2 gap-3 bg-slate-800/30">
+        <div className="p-4 border-t border-slate-100 grid grid-cols-2 gap-3 bg-slate-50">
           <button 
             onClick={onClose}
-            className="py-3 rounded-xl font-bold text-slate-300 hover:bg-slate-800 transition-colors"
+            className="py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors"
           >
             Close
           </button>
@@ -534,29 +537,29 @@ function EmailScanCard({ onComplete }: { onComplete: () => void }) {
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+    <div className="bg-white/90 border border-teal-200 rounded-2xl p-6 shadow-lg shadow-teal-900/5">
       <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <Mail className="w-5 h-5 text-purple-600" />
+        <Mail className="w-5 h-5 text-teal-700" />
         {t('email_automation')}
       </h2>
 
       <div className="text-center py-8">
-        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Mail className={`w-8 h-8 text-purple-600 ${scanning ? 'animate-spin' : ''}`} />
+        <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-teal-100">
+          <Mail className={`w-8 h-8 text-teal-700 ${scanning ? 'animate-spin' : ''}`} />
         </div>
         <p className="text-slate-500 text-sm mb-4">{t('scan_from_email')}</p>
         
         <button
           onClick={handleScan}
           disabled={scanning}
-          className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition-colors disabled:opacity-50"
+          className="w-full bg-teal-700 text-white py-3 rounded-xl font-bold hover:bg-teal-800 transition-colors disabled:opacity-50"
         >
           {scanning ? t('scanning') : t('start_scan')}
         </button>
 
         {message && (
           <div className={`mt-4 p-3 rounded-lg text-sm ${
-            message.includes('Success') || message.includes('สำเร็จ') ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+            message.includes('Success') || message.includes('สำเร็จ') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
           }`}>
             {message}
           </div>

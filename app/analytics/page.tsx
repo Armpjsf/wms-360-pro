@@ -67,22 +67,24 @@ export default function AnalyticsLandingPage() {
   ];
 
   return (
-    <div className="relative min-h-screen p-8 pb-32 overflow-hidden">
+    <div className="relative min-h-screen px-4 py-6 pb-32 sm:px-6 lg:p-8 overflow-hidden">
        <AmbientBackground />
        
-       <div className="relative z-10 max-w-6xl mx-auto space-y-12">
+       <div className="relative z-10 max-w-[1500px] mx-auto space-y-8">
           <motion.header 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center md:text-left"
+            className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/85 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl"
           >
-             <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">
+             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-violet-600 to-emerald-500" />
+             <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-violet-700">Decision Intelligence</p>
+             <h1 className="text-4xl font-black text-slate-950 mb-3 tracking-tight">
                 {t('analytics_center')}
              </h1>
-             <p className="text-slate-500 text-lg font-medium">{t('analytics_subtitle')}</p>
+             <p className="text-slate-500 text-sm font-semibold max-w-3xl">{t('analytics_subtitle')}</p>
           </motion.header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
              {cards.map((card, idx) => (
                 <motion.div
                   key={card.href}
@@ -92,29 +94,25 @@ export default function AnalyticsLandingPage() {
                 >
                    <Link 
                      href={card.href} 
-                     className="group relative border-none p-8 rounded-[2.5rem] flex flex-col h-full shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden"
+                     className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                    >
-                      {/* Permanent Gradient Background */}
-                      <div className={`absolute inset-0 bg-gradient-to-br ${card.color} transition-transform duration-700 group-hover:scale-110`} />
-                      
-                      {/* Decorative Circles */}
-                      <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white opacity-10 blur-2xl group-hover:scale-150 transition-transform duration-700`} />
+                      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.color}`} />
 
                       <div className="relative z-10">
-                        <div className={`w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm`}>
-                           <card.icon className={`w-8 h-8 text-white`} />
+                        <div className={`w-14 h-14 ${card.lightBg} rounded-2xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-105 ring-1 ring-slate-100`}>
+                           <card.icon className={`w-7 h-7 ${card.iconColor}`} />
                         </div>
                         
-                        <h3 className={`text-2xl font-black text-white mb-3 tracking-tight`}>
+                        <h3 className="text-2xl font-black text-slate-950 mb-3 tracking-tight">
                            {card.title}
                         </h3>
                         
-                        <p className="text-white/80 leading-relaxed font-medium">
+                        <p className="text-slate-500 leading-relaxed font-semibold">
                            {card.desc}
                         </p>
                       </div>
 
-                      <div className="mt-8 flex items-center gap-2 text-white font-black text-sm uppercase tracking-widest relative z-10 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <div className="mt-8 flex items-center gap-2 text-slate-700 font-black text-sm uppercase tracking-widest relative z-10 group-hover:text-blue-700 transition-colors">
                          {t('go_to_section') || 'Open Module'}
                          <TrendingUp className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>

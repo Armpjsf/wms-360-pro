@@ -102,22 +102,24 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-4 md:p-8 pb-32">
+    <div className="relative min-h-screen px-4 py-6 pb-32 sm:px-6 lg:p-8">
       <AmbientBackground />
 
-      <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-        <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit print:hidden">
+      <div className="max-w-[1500px] mx-auto space-y-7 relative z-10">
+        <Link href="/analytics" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 print:hidden">
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
           {t('back_to_analytics')}
         </Link>
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
-            <span className="p-2 bg-indigo-600 rounded-xl text-white">
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-blue-200 bg-white/85 p-6 shadow-xl shadow-blue-900/10 backdrop-blur-xl">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-cyan-500 to-slate-700" />
+          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">Report Center</p>
+          <h1 className="text-3xl font-black text-slate-950 flex items-center gap-3">
+            <span className="p-2 bg-blue-700 rounded-xl text-white">
               <BarChart className="w-6 h-6" />
             </span>
             {t('report_center_title')}
           </h1>
-          <p className="text-slate-500 mt-2 text-lg">{t('report_center_subtitle')}</p>
+          <p className="text-slate-500 mt-2 font-semibold">{t('report_center_subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

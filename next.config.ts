@@ -17,10 +17,8 @@ const nextConfig: any = {
   images: {
     unoptimized: isMobileBuild,
   },
-  // Silence Next.js 16 Turbopack error (next-pwa uses Webpack)
-  turbopack: {},
-  typescript: {
-    ignoreBuildErrors: true,
+  turbopack: {
+    root: process.cwd(),
   },
 };
 

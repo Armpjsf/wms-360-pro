@@ -46,26 +46,28 @@ export default function SummaryPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-6 max-w-7xl mx-auto space-y-8">
+    <div className="relative min-h-screen px-4 py-6 sm:px-6 lg:p-8">
        <AmbientBackground />
-       <div className="relative z-10">
-       <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-4 transition-colors font-medium print:hidden">
+       <div className="relative z-10 mx-auto max-w-[1500px] space-y-7">
+       <Link href="/analytics" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 print:hidden">
            <ArrowLeft className="w-4 h-4" /> {t('back_to_analytics')}
        </Link>
-       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+       <header className="relative overflow-hidden rounded-[1.75rem] border border-emerald-200 bg-white/85 p-6 shadow-xl shadow-emerald-900/10 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-600 via-teal-500 to-blue-600" />
           <div>
-              <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-                 <div className="p-2 bg-emerald-100 rounded-lg">
+              <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Movement Summary</p>
+              <h1 className="text-3xl font-black text-slate-950 flex items-center gap-3">
+                 <div className="p-2 bg-emerald-100 rounded-xl ring-1 ring-emerald-200">
                     <BarChart3 className="w-8 h-8 text-emerald-600" />
                  </div>
                  {t('transaction_summary_title')}
               </h1>
-              <p className="text-slate-500 mt-2">{t('transaction_summary_subtitle')}</p>
+              <p className="text-slate-500 mt-2 font-semibold">{t('transaction_summary_subtitle')}</p>
           </div>
           
           <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
               {/* Date Filter */}
-              <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-inner shadow-slate-100">
                   <input 
                     type="date" 
                     value={startDate} 
@@ -82,16 +84,16 @@ export default function SummaryPage() {
               </div>
 
               {/* Granularity Toggle */}
-              <div className="bg-white p-1 rounded-lg flex border border-slate-200">
+              <div className="bg-white p-1 rounded-xl flex border border-slate-200 shadow-inner shadow-slate-100">
                   <button 
                      onClick={() => setGranularity('day')}
-                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${granularity === 'day' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900'}`}
+                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${granularity === 'day' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'}`}
                   >
                       {t('daily')}
                   </button>
                   <button 
                      onClick={() => setGranularity('month')}
-                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${granularity === 'month' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900'}`}
+                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${granularity === 'month' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'}`}
                   >
                       {t('monthly')}
                   </button>

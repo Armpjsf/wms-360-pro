@@ -184,11 +184,11 @@ export default function Dashboard() {
   if (!mounted) return null; // Prevent hydration mismatch
 
   return (
-    <div className="min-h-screen relative p-8 pb-32">
+    <div className="min-h-screen relative px-4 py-6 pb-32 sm:px-6 lg:p-8">
       <AmbientBackground />
       
       {/* Critical Alerts & Quick Actions */}
-      <div className="max-w-7xl mx-auto mb-6 flex flex-col gap-4">
+      <div className="max-w-[1500px] mx-auto mb-6 flex flex-col gap-4">
         {visibleWidgets['alerts'] && <DashboardAlertsBanner />}
         {visibleWidgets['quick_actions'] && <QuickActionsPanel />}
       </div>
@@ -197,29 +197,36 @@ export default function Dashboard() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="max-w-7xl mx-auto space-y-8"
+        className="max-w-[1500px] mx-auto space-y-7"
       >
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <motion.div variants={item}>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-              <span className="bg-indigo-600 text-white p-2 rounded-xl">WMS</span>
-              {t('dashboard_title')}
-            </h1>
-            <p className="text-slate-500 mt-1 font-medium">{t('dashboard_subtitle')}</p>
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/85 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-teal-500 to-amber-500" />
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <motion.div variants={item} className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-teal-600 text-sm font-black text-white shadow-lg shadow-blue-900/20">
+              WMS
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-teal-700">Operations Command</p>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950">
+                {t('dashboard_title')}
+              </h1>
+              <p className="text-sm font-semibold text-slate-500">{t('dashboard_subtitle')}</p>
+            </div>
           </motion.div>
           
-          <motion.div variants={item} className="flex gap-4">
+          <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center">
              <DashboardCustomizer visibleWidgets={visibleWidgets} toggleWidget={toggleWidget} />
              
-             <div className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2">
+             <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/90 p-1.5 shadow-inner shadow-slate-200/70">
                <div className="relative group">
                  <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
                  <input 
                    type="date" 
                    value={startDate}
                    onChange={(e) => setStartDate(e.target.value)}
-                   className="pl-9 pr-3 py-2 bg-slate-50 border-none rounded-xl text-sm font-medium text-slate-600 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer hover:bg-indigo-50/50"
+                   className="pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer hover:border-blue-200"
                  />
                </div>
                <span className="text-slate-300 font-bold">→</span>
@@ -229,22 +236,23 @@ export default function Dashboard() {
                     type="date" 
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="pl-9 pr-3 py-2 bg-slate-50 border-none rounded-xl text-sm font-medium text-slate-600 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer hover:bg-indigo-50/50"
+                    className="pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer hover:border-blue-200"
                   />
                </div>
             </div>
           </motion.div>
+          </div>
         </div>
 
         {/* Tab Navigation */}
-        <motion.div variants={item} className="flex space-x-1 bg-white/50 backdrop-blur-md p-1.5 rounded-[1.5rem] w-fit shadow-lg border border-white/50">
+        <motion.div variants={item} className="flex w-full max-w-3xl flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/75 p-2 shadow-lg shadow-slate-900/5 backdrop-blur-xl">
           <button
             onClick={() => setActiveTab("operational")}
             className={cn(
-              "px-8 py-3 rounded-2xl text-sm font-black transition-all duration-500 relative overflow-hidden group",
+              "px-6 py-3 rounded-xl text-sm font-black transition-all duration-300 relative overflow-hidden group",
               activeTab === "operational"
-                ? "bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-xl shadow-slate-900/30"
-                : "text-slate-500 hover:text-slate-900 hover:bg-white"
+                ? "bg-gradient-to-r from-teal-700 to-emerald-600 text-white shadow-lg shadow-teal-700/20"
+                : "text-slate-600 hover:text-teal-700 hover:bg-teal-50"
             )}
           >
             {t('tab_operational')}
@@ -252,10 +260,10 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab("executive")}
             className={cn(
-              "px-8 py-3 rounded-2xl text-sm font-black transition-all duration-500 relative overflow-hidden group",
+              "px-6 py-3 rounded-xl text-sm font-black transition-all duration-300 relative overflow-hidden group",
               activeTab === "executive"
-                ? "bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-600/30"
-                : "text-slate-500 hover:text-indigo-600 hover:bg-white"
+                ? "bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg shadow-blue-700/20"
+                : "text-slate-600 hover:text-blue-700 hover:bg-blue-50"
             )}
           >
             {t('tab_executive')}
@@ -263,10 +271,10 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab("forecast")}
             className={cn(
-              "px-8 py-3 rounded-2xl text-sm font-black transition-all duration-500 flex items-center gap-2 relative overflow-hidden group",
+              "px-6 py-3 rounded-xl text-sm font-black transition-all duration-300 flex items-center gap-2 relative overflow-hidden group",
               activeTab === "forecast"
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-600/30"
-                : "text-slate-500 hover:text-purple-600 hover:bg-white"
+                ? "bg-gradient-to-r from-violet-700 to-amber-600 text-white shadow-lg shadow-violet-700/20"
+                : "text-slate-600 hover:text-violet-700 hover:bg-violet-50"
             )}
           >
             <span>Forecast</span>
@@ -777,34 +785,52 @@ export default function Dashboard() {
  }
  
 function KpiCard({ label, value, icon: Icon, color, bg, border, href, title }: any) {
+    const palette = color.includes('rose') ? {
+      shell: 'border-rose-200 bg-gradient-to-br from-white to-rose-50',
+      icon: 'bg-rose-600 text-white',
+      rail: 'bg-rose-500',
+      value: 'text-rose-700',
+    } : color.includes('amber') ? {
+      shell: 'border-amber-200 bg-gradient-to-br from-white to-amber-50',
+      icon: 'bg-amber-600 text-white',
+      rail: 'bg-amber-500',
+      value: 'text-amber-700',
+    } : color.includes('green') || color.includes('emerald') ? {
+      shell: 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50',
+      icon: 'bg-emerald-600 text-white',
+      rail: 'bg-emerald-500',
+      value: 'text-emerald-700',
+    } : color.includes('violet') ? {
+      shell: 'border-violet-200 bg-gradient-to-br from-white to-violet-50',
+      icon: 'bg-violet-600 text-white',
+      rail: 'bg-violet-500',
+      value: 'text-violet-700',
+    } : color.includes('blue') || color.includes('indigo') ? {
+      shell: 'border-blue-200 bg-gradient-to-br from-white to-blue-50',
+      icon: 'bg-blue-700 text-white',
+      rail: 'bg-blue-500',
+      value: 'text-blue-800',
+    } : {
+      shell: 'border-slate-200 bg-gradient-to-br from-white to-slate-50',
+      icon: 'bg-slate-700 text-white',
+      rail: 'bg-slate-400',
+      value: 'text-slate-800',
+    };
+
     const Content = (
-      <div title={title} className={cn("relative border-none shadow-lg p-6 rounded-[2.5rem] flex flex-col justify-between h-44 group hover:-translate-y-2 hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer", border)}>
-        {/* Permanent Gradient Background */}
-        <div className={cn("absolute inset-0 bg-gradient-to-br transition-transform duration-700 group-hover:scale-110", 
-            color.includes('indigo') ? 'from-indigo-600 to-blue-700' :
-            color.includes('green') ? 'from-emerald-600 to-teal-700' :
-            color.includes('rose') ? 'from-rose-600 to-pink-700' :
-            color.includes('amber') ? 'from-amber-500 to-orange-600' :
-            color.includes('violet') ? 'from-violet-600 to-purple-700' :
-            color.includes('blue') ? 'from-blue-600 to-indigo-700' :
-            color.includes('emerald') ? 'from-emerald-600 to-teal-700' :
-            'from-slate-800 to-slate-900'
-        )} />
+      <div title={title} className={cn("relative h-40 overflow-hidden rounded-2xl border p-5 shadow-lg shadow-slate-900/5 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-xl", palette.shell, border)}>
+        <div className={cn("absolute left-0 top-0 h-full w-1.5", palette.rail)} />
+        <div className="absolute right-4 top-4 h-16 w-16 rounded-2xl border border-white/70 bg-white/45" />
 
-        {/* Decorative Background Icon */}
-        <div className="absolute -right-6 -top-6 p-8 opacity-20 transition-all transform group-hover:scale-150 group-hover:rotate-12 duration-700 blur-xl">
-          <Icon className="h-32 w-32 text-white" />
-        </div>
-
-        <div className="flex justify-between items-start relative z-10">
-           <div className="p-4 rounded-2xl w-fit bg-white/20 backdrop-blur-md shadow-sm">
-             <Icon className="h-7 w-7 text-white" />
+        <div className="relative z-10 flex items-start justify-between">
+           <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl shadow-lg", palette.icon)}>
+             <Icon className="h-5 w-5" />
            </div>
         </div>
 
         <div className="relative z-10">
-           <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mb-1">{label}</p>
-           <p className="text-4xl font-black tabular-nums tracking-tighter text-white">
+           <p className="mb-2 line-clamp-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
+           <p className={cn("text-3xl font-black tabular-nums tracking-tight", palette.value)}>
               {typeof value === 'number' ? <CountUp end={value} duration={1.8} separator="," /> : value}
            </p>
         </div>
@@ -818,21 +844,36 @@ function KpiCard({ label, value, icon: Icon, color, bg, border, href, title }: a
 }
  
  function AdminMetric({ label, value, target, color }: any) {
-    const bgColor = color.includes('indigo') ? 'from-indigo-600 to-blue-700' :
-                    color.includes('rose') ? 'from-rose-600 to-pink-700' :
-                    color.includes('amber') ? 'from-amber-500 to-orange-600' :
-                    color.includes('emerald') ? 'from-emerald-600 to-teal-700' :
-                    'from-slate-800 to-slate-900';
+    const accent = color.includes('indigo') ? {
+      shell: 'border-blue-400/30 bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500 shadow-blue-900/18',
+      rail: 'bg-cyan-300',
+      glow: 'bg-cyan-300/16',
+    } : color.includes('rose') ? {
+      shell: 'border-rose-300/30 bg-gradient-to-br from-rose-700 via-rose-600 to-pink-500 shadow-rose-900/18',
+      rail: 'bg-pink-200',
+      glow: 'bg-pink-200/16',
+    } : color.includes('amber') ? {
+      shell: 'border-amber-300/30 bg-gradient-to-br from-amber-700 via-orange-600 to-amber-500 shadow-amber-900/18',
+      rail: 'bg-amber-100',
+      glow: 'bg-amber-100/16',
+    } : color.includes('emerald') ? {
+      shell: 'border-emerald-300/30 bg-gradient-to-br from-emerald-800 via-teal-700 to-emerald-600 shadow-emerald-900/18',
+      rail: 'bg-teal-100',
+      glow: 'bg-teal-100/16',
+    } : {
+      shell: 'border-slate-300/30 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 shadow-slate-900/18',
+      rail: 'bg-slate-200',
+      glow: 'bg-white/10',
+    };
 
     return (
-      <div className={cn("relative group border-none p-6 rounded-[2rem] flex flex-col h-36 shadow-lg hover:-translate-y-1 transition-all duration-500 overflow-hidden")}>
-         {/* Permanent Gradient Background */}
-         <div className={cn("absolute inset-0 bg-gradient-to-br transition-transform duration-700 group-hover:scale-110", bgColor)} />
-         
+      <div className={cn("relative flex h-36 flex-col overflow-hidden rounded-2xl border p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl", accent.shell)}>
+         <div className={cn("absolute inset-x-0 top-0 h-1", accent.rail)} />
+         <div className={cn("absolute -right-10 -top-10 h-28 w-28 rounded-full", accent.glow)} />
          <div className="relative z-10">
-            <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.2em] mb-3">{label}</p>
-            <p className="text-4xl font-black mb-1 tracking-tighter text-white">{value}</p>
-            <p className="text-[10px] text-white/60 font-medium">Target: <span className="text-white font-bold">{target}</span></p>
+            <p className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-white/78">{label}</p>
+            <p className="mb-1 text-3xl font-black tracking-tight text-white drop-shadow-sm">{value}</p>
+            <p className="text-[10px] font-semibold text-white/72">Target: <span className="font-black text-white">{target}</span></p>
          </div>
       </div>
     );

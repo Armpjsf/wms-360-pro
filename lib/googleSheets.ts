@@ -1301,7 +1301,7 @@ export async function editProduct(
     ];
 
     await updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]);
-    revalidateTag("products-sheet-only-v3");
+    revalidateTag("products-sheet-only-v3", "max");
     return true;
   } catch (error) {
     console.error("Edit Product Error:", error);

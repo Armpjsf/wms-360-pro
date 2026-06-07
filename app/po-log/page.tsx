@@ -362,7 +362,7 @@ export default function POLogPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-6 pb-20">
+    <div className="relative min-h-screen px-4 py-6 pb-20 sm:px-6 lg:p-8">
       <AmbientBackground />
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
@@ -373,11 +373,12 @@ export default function POLogPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
+          className="relative overflow-hidden rounded-[1.75rem] border border-blue-200 bg-white/85 p-6 shadow-xl shadow-blue-900/10 backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
         >
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-teal-500 to-amber-500" />
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-              <span className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/20">
+              <span className="p-3 bg-blue-700 rounded-2xl text-white shadow-lg shadow-blue-600/20">
                 <FileText className="w-8 h-8" />
               </span>
               {t('po_log_title')}
@@ -389,14 +390,14 @@ export default function POLogPage() {
         </motion.div>
 
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-slate-200">
+        <div className="inline-flex w-fit gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1.5 shadow-inner shadow-slate-100">
           <button
             onClick={() => setActiveTab('orders')}
             className={cn(
-              "px-6 py-3 font-bold text-sm transition-all border-b-2",
+              "px-6 py-3 font-bold text-sm transition-all rounded-xl",
               activeTab === 'orders'
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-slate-400 hover:text-slate-600"
+                ? "bg-blue-700 text-white shadow-lg shadow-blue-700/15"
+                : "text-slate-500 hover:text-blue-700 hover:bg-blue-50"
             )}
           >
             {t('tab_orders')}
@@ -404,10 +405,10 @@ export default function POLogPage() {
           <button
             onClick={() => setActiveTab('delivery')}
             className={cn(
-              "px-6 py-3 font-bold text-sm transition-all border-b-2",
+              "px-6 py-3 font-bold text-sm transition-all rounded-xl",
               activeTab === 'delivery'
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-slate-400 hover:text-slate-600"
+                ? "bg-teal-700 text-white shadow-lg shadow-teal-700/15"
+                : "text-slate-500 hover:text-teal-700 hover:bg-teal-50"
             )}
           >
             {t('tab_delivery')}
@@ -901,7 +902,7 @@ export default function POLogPage() {
                     {t('delivery_areas')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {Object.entries(locationSummary)
+                    {(Object.entries(locationSummary) as [string, number][])
                         .sort(([, a], [, b]) => b - a)
                         .map(([loc, count], idx) => (
                         <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">

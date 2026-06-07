@@ -122,7 +122,7 @@ export default function UserManagerPage() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-blue-500/5 relative overflow-hidden"
       >
-         <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/5 blur-3xl rounded-full" />
+         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-cyan-500 to-emerald-500" />
          
          <div className="relative z-10 flex items-center gap-6">
              <Link
@@ -151,7 +151,7 @@ export default function UserManagerPage() {
          </button>
       </motion.div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white/90 border border-slate-200 rounded-2xl overflow-hidden shadow-xl shadow-slate-900/5 backdrop-blur-xl">
         <table className="w-full text-left text-slate-700">
           <thead className="text-white uppercase font-black text-[10px] tracking-[0.1em] sticky top-0 z-20">
             <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-md">
@@ -162,11 +162,11 @@ export default function UserManagerPage() {
               <th className="px-6 py-5 text-right rounded-r-2xl">{t('actions')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={5} className="p-8 text-center bg-slate-900">{t('processing')}</td></tr>
+              <tr><td colSpan={5} className="p-8 text-center text-slate-500 bg-slate-50">{t('processing')}</td></tr>
             ) : users.map((user) => (
-              <tr key={user.id} className="hover:bg-slate-800/50 transition-colors">
+              <tr key={user.id} className="hover:bg-blue-50/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
@@ -180,9 +180,9 @@ export default function UserManagerPage() {
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded text-xs border ${
-                    user.role === 'Admin' ? 'border-purple-500/30 text-purple-400 bg-purple-500/10' : 
-                    user.role === 'Viewer' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' :
-                    'border-slate-600 text-slate-400'
+                    user.role === 'Admin' ? 'border-blue-200 text-blue-700 bg-blue-50' : 
+                    user.role === 'Viewer' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
+                    'border-slate-200 text-slate-600 bg-slate-50'
                   }`}>
                     {user.role}
                   </span>
@@ -194,7 +194,7 @@ export default function UserManagerPage() {
                     ) : (
                        <XCircle className="w-4 h-4 text-red-500" />
                     )}
-                    <span className={user.status === 'Active' ? 'text-green-400' : 'text-red-400'}>{user.status}</span>
+                    <span className={user.status === 'Active' ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'}>{user.status}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-slate-500 text-sm font-mono">
@@ -233,8 +233,8 @@ export default function UserManagerPage() {
       
       {/* Modal */}
       {showModal && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-              <div className="bg-white border border-slate-200 p-6 rounded-xl w-full max-w-sm space-y-4 shadow-2xl">
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl">
                   <h3 className="text-lg font-bold text-slate-900">{isEditing ? t('edit_user') : t('add_new_user')}</h3>
                   
                   {/* Username */}
@@ -309,7 +309,7 @@ export default function UserManagerPage() {
                   </div>
 
                   <div className="flex gap-2 justify-end pt-4">
-                      <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-400 hover:text-white">{t('cancel')}</button>
+                      <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl font-bold">{t('cancel')}</button>
                       <button 
                         onClick={handleAddUser} 
                         disabled={!newUser.username || (!isEditing && !newUser.password)}

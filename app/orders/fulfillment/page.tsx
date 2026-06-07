@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FileText, RefreshCw, Printer, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 export default function OrderFulfillmentPage() {
   const [status, setStatus] = useState<any>(null);
@@ -73,25 +74,28 @@ export default function OrderFulfillmentPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
-       <header>
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-             <div className="p-3 bg-indigo-500/10 rounded-xl">
-               <Printer className="w-8 h-8 text-indigo-400" />
+    <div className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:p-8">
+      <AmbientBackground />
+      <div className="relative z-10 mx-auto max-w-6xl space-y-8">
+       <header className="relative overflow-hidden rounded-[1.75rem] border border-blue-200 bg-white/85 p-6 shadow-xl shadow-blue-900/10 backdrop-blur-xl">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-700 via-teal-500 to-amber-500" />
+          <h1 className="text-3xl font-bold text-slate-950 mb-2 flex items-center gap-3">
+             <div className="p-3 bg-blue-50 rounded-xl ring-1 ring-blue-100">
+               <Printer className="w-8 h-8 text-blue-700" />
              </div>
              Order Fulfillment Center
           </h1>
-          <p className="text-slate-400">ระบบจัดการใบส่งสินค้าและ PDF (Legacy Parity)</p>
+          <p className="text-slate-500">ระบบจัดการใบส่งสินค้าและ PDF (Legacy Parity)</p>
        </header>
 
        {/* Status Cards */}
        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
            
            {/* Section 1: Pending Jobs */}
-           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+           <div className="bg-white/90 border border-slate-200 rounded-2xl p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl">
                <div className="flex justify-between items-center mb-6">
-                   <h2 className="text-xl font-bold text-white">1. Pending Tasks (งานรอ)</h2>
-                   <button onClick={fetchStatus} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+                   <h2 className="text-xl font-bold text-slate-950">1. Pending Tasks (งานรอ)</h2>
+                   <button onClick={fetchStatus} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
                        <RefreshCw className={`w-5 h-5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
                    </button>
                </div>
@@ -100,9 +104,9 @@ export default function OrderFulfillmentPage() {
                     {loading ? (
                         <div className="text-center py-6 text-slate-500">Loading tasks...</div>
                     ) : !status?.pending_tasks || status.pending_tasks.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500 bg-slate-950 border border-slate-800 rounded-xl">
+                        <div className="text-center py-12 text-slate-500 bg-slate-50 border border-slate-200 rounded-xl">
                             <CheckCircle className="w-12 h-12 mx-auto mb-2 text-slate-700" />
-                            <p className="font-medium text-slate-400">No Pending Tasks</p>
+                            <p className="font-medium text-slate-500">No Pending Tasks</p>
                             <p className="text-xs text-slate-500 mt-1">All Roll Tags are clear</p>
                         </div>
                     ) : (
@@ -112,7 +116,7 @@ export default function OrderFulfillmentPage() {
                                     <div className="text-xs text-emerald-400 uppercase font-bold tracking-wider mb-1">
                                         {task.name || `Roll Tag ${task.tagId.replace("RT", "")}`}
                                     </div>
-                                    <div className="font-bold text-lg text-white">
+                                    <div className="font-bold text-lg text-slate-950">
                                         Order: {task.customerId || task.customerName}
                                     </div>
                                 </div>
@@ -130,17 +134,17 @@ export default function OrderFulfillmentPage() {
            </div>
 
            {/* Section 2: Active Form */}
-           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-               <h2 className="text-xl font-bold text-white mb-6">2. Active Form (งานปัจจุบัน)</h2>
+           <div className="bg-white/90 border border-slate-200 rounded-2xl p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl">
+               <h2 className="text-xl font-bold text-slate-950 mb-6">2. Active Form (งานปัจจุบัน)</h2>
                
                {status?.form_active_doc ? (
-                   <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-6 text-center space-y-6">
-                       <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-sm font-medium border border-indigo-500/30">
+                   <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center space-y-6">
+                       <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium border border-blue-200">
                            <FileText className="w-4 h-4" /> Editing: {status.form_active_doc}
                        </div>
                        
                        <div className="grid grid-cols-2 gap-4">
-                            <button className="py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 font-medium text-sm transition-colors">
+                            <button className="py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-lg border border-slate-200 font-medium text-sm transition-colors">
                                 View Form Sheet
                             </button>
                             <button 
@@ -153,7 +157,7 @@ export default function OrderFulfillmentPage() {
                        </div>
                    </div>
                ) : (
-                   <div className="h-40 flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
+                   <div className="h-40 flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-200 rounded-xl">
                        <CheckCircle className="w-8 h-8 mb-2 opacity-50" />
                        <p>Form is Clear</p>
                        <p className="text-xs mt-1">Ready to create new document</p>
@@ -161,19 +165,20 @@ export default function OrderFulfillmentPage() {
                )}
 
                {pdfResult && (
-                   <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-xl animate-in fade-in slide-in-from-bottom-2">
-                       <h3 className="font-bold text-green-400 flex items-center gap-2 mb-2">
+                   <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-bottom-2">
+                       <h3 className="font-bold text-emerald-700 flex items-center gap-2 mb-2">
                            <CheckCircle className="w-4 h-4" /> PDF Created!
                        </h3>
                        <div className="flex gap-2">
                            <a href={pdfResult.viewLink} target="_blank" className="flex-1 py-2 text-center bg-green-600 text-white rounded-lg font-bold text-sm">Open PDF</a>
-                           <a href={pdfResult.downloadLink} target="_blank" className="flex-1 py-2 text-center bg-slate-800 text-green-400 border border-green-500/30 rounded-lg font-bold text-sm">Download</a>
+                           <a href={pdfResult.downloadLink} target="_blank" className="flex-1 py-2 text-center bg-white text-emerald-700 border border-emerald-200 rounded-lg font-bold text-sm">Download</a>
                        </div>
                    </div>
                )}
            </div>
 
        </div>
+      </div>
     </div>
   );
 }

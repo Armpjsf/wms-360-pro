@@ -84,20 +84,22 @@ export default function ProfitAnalyticsPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 pb-20 relative overflow-hidden">
+    <div className="min-h-screen px-4 py-6 pb-20 sm:px-6 lg:p-8 relative overflow-hidden">
       <AmbientBackground />
-      <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+      <div className="relative z-10 max-w-[1500px] mx-auto space-y-7">
         
-        <Link href="/analytics" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 transition-colors font-bold group w-fit">
+        <Link href="/analytics" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
             {t('back_to_analytics')}
         </Link>
         
         {/* Header */}
-        <div className="flex justify-between items-end">
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-emerald-200 bg-white/85 p-6 shadow-xl shadow-emerald-900/10 backdrop-blur-xl flex flex-col gap-5 md:flex-row md:justify-between md:items-end">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-600 via-blue-600 to-amber-500" />
             <div>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                    <div className="p-3 bg-emerald-100 rounded-2xl">
+                <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Margin Control</p>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-950 tracking-tight flex items-center gap-3">
+                    <div className="p-3 bg-emerald-100 rounded-2xl ring-1 ring-emerald-200">
                         <DollarSign className="w-8 h-8 text-emerald-600" />
                     </div>
                     {t('profit_title')}

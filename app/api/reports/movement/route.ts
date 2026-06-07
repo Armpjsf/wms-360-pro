@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         const BOM = "\uFEFF";
         const header = "Date,Type,Product,Quantity\n";
         const rows = all.map(t => 
-            `"${t.date}","${t.type}","${t.product.replace(/"/g, '""')}",${t.qty}`
+            `"${t.date}","${t.type}","${(t.product || '').replace(/"/g, '""')}",${t.qty}`
         ).join("\n");
 
         const csv = BOM + header + rows;

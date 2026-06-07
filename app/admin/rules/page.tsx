@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Plus, Trash2, CheckCircle, XCircle, AlertTriangle, Save, Play } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
 interface AutomationRule {
     id: string;
@@ -129,9 +130,12 @@ export default function RulesPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
-            <header className="mb-8 flex justify-between items-center">
+        <div className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:p-8">
+            <AmbientBackground />
+            <div className="relative z-10 mx-auto max-w-7xl">
+            <header className="mb-8 flex flex-col gap-5 overflow-hidden rounded-[1.75rem] border border-indigo-200 bg-white/85 p-6 shadow-xl shadow-indigo-900/10 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
                 <div>
+                     <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-indigo-700">Automation Control</p>
                      <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
                         <Bot className="w-8 h-8 text-indigo-600" />
                         {t('rules_title')}
@@ -245,7 +249,7 @@ export default function RulesPage() {
             {loading ? (
                 <div className="text-center py-12 text-slate-400">Loading rules...</div>
             ) : rules.length === 0 ? (
-                <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                <div className="text-center py-20 bg-white/80 rounded-3xl border border-dashed border-slate-200">
                     <Bot className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                     <h3 className="text-lg font-bold text-slate-600">{t('no_history')}</h3>
                     <p className="text-slate-400">{t('no_rules_desc')}</p>
@@ -307,6 +311,7 @@ export default function RulesPage() {
                     ))}
                 </div>
             )}
+            </div>
         </div>
     );
 }

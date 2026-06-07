@@ -101,7 +101,7 @@ export default function AdminBranchesPage() {
     };
 
     return (
-        <div className="min-h-screen p-8 bg-slate-50 relative overflow-hidden">
+        <div className="min-h-screen p-8 relative overflow-hidden">
              <AmbientBackground />
              
              <div className="max-w-5xl mx-auto relative z-10">
@@ -110,7 +110,7 @@ export default function AdminBranchesPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-indigo-500/5 relative overflow-hidden"
                 >
-                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full" />
+                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-600 via-blue-600 to-amber-500" />
                    
                    <div className="relative z-10 flex items-center gap-6">
                        <Link href="/admin" className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 hover:shadow-lg hover:-translate-x-1 transition-all">
@@ -144,9 +144,9 @@ export default function AdminBranchesPage() {
                 <AnimatePresence>
                 {isAdding && (
                     <motion.div 
-                        initial={{ opacity: 0, height: 0, mb: 0 }}
-                        animate={{ opacity: 1, height: 'auto', mb: 24 }}
-                        exit={{ opacity: 0, height: 0, mb: 0 }}
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         className="overflow-hidden"
                     >
                         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-xl border border-indigo-100">

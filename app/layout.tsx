@@ -56,7 +56,7 @@ export default function RootLayout({
             <KeyboardShortcuts />
             <OfflineIndicator />
             <Sidebar />
-            <main className="pl-0 md:pl-64 min-h-screen transition-all duration-300 pt-20 md:pt-0">
+            <main id="main-content" className="min-h-screen pt-20 transition-all duration-300 md:pl-72 md:pt-0">
             {children}
             </main>
         </Providers>

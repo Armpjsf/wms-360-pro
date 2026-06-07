@@ -40,9 +40,12 @@ export async function getUsers(): Promise<User[]> {
 export async function verifyUser(username: string, password: string): Promise<User | null> {
     try {
         const raw = await getSheetData(USER_SPREADSHEET_ID, "'Users'!A:H");
+        const allowDevAdmin =
+            process.env.NODE_ENV !== 'production' &&
+            process.env.ENABLE_DEV_ADMIN_BACKDOOR === 'true';
+
         if (!raw || raw.length < 2) {
-             // Default Admin Backdoor
-             if (username === 'admin' && password === 'admin') {
+             if (allowDevAdmin && username === 'admin' && password === 'admin') {
                  return { 
                      id: 'admin', 
                      username: 'admin', 
@@ -59,7 +62,7 @@ export async function verifyUser(username: string, password: string): Promise<Us
         const userRow = raw.slice(1).find(r => r[1]?.toLowerCase() === username.toLowerCase());
         
         if (!userRow) {
-             if (username === 'admin' && password === 'admin') {
+             if (allowDevAdmin && username === 'admin' && password === 'admin') {
                  return { 
                      id: 'admin', 
                      username: 'admin', 

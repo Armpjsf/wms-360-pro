@@ -97,23 +97,28 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-8 max-w-[1600px] mx-auto space-y-6">
+    <div className="relative min-h-screen px-4 py-6 sm:px-6 lg:p-8">
       <AmbientBackground />
-      <div className="relative z-10">
-      <header className="flex flex-col md:flex-row justify-between gap-4">
+      <div className="relative z-10 mx-auto max-w-[1500px] space-y-6">
+      <header className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/85 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-xl">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" />
+        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
         <div>
-           <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
-              <History className="w-8 h-8 text-purple-600" />
+           <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Inventory Ledger</p>
+           <h1 className="text-3xl font-black text-slate-950 mb-2 flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-blue-700 text-white shadow-lg shadow-blue-900/20">
+                <History className="w-6 h-6" />
+              </span>
               {t('logs_title')}
            </h1>
-           <p className="text-slate-400">{t('logs_subtitle')}</p>
+           <p className="text-slate-500 font-semibold">{t('logs_subtitle')}</p>
         </div>
         
-        <div className="flex bg-white border border-slate-200 p-1 rounded-lg w-fit overflow-x-auto shadow-sm">
+        <div className="flex bg-slate-50 border border-slate-200 p-1.5 rounded-2xl w-fit overflow-x-auto shadow-inner shadow-slate-200/70">
             <button
                 onClick={() => setActiveTab('IN')}
                 className={`px-6 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === 'IN' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
+                    activeTab === 'IN' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-700/20' : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
                 }`}
             >
                 <ArrowDownLeft className="w-4 h-4" /> {t('tab_inbound')}
@@ -121,7 +126,7 @@ export default function TransactionsPage() {
             <button
                 onClick={() => setActiveTab('OUT')}
                 className={`px-6 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === 'OUT' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
+                    activeTab === 'OUT' ? 'bg-rose-600 text-white shadow-lg shadow-rose-700/20' : 'text-slate-600 hover:text-rose-700 hover:bg-rose-50'
                 }`}
             >
                 <ArrowUpRight className="w-4 h-4" /> {t('tab_outbound')}
@@ -129,16 +134,17 @@ export default function TransactionsPage() {
             <button
                 onClick={() => setActiveTab('DAMAGE')}
                 className={`px-6 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === 'DAMAGE' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
+                    activeTab === 'DAMAGE' ? 'bg-amber-600 text-white shadow-lg shadow-amber-700/20' : 'text-slate-600 hover:text-amber-700 hover:bg-amber-50'
                 }`}
             >
                 <AlertTriangle className="w-4 h-4" /> {t('tab_damage')}
             </button>
         </div>
+        </div>
       </header>
 
       {/* Controls */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm items-stretch lg:items-center">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white/85 p-4 rounded-2xl border border-slate-200 shadow-lg shadow-slate-900/5 backdrop-blur-xl items-stretch lg:items-center">
           <div className="flex flex-col md:flex-row flex-1 gap-3 items-stretch md:items-center w-full max-w-5xl">
              <div className="relative flex-1">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -147,12 +153,12 @@ export default function TransactionsPage() {
                     placeholder={t('search_logs_placeholder')} 
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:border-purple-500 outline-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none"
                  />
              </div>
              
              {/* Date Range Inputs */}
-             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg shadow-inner">
+             <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-xl shadow-inner shadow-slate-100">
                 <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                 <input 
                    type="date" 
@@ -185,16 +191,17 @@ export default function TransactionsPage() {
           </div>
           <button 
                  onClick={exportCSV}
-                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg flex items-center gap-2 transition-colors border border-slate-200 font-bold w-full lg:w-auto justify-center"
+                 className="px-4 py-2.5 bg-slate-900 hover:bg-blue-900 text-white rounded-xl flex items-center gap-2 transition-colors border border-slate-900 font-bold w-full lg:w-auto justify-center shadow-lg shadow-slate-900/10"
              >
                  <Download className="w-4 h-4" /> {t('export_current_view')}
           </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xl">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl shadow-slate-900/5">
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold">
+              <thead className="bg-slate-900 text-white uppercase tracking-wider font-black text-[11px]">
                   <tr>
                       <th className="p-4">{t('date')}</th>
                       <th className="p-4">{t('col_product_name')}</th>
@@ -236,11 +243,12 @@ export default function TransactionsPage() {
                   )}
               </tbody>
           </table>
+          </div>
       </div>
 
       {/* Pagination UI */}
       {totalPages > 1 && (
-          <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col gap-4 justify-between items-center bg-white/90 p-4 rounded-2xl border border-slate-200 shadow-lg shadow-slate-900/5 sm:flex-row">
               <div className="text-sm text-slate-500">
                   Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-bold text-slate-900">{filtered.length}</span> results
               </div>
@@ -262,8 +270,8 @@ export default function TransactionsPage() {
                                   onClick={() => setCurrentPage(pageNum)}
                                   className={`w-10 h-10 rounded-lg text-sm font-bold border transition-all ${
                                       currentPage === pageNum 
-                                          ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
-                                          : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300'
+                                          ? 'bg-blue-700 border-blue-700 text-white shadow-md' 
+                                          : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
                                   }`}
                               >
                                   {pageNum}
@@ -276,8 +284,8 @@ export default function TransactionsPage() {
                               onClick={() => setCurrentPage(totalPages)}
                               className={`w-10 h-10 rounded-lg text-sm font-bold border transition-all ${
                                   currentPage === totalPages 
-                                      ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
-                                      : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300'
+                                      ? 'bg-blue-700 border-blue-700 text-white shadow-md' 
+                                      : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
                               }`}
                           >
                               {totalPages}

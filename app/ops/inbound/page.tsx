@@ -161,38 +161,39 @@ export default function InboundPage() {
   };
 
   return (
-    <div className="relative min-h-screen p-6 pb-20">
+    <div className="relative min-h-screen px-4 py-6 pb-20 sm:px-6 lg:p-8">
       <AmbientBackground />
       
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-[1500px] mx-auto relative z-10">
       
         {/* Header */}
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-10 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 shadow-xl shadow-emerald-500/20 relative overflow-hidden"
+            className="relative mb-8 overflow-hidden rounded-[1.75rem] border border-emerald-200 bg-white/85 p-6 shadow-xl shadow-emerald-900/10 backdrop-blur-xl"
         >
-           <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/10 blur-3xl rounded-full" />
+           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-600 via-teal-500 to-blue-500" />
            
            <Link href="/dashboard" className="relative z-10 text-slate-500 hover:text-emerald-600 flex items-center gap-2 mb-6 transition-colors font-bold uppercase text-xs tracking-widest">
               <ArrowLeft className="w-4 h-4" /> {t('back_to_dashboard')}
            </Link>
             <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div className="flex items-center gap-6">
-                   <div className="p-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-xl shadow-emerald-200">
+                <div className="flex items-center gap-5">
+                   <div className="p-5 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-3xl shadow-xl shadow-emerald-900/20">
                      <PackagePlus className="w-10 h-10 text-white" />
                    </div>
                    <div>
-                       <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-1">
+                       <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Receiving Workspace</p>
+                       <h1 className="text-4xl font-black text-slate-950 tracking-tight mb-1">
                           {t('inbound_order')}
                        </h1>
-                       <p className="text-slate-500 font-medium text-lg">{t('inbound_subtitle')}</p>
+                       <p className="text-slate-500 font-semibold text-sm">{t('inbound_subtitle')}</p>
                    </div>
                 </div>
                 
                 <button
                     onClick={() => setIsImportOpen(true)}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-3.5 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-sm"
+                    className="flex items-center gap-2 bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-emerald-200 px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
                 >
                     <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
                     <span>{t('import_excel')}</span>
@@ -200,7 +201,7 @@ export default function InboundPage() {
             </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Form */}
             <div className="lg:col-span-1 space-y-6">
                 
@@ -209,7 +210,7 @@ export default function InboundPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-white/80 backdrop-blur-xl border border-white/50 p-6 rounded-[2rem] shadow-sm"
+                    className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-xl"
                 >
                     <h3 className="font-bold text-slate-800 mb-6 uppercase text-sm tracking-wider flex items-center gap-2">
                         <FileText className="w-4 h-4 text-emerald-500" /> {t('document_info')}
@@ -245,7 +246,7 @@ export default function InboundPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-white/80 backdrop-blur-xl border border-white/50 p-6 rounded-[2rem] shadow-sm"
+                    className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-xl"
                 >
                     <h3 className="font-bold text-slate-800 mb-6 uppercase text-sm tracking-wider flex items-center gap-2">
                         <Plus className="w-4 h-4 text-emerald-500" /> {t('add_item')}
@@ -350,7 +351,7 @@ export default function InboundPage() {
                 transition={{ delay: 0.3 }}
                 className="lg:col-span-2"
             >
-                 <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden min-h-[500px] flex flex-col shadow-sm">
+                 <div className="bg-white/95 border border-slate-200 rounded-2xl overflow-hidden min-h-[500px] flex flex-col shadow-lg shadow-slate-900/5">
                      <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center backdrop-blur-sm">
                          <h3 className="font-bold text-slate-900 flex items-center gap-3 text-lg">
                             {t('items_list')} <span className="bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full border border-emerald-200 font-bold">{items.length}</span>

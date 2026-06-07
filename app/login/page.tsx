@@ -48,10 +48,11 @@ function LoginForm() {
       <AmbientBackground />
 
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-white/70 backdrop-blur-2xl border border-white/50 rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-indigo-500/10">
+        <div className="relative overflow-hidden bg-white/85 backdrop-blur-2xl border border-slate-200 rounded-[1.75rem] p-8 md:p-10 shadow-2xl shadow-slate-900/10">
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-blue-700 via-teal-500 to-amber-500" />
           
           <div className="text-center mb-10">
-            <div className="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-600/30 mb-6 transform rotate-3 hover:rotate-6 transition-transform duration-300">
+            <div className="w-20 h-20 bg-slate-950 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-slate-900/20 mb-6 ring-4 ring-blue-50">
                <User className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Welcome Back</h1>
@@ -70,13 +71,13 @@ function LoginForm() {
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Username</label>
                 <div className="relative group">
                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                      <User className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                    </div>
                    <input
                      type="text"
                      value={username}
                      onChange={(e) => setUsername(e.target.value)}
-                     className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 text-sm rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 block w-full pl-12 p-4 outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-300"
+                     className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 text-sm rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 block pl-12 p-4 outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-300"
                      placeholder="Enter your username"
                      required
                    />
@@ -87,13 +88,13 @@ function LoginForm() {
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Password</label>
                 <div className="relative group">
                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                      <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                    </div>
                    <input
                      type="password"
                      value={password}
                      onChange={(e) => setPassword(e.target.value)}
-                     className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 text-sm rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 block w-full pl-12 p-4 outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-300"
+                     className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 text-sm rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 block pl-12 p-4 outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-300"
                      placeholder="••••••••"
                      required
                    />
@@ -103,7 +104,7 @@ function LoginForm() {
              <button
                type="submit"
                disabled={loading}
-               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl p-4 transition-all duration-200 shadow-lg shadow-indigo-600/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+               className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-2xl p-4 transition-all duration-200 shadow-lg shadow-blue-700/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
              >
                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
                {!loading && <ArrowRight className="w-5 h-5" />}
