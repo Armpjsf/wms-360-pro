@@ -34,8 +34,22 @@ function LoginForm() {
       } else {
         // Force full reload to ensure session is picked up and state is cleared
         const isMobile = window.innerWidth < 768 || Boolean((window as any).Capacitor);
-        const isGenericCallback = callbackUrl === '/' || callbackUrl === '/dashboard';
-        window.location.href = isMobile && isGenericCallback ? '/mobile/jobs' : callbackUrl;
+        let targetUrl = callbackUrl;
+        
+        if (isMobile) {
+          try {
+            const pathname = callbackUrl.startsWith('http') 
+              ? new URL(callbackUrl).pathname 
+              : callbackUrl;
+            
+            if (!pathname.startsWith('/mobile')) {
+              targetUrl = '/mobile/jobs';
+            }
+          } catch (e) {
+            targetUrl = '/mobile/jobs';
+          }
+        }
+        window.location.href = targetUrl;
       }
     } catch (err) {
       console.error(err);
