@@ -20,10 +20,12 @@ export async function GET() {
     // 1. Get Today's Date in Thailand Time (UTC+7)
     // We need to match the date format stored in Sheets (usually YYYY-MM-DD or DD/MM/YYYY)
     const now = new Date();
-    const thaiTime = new Date(
-      now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
-    );
-    const todayStr = thaiTime.toISOString().split("T")[0]; // YYYY-MM-DD
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
 
     console.log(`[Daily Count] Fetching movements for: ${todayStr}`);
 

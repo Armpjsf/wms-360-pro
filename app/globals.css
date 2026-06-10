@@ -74,3 +74,9 @@ textarea {
 .font-outfit {
     font-family: var(--font-outfit), sans-serif;
 }
+
+@media (min-width: 768px) {
+  html.sidebar-collapsed #main-content {
+    padding-left: 5rem !important;
+  }
+}

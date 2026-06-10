@@ -25,19 +25,26 @@ export async function generateNewDocNumber(spreadsheetId?: string) {
         // Generate New Num (Thailand Time)
         // Format: YYYYMMDD-XXX
         const now = new Date();
-        const thDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-        const year = thDate.getFullYear();
-        const month = String(thDate.getMonth() + 1).padStart(2, '0');
-        const day = String(thDate.getDate()).padStart(2, '0');
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Bangkok',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+        const parts = formatter.formatToParts(now);
+        const partMap = Object.fromEntries(parts.map(p => [p.type, p.value]));
+        const year = partMap.year;
+        const month = partMap.month;
+        const day = partMap.day;
         const todayStr = `${year}${month}${day}`;
         const currentMonthPrefix = `${year}${month}`;
 
         let newSeq = 1;
 
-        const parts = lastDocNum.split('-');
-        if (parts.length === 2) {
-            const lastDate = parts[0]; // YYYYMMDD
-            const lastSeq = parseInt(parts[1]);
+        const docParts = lastDocNum.split('-');
+        if (docParts.length === 2) {
+            const lastDate = docParts[0]; // YYYYMMDD
+            const lastSeq = parseInt(docParts[1]);
             
             // Check if same month (YYYYMM)
             if (lastDate.substring(0, 6) === currentMonthPrefix) {

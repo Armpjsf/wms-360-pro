@@ -41,7 +41,7 @@ import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import BranchSelector from './BranchSelector';
@@ -112,6 +112,37 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { t, language, setLanguage } = useLanguage();
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('sidebar-collapsed');
+      if (stored !== null) {
+        setCollapsed(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Error reading sidebar collapse state:', e);
+    }
+  }, []);
+
+  // Sync class on document.documentElement
+  useEffect(() => {
+    if (collapsed) {
+      document.documentElement.classList.add('sidebar-collapsed');
+    } else {
+      document.documentElement.classList.remove('sidebar-collapsed');
+    }
+  }, [collapsed]);
+
+  const handleToggleCollapse = () => {
+    const nextVal = !collapsed;
+    setCollapsed(nextVal);
+    try {
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(nextVal));
+    } catch (e) {
+      console.error('Error saving sidebar collapse state:', e);
+    }
+  };
 
   const userRole = (session?.user as any)?.role || 'User';
   const isAdminRole = adminRoles.includes(userRole);
@@ -259,7 +290,7 @@ export default function Sidebar() {
 
           <button
             type="button"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={handleToggleCollapse}
             className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 md:inline-flex"
             aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
           >

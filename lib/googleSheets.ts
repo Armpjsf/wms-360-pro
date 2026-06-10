@@ -1131,14 +1131,17 @@ export async function addTransaction(type: "IN" | "OUT", data: any) {
 
   // Format date: DD/MM/YYYY Buddhist Era (Thai format)
   const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const bangkokOffset = 7 * 60 * 60 * 1000;
-  const thDate = new Date(utc + bangkokOffset);
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  });
+  const parts = formatter.formatToParts(now);
+  const partMap = Object.fromEntries(parts.map(p => [p.type, p.value]));
   const dateStr =
     data.date ||
-    `${thDate.getDate()}/${thDate.getMonth() + 1}/${
-      thDate.getFullYear() + 543
-    }`;
+    `${partMap.day}/${partMap.month}/${parseInt(partMap.year, 10) + 543}`;
 
   let row: any[];
   let range: string;
@@ -1469,38 +1472,47 @@ export async function saveRule(rule: AutomationRule) {
 function parseDate(dateStr: string): string {
   if (!dateStr) return "";
 
-  // Try standard date first
-  let d = new Date(dateStr);
+  const cleaned = dateStr.trim();
 
-  // Invalid Date Check
-  if (isNaN(d.getTime())) {
-    // Try DD/MM/YYYY (common in Thai Sheets)
-    const parts = dateStr.trim().split("/");
-    if (parts.length === 3) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10);
-      let year = parseInt(parts[2], 10);
-
-      // Handle Thai Year (BE) 2568 -> 2025 (approx, valid > 2400)
-      if (year > 2400) year -= 543;
-
-      // Construct strictly as YYYY-MM-DD string to avoid timezone shifts
-      return `${year}-${month.toString().padStart(2, "0")}-${day
-        .toString()
-        .padStart(2, "0")}`;
-    }
-    return ""; // Invalid format
+  // 1. Check for YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = cleaned.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (ymdMatch) {
+    let year = parseInt(ymdMatch[1], 10);
+    const month = ymdMatch[2].padStart(2, '0');
+    const day = ymdMatch[3].padStart(2, '0');
+    if (year > 2400) year -= 543;
+    return `${year}-${month}-${day}`;
   }
 
-  // IF it was a standard date object (e.g. from YYYY-MM-DD or MM/DD/YYYY),
-  // ensure we output YYYY-MM-DD relative to the Local/Client timezone, not UTC.
-  // However, if the input is YYYY-MM-DD string, Date() assumes UTC usually.
-  // Let's rely on string parsing if possible, or manual extraction.
+  // 2. Check for DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = cleaned.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    let year = parseInt(dmyMatch[3], 10);
+    if (year > 2400) year -= 543;
+    return `${year}-${month}-${day}`;
+  }
 
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  // 3. Fallback to standard JS parsing
+  const d = new Date(cleaned);
+  if (!isNaN(d.getTime())) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(d);
+    } catch (e) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return "";
 }
 
 // Internal fetcher (uncached) - Exported for Data Quality Check

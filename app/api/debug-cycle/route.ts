@@ -7,8 +7,13 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
     try {
         const now = new Date();
+        const todayStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Bangkok',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(now);
         const thaiTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-        const todayStr = thaiTime.toISOString().split("T")[0]; // YYYY-MM-DD
 
         const inTxs = await getTransactions('IN');
         const outTxs = await getTransactions('OUT');

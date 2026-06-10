@@ -15,8 +15,12 @@ export async function GET(req: Request) {
         
         // 1. Get Today's Date (Thai Time)
         const now = new Date();
-        const thaiTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-        const todayStr = thaiTime.toISOString().split("T")[0]; // YYYY-MM-DD
+        const todayStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Bangkok',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(now);
         
         console.log(`[CycleCount] Checking for date: ${todayStr}`);
         
