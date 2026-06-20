@@ -76,6 +76,7 @@ function checkOrderEmailAndWakeWms() {
 4. Type: **Minutes timer**.
 5. Interval: **Every minute**.
 
-Keep the Vercel cron in place as a safety net. Apps Script wakes the system
-quickly when email arrives; Vercel cron still catches anything missed.
+The `/api/cron/email-orders` endpoint is intentionally callable by Apps Script
+even when it is not listed in `vercel.json`. Vercel Hobby projects only support
+daily cron schedules, so Apps Script is the fast wake-up path for this workflow.
 
