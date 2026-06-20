@@ -25,6 +25,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get('branchId');
+    const bypassCache = searchParams.get('noCache') === '1' || searchParams.get('automation') === '1';
 
     // Resolver for Multi-Branch Isolation
     const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
 
     // 0. High Performance: Intercept with a 4-second in-memory cache to solve rapid double-clicks or mobile page transition latency
     const cacheAge = Date.now() - lastFetchTime;
-    if (lastGoodResponse && cacheAge < 4000) {
+    if (!bypassCache && lastGoodResponse && cacheAge < 4000) {
         console.log(`[Status API] Instant Cache hit! Returning cached status (${Math.round(cacheAge/1000)}s old)`);
         return NextResponse.json(lastGoodResponse, { headers: corsHeaders });
     }
@@ -330,6 +331,11 @@ export async function GET(req: Request) {
         completed: completedJobs,
         recent: recentPendingPdf
     };
+
+    if (bypassCache) {
+        console.log("[Status] Returning uncached automation response");
+        return NextResponse.json(response, { headers: corsHeaders });
+    }
 
     // Cache the response if it has meaningful data
     const hasData = pendingTasks.length > 0 || activeForm || waitingJobs.length > 0;
