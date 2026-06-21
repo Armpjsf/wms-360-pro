@@ -149,9 +149,25 @@ function OrderManagement() {
     }
   }, [t]);
 
-  // Initial load only
+  // Initial load + background refresh for automation-created jobs.
   useEffect(() => {
     fetchStatus();
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStatus();
+      }
+    };
+
+    const intervalId = window.setInterval(refreshIfVisible, 15000);
+    window.addEventListener('focus', refreshIfVisible);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshIfVisible);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
   }, [fetchStatus]);
 
   // ========== HANDLERS ==========
