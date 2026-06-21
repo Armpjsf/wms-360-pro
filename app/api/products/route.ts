@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getProducts, addProduct, editProduct, getBranchSpreadsheetId } from '@/lib/googleSheets';
+import { getProducts, addProduct, editProduct, getBranchSpreadsheetId, ProductLocationConflictError } from '@/lib/googleSheets';
 
 export async function GET(request: Request) {
     try {
@@ -83,6 +83,12 @@ export async function POST(request: Request) {
         }
     } catch (error: any) {
         console.error("Add Product Error:", error);
+        if (error instanceof ProductLocationConflictError) {
+            return NextResponse.json(
+                { error: error.message, conflict: error.conflict },
+                { status: 409 }
+            );
+        }
          return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
@@ -129,6 +135,12 @@ export async function PUT(request: Request) {
 
     } catch (error: any) {
         console.error("Edit Product Error:", error);
+        if (error instanceof ProductLocationConflictError) {
+            return NextResponse.json(
+                { error: error.message, conflict: error.conflict },
+                { status: 409 }
+            );
+        }
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

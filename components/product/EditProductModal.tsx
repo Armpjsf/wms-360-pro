@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Save, Loader2, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
@@ -15,6 +15,7 @@ interface Product {
     stock: number;
     unit: string;
     location: string;
+    status?: string;
 }
 
 interface EditProductModalProps {
@@ -27,14 +28,34 @@ interface EditProductModalProps {
 export default function EditProductModal({ isOpen, onClose, product, onSuccess }: EditProductModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [emptyLocations, setEmptyLocations] = useState<string[]>([]);
+    const [categories, setCategories] = useState<string[]>(["FENIX", "FORMICA", "TD BORD", "TOP BORD"]);
     
     const [formData, setFormData] = useState({
         name: product.name,
         category: product.category,
         price: product.price,
         minStock: product.minStock,
-        location: product.location
+        location: product.location,
+        status: product.status || 'Active'
     });
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const branchId = urlParams.get('branchId') || 'hq';
+
+        fetch(getApiUrl(`/api/products/locations?branchId=${encodeURIComponent(branchId)}`), { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : { locations: [] })
+            .then(data => setEmptyLocations(Array.isArray(data.locations) ? data.locations : []))
+            .catch(() => setEmptyLocations([]));
+
+        fetch(getApiUrl(`/api/products/categories?branchId=${encodeURIComponent(branchId)}`), { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : { categories: [] })
+            .then(data => setCategories(Array.isArray(data.categories) && data.categories.length > 0 ? data.categories : ["FENIX", "FORMICA", "TD BORD", "TOP BORD"]))
+            .catch(() => setCategories(["FENIX", "FORMICA", "TD BORD", "TOP BORD"]));
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,14 +63,43 @@ export default function EditProductModal({ isOpen, onClose, product, onSuccess }
         setError('');
 
         try {
-            const res = await fetch(getApiUrl('/api/products/update'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const urlParams = new URLSearchParams(window.location.search);
+            const branchId = urlParams.get('branchId') || 'hq';
+
+            const body: any = {
+                    branchId,
                     oldName: product.name, // Key to find row
                     updates: formData
-                })
-            });
+                };
+
+            const submitUpdate = async (payload: any) => {
+                const res = await fetch(getApiUrl('/api/products/update'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json().catch(() => ({}));
+                return { res, json };
+            };
+
+            let { res, json } = await submitUpdate(body);
+
+            if (res.status === 409 && json.conflict) {
+                const shouldSwap = confirm(
+                    `Location ${json.conflict.location} is already used by ${json.conflict.productName}.\n\nDo you want to swap locations?`
+                );
+
+                if (!shouldSwap) {
+                    return;
+                }
+
+                body.updates = {
+                    ...body.updates,
+                    swapLocation: true,
+                };
+
+                ({ res, json } = await submitUpdate(body));
+            }
 
             if (!res.ok) throw new Error('Failed to update');
 
@@ -117,11 +167,29 @@ export default function EditProductModal({ isOpen, onClose, product, onSuccess }
                                 <label className="block text-sm font-bold text-slate-700 mb-1">หมวดหมู่ (Category)</label>
                                 <input 
                                     type="text" 
+                                    list="product-category-options-legacy"
                                     value={formData.category}
                                     onChange={e => setFormData({...formData, category: e.target.value})}
                                     className="w-full p-3 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 />
+                                <datalist id="product-category-options-legacy">
+                                    {categories.map(category => (
+                                        <option key={category} value={category} />
+                                    ))}
+                                </datalist>
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">สถานะสินค้า (Status)</label>
+                            <select
+                                value={formData.status}
+                                onChange={e => setFormData({...formData, status: e.target.value})}
+                                className="w-full p-3 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="Active">Active</option>
+                                <option value="Inactive">inActive</option>
+                            </select>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -138,10 +206,16 @@ export default function EditProductModal({ isOpen, onClose, product, onSuccess }
                                 <label className="block text-sm font-bold text-slate-700 mb-1">ที่เก็บ (Location)</label>
                                 <input 
                                     type="text" 
+                                    list="empty-product-locations-legacy"
                                     value={formData.location}
                                     onChange={e => setFormData({...formData, location: e.target.value})}
                                     className="w-full p-3 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 />
+                                <datalist id="empty-product-locations-legacy">
+                                    {emptyLocations.map(location => (
+                                        <option key={location} value={location} />
+                                    ))}
+                                </datalist>
                             </div>
                         </div>
                     </div>

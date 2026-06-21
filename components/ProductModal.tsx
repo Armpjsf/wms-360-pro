@@ -16,6 +16,8 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
     const { t } = useLanguage();
     const isEdit = !!product;
     const [loading, setLoading] = useState(false);
+    const [emptyLocations, setEmptyLocations] = useState<string[]>([]);
+    const [categories, setCategories] = useState<string[]>(["FENIX", "FORMICA", "TD BORD", "TOP BORD"]);
     
     // Form State
     const [formData, setFormData] = useState({
@@ -43,6 +45,7 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
         minStock: '',
         unit: '',
         location: '',
+        status: 'Active',
         image: ''
     });
 
@@ -58,6 +61,7 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                      minStock: product.minStock?.toString() || '',
                      unit: product.unit || '',
                      location: product.location || '',
+                     status: product.status || 'Active',
                      image: product.image || ''
                  });
              } else {
@@ -71,11 +75,29 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                      minStock: '',
                      unit: 'ชิ้น',
                      location: '',
+                     status: 'Active',
                      image: ''
                  });
              }
         }
     }, [isOpen, product]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const branchId = urlParams.get('branchId') || 'hq';
+
+        fetch(`/api/products/locations?branchId=${encodeURIComponent(branchId)}`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : { locations: [] })
+            .then(data => setEmptyLocations(Array.isArray(data.locations) ? data.locations : []))
+            .catch(() => setEmptyLocations([]));
+
+        fetch(`/api/products/categories?branchId=${encodeURIComponent(branchId)}`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : { categories: [] })
+            .then(data => setCategories(Array.isArray(data.categories) && data.categories.length > 0 ? data.categories : ["FENIX", "FORMICA", "TD BORD", "TOP BORD"]))
+            .catch(() => setCategories(["FENIX", "FORMICA", "TD BORD", "TOP BORD"]));
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -85,7 +107,7 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
             const branchId = urlParams.get('branchId') || 'hq';
 
             const method = isEdit ? 'PUT' : 'POST';
-            const body = isEdit ? {
+            const body: any = isEdit ? {
                 branchId,
                 oldName: product.name,
                 updates: {
@@ -96,6 +118,7 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                     minStock: parseFloat(formData.minStock) || 0,
                     unit: formData.unit,
                     location: formData.location,
+                    status: formData.status,
                     image: formData.image
                 }
             } : {
@@ -105,15 +128,43 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                 price: parseFloat(formData.price) || 0,
                 cost: parseFloat(formData.cost) || 0,
                 minStock: parseFloat(formData.minStock) || 0,
+                status: formData.status,
             };
 
-            const res = await fetch('/api/products', {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
+            const submitProduct = async (payload: any) => {
+                const res = await fetch('/api/products', {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+                return { res, json };
+            };
 
-            const json = await res.json();
+            let { res, json } = await submitProduct(body);
+
+            if (res.status === 409 && json.conflict) {
+                if (!isEdit) {
+                    throw new Error(`Location ${json.conflict.location} is already used by ${json.conflict.productName}`);
+                }
+
+                const shouldSwap = confirm(
+                    `Location ${json.conflict.location} is already used by ${json.conflict.productName}.\n\nDo you want to swap locations?`
+                );
+
+                if (!shouldSwap) {
+                    setLoading(false);
+                    return;
+                }
+
+                body.updates = {
+                    ...body.updates,
+                    swapLocation: true,
+                };
+
+                ({ res, json } = await submitProduct(body));
+            }
+
             if (!res.ok) throw new Error(json.error || 'Failed to save');
 
             alert(isEdit ? 'Product updated!' : 'Product added!');
@@ -176,11 +227,17 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                                 <div className="relative">
                                     <Tag className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                                     <input 
+                                        list="product-category-options"
                                         value={formData.category}
                                         onChange={e => setFormData({...formData, category: e.target.value})}
                                         className="w-full pl-12 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                                        placeholder="e.g. Electronics"
+                                        placeholder={categories[0] || "FORMICA"}
                                     />
+                                    <datalist id="product-category-options">
+                                        {categories.map(category => (
+                                            <option key={category} value={category} />
+                                        ))}
+                                    </datalist>
                                 </div>
                              </div>
                         </div>
@@ -210,7 +267,7 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                         </div>
 
                         {/* Logistics */}
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                              <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Unit</label>
                                 <input 
@@ -231,14 +288,31 @@ export function ProductModal({ isOpen, onClose, product, onSuccess }: ProductMod
                                 />
                              </div>
                              <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Status</label>
+                                <select
+                                    value={formData.status}
+                                    onChange={e => setFormData({...formData, status: e.target.value})}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-medium text-slate-800 outline-none focus:border-indigo-500 transition-all"
+                                >
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">inActive</option>
+                                </select>
+                             </div>
+                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Location</label>
                                 <input 
+                                    list="empty-product-locations"
                                     value={formData.location}
                                     onChange={e => setFormData({...formData, location: e.target.value})}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-medium text-slate-800 outline-none focus:border-indigo-500 transition-all"
-                                    placeholder="A-001"
+                                    placeholder={emptyLocations[0] || "A-001"}
                                 />
-                             </div>
+                                <datalist id="empty-product-locations">
+                                    {emptyLocations.map(location => (
+                                        <option key={location} value={location} />
+                                    ))}
+                                </datalist>
+                              </div>
                         </div>
 
                          {/* Image */}

@@ -155,6 +155,7 @@ export function cleanSpreadsheetId(id: string | undefined): string {
 
 // CONSTANTS (From User)
 export const PRODUCT_SHEET_GID = 984590829; // Updated from User URL
+export const PRODUCT_MASTER_SHEET_GID = 1511150723; // "ชื่อสินค้า" master product tab
 
 // SPLIT SPREADSHEET CONFIGURATION
 // ID 1: Inventory, Transactions, Damage, Cycle Count, Audit
@@ -197,6 +198,73 @@ export const getProductSheetName = unstable_cache(
   ["product-sheet-name-v2"], // Force refresh with new GID
   { revalidate: 3600 }, // Cache for 1 hour
 );
+
+async function getSheetNameByGid(
+  spreadsheetId: string,
+  gid: number,
+  fallbackTitle: string,
+): Promise<string> {
+  const { googleSheets, auth } = await getGoogleSheets();
+  const meta = await googleSheets.spreadsheets.get({
+    auth: auth as any,
+    spreadsheetId,
+    fields: "sheets.properties",
+  });
+  const sheet = meta.data.sheets?.find((s) => s.properties?.sheetId === gid);
+  return sheet?.properties?.title || fallbackTitle;
+}
+
+async function getProductMasterSheetName(spreadsheetId: string): Promise<string> {
+  return getSheetNameByGid(spreadsheetId, PRODUCT_MASTER_SHEET_GID, "ชื่อสินค้า");
+}
+
+function normalizeProductLocation(location: unknown): string {
+  return String(location || "").trim().toLowerCase();
+}
+
+export class ProductLocationConflictError extends Error {
+  conflict: {
+    location: string;
+    productName: string;
+    currentLocation?: string;
+  };
+
+  constructor(location: string, productName: string, currentLocation?: string) {
+    super(`Location ${location} is already occupied by ${productName}`);
+    this.name = "ProductLocationConflictError";
+    this.conflict = { location, productName, currentLocation };
+  }
+}
+
+export async function getEmptyProductMasterLocations(
+  spreadsheetId?: string,
+): Promise<string[]> {
+  const SSID = spreadsheetId || SPREADSHEET_ID;
+  const sheetName = await getProductMasterSheetName(SSID);
+  const masterRows = await getSheetData(SSID, `'${sheetName}'!A:J`);
+
+  return masterRows
+    .slice(1)
+    .map((row) => String(row?.[0] || "").trim())
+    .filter((location, index) => {
+      const row = masterRows[index + 1] || [];
+      return location && location !== "-" && !String(row?.[1] || "").trim();
+    });
+}
+
+export async function getProductMasterCategories(
+  spreadsheetId?: string,
+): Promise<string[]> {
+  const SSID = spreadsheetId || SPREADSHEET_ID;
+  const sheetName = await getProductMasterSheetName(SSID);
+  const masterRows = await getSheetData(SSID, `'${sheetName}'!G2:G`);
+  const fallback = ["FENIX", "FORMICA", "TD BORD", "TOP BORD"];
+  const categories = masterRows
+    .map((row) => String(row?.[0] || "").trim())
+    .filter(Boolean);
+
+  return Array.from(new Set([...categories, ...fallback]));
+}
 
 // Helper to get Sheet ID (GID) by Name
 export async function getSheetId(
@@ -1242,10 +1310,13 @@ export async function addProduct(
   spreadsheetId?: string,
 ): Promise<boolean> {
   const SSID = spreadsheetId || SPREADSHEET_ID;
-  const sheetName = await getProductSheetName();
-  console.log(`[addProduct] Resolved Sheet Name: ${sheetName}`);
+  const sheetName = await getProductMasterSheetName(SSID);
+  console.log(`[addProduct] Resolved Product Master Sheet Name: ${sheetName}`);
   if (!sheetName) throw new Error("Could not resolve Product Sheet Name");
 
+  // Product master data is written to "ชื่อสินค้า".
+  // "📊 รายงานสินค้าคงเหลือ" is formula-linked to this master tab, so add/edit/location moves
+  // must update "ชื่อสินค้า" and let the report tab recalculate.
   // Map Data to Columns based on User Screenshot / Standard
   // A: Location
   // B: Name (Key)
@@ -1258,6 +1329,29 @@ export async function addProduct(
   // I: Image URL (Direct)
   // J: Drive Link
 
+  const masterRows = await getSheetData(SSID, `'${sheetName}'!A:J`);
+  const targetLocation = normalizeProductLocation(data.location);
+  const occupied = masterRows.find(
+    (row, rowIndex) =>
+      rowIndex > 0 &&
+      targetLocation &&
+      targetLocation !== "-" &&
+      String(row?.[1] || "").trim() &&
+      normalizeProductLocation(row?.[0]) === targetLocation,
+  );
+  const emptyLocationIndex = masterRows.findIndex(
+    (row, rowIndex) =>
+      rowIndex > 0 &&
+      targetLocation &&
+      targetLocation !== "-" &&
+      !String(row?.[1] || "").trim() &&
+      normalizeProductLocation(row?.[0]) === targetLocation,
+  );
+
+  if (occupied) {
+    throw new ProductLocationConflictError(data.location, occupied[1] || "Unknown");
+  }
+
   const row = [
     data.location || "-", // A
     data.name, // B
@@ -1266,12 +1360,17 @@ export async function addProduct(
     data.unit || "ชิ้น", // E
     data.minStock || 0, // F
     data.category || "General", // G
-    "Active", // H
+    data.status || "Active", // H
     data.image || "", // I
     "", // J (Drive Link - usually empty if direct link used)
   ];
 
-  await appendSheetRow(SSID, `'${sheetName}'!A:J`, row);
+  if (emptyLocationIndex !== -1) {
+    const rowNum = emptyLocationIndex + 1;
+    await updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]);
+  } else {
+    await appendSheetRow(SSID, `'${sheetName}'!A:J`, row);
+  }
   return true;
 }
 
@@ -1281,32 +1380,79 @@ export async function editProduct(
   spreadsheetId?: string,
 ): Promise<boolean> {
   const SSID = spreadsheetId || SPREADSHEET_ID;
-  const sheetName = await getProductSheetName();
+  const sheetName = await getProductMasterSheetName(SSID);
   if (!sheetName) return false;
 
   try {
-    const products = await getProducts(SSID);
-    const index = products.findIndex((p) => p.name === oldName);
+    const masterRows = await getSheetData(SSID, `'${sheetName}'!A:J`);
+    const index = masterRows.findIndex((row, rowIndex) => rowIndex > 0 && row?.[1] === oldName);
     if (index === -1) return false;
 
-    const rowNum = index + 2;
+    const existing = masterRows[index] || [];
+    const rowNum = index + 1;
+    const oldLocation = existing[0] || "-";
+    const newLocation = updates.location || oldLocation || "-";
+    const normalizedOldLocation = normalizeProductLocation(oldLocation);
+    const normalizedNewLocation = normalizeProductLocation(newLocation);
+    const hasLocationChange = normalizedNewLocation !== normalizedOldLocation;
+    const conflictIndex = masterRows.findIndex(
+      (row, rowIndex) =>
+        rowIndex > 0 &&
+        rowIndex !== index &&
+        normalizedNewLocation &&
+        normalizedNewLocation !== "-" &&
+        normalizeProductLocation(row?.[0]) === normalizedNewLocation,
+    );
+
+    if (hasLocationChange && conflictIndex !== -1 && !updates.swapLocation) {
+      const conflictRow = masterRows[conflictIndex] || [];
+      throw new ProductLocationConflictError(
+        newLocation,
+        conflictRow[1] || "Unknown",
+        oldLocation,
+      );
+    }
+
     const row = [
-      updates.location || products[index].location || "-", // A
-      updates.name || products[index].name, // B
-      updates.cost || 0, // C
-      updates.price || products[index].price, // D
-      updates.unit || products[index].unit, // E
-      updates.minStock || products[index].minStock, // F
-      updates.category || products[index].category, // G
-      updates.status || products[index].status, // H
-      updates.image || products[index].image, // I
-      "", // J (Link)
+      newLocation, // A
+      updates.name || existing[1], // B
+      updates.cost ?? existing[2] ?? 0, // C
+      updates.price ?? existing[3] ?? 0, // D
+      updates.unit || existing[4] || "ชิ้น", // E
+      updates.minStock ?? existing[5] ?? 0, // F
+      updates.category || existing[6] || "General", // G
+      updates.status || existing[7] || "Active", // H
+      updates.image || existing[8] || "", // I
+      existing[9] || "", // J (Drive Link)
     ];
 
-    await updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]);
+    if (hasLocationChange && conflictIndex !== -1 && updates.swapLocation) {
+      const conflictRow = masterRows[conflictIndex] || [];
+      const conflictRowNum = conflictIndex + 1;
+      const swappedConflictRow = [
+        oldLocation, // A
+        conflictRow[1] || "", // B
+        conflictRow[2] ?? 0, // C
+        conflictRow[3] ?? 0, // D
+        conflictRow[4] || "ชิ้น", // E
+        conflictRow[5] ?? 0, // F
+        conflictRow[6] || "General", // G
+        conflictRow[7] || "Active", // H
+        conflictRow[8] || "", // I
+        conflictRow[9] || "", // J
+      ];
+
+      await Promise.all([
+        updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]),
+        updateSheetData(SSID, `'${sheetName}'!A${conflictRowNum}:J${conflictRowNum}`, [swappedConflictRow]),
+      ]);
+    } else {
+      await updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]);
+    }
     revalidateTag("products-sheet-only-v3", "max");
     return true;
   } catch (error) {
+    if (error instanceof ProductLocationConflictError) throw error;
     console.error("Edit Product Error:", error);
     return false;
   }
