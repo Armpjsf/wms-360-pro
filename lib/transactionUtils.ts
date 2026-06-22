@@ -1,4 +1,4 @@
-import { getSheetData, updateSheetData, appendSheetData } from './googleSheets';
+import { getSheetData, appendSheetData } from './googleSheets';
 
 // Transaction Spreadsheet ID
 export const TRANSACTION_SPREADSHEET_ID = '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
@@ -12,38 +12,6 @@ interface TransactionItem {
     quantity: number;
     orderNumber: string;
     price?: number; // Optional override
-}
-
-/**
- * Lookup price for an item from ชื่อสินค้า sheet
- * Item Code is in Column B, Price is in Column D
- */
-async function lookupItemPrice(itemCode: string, spreadsheetId?: string): Promise<number> {
-    try {
-        const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
-        // Read columns B:D from ชื่อสินค้า sheet
-        const data = await getSheetData(ssid, `${PRODUCT_SHEET_NAME}!B:D`);
-        
-        if (!data || data.length === 0) {
-            console.warn(`No data found in ${PRODUCT_SHEET_NAME} sheet`);
-            return 0;
-        }
-
-        // Find row where Column B matches itemCode
-        for (const row of data) {
-            if (row[0] === itemCode) {
-                // Return price from Column D (index 2)
-                const price = parseFloat(row[2]);
-                return isNaN(price) ? 0 : price;
-            }
-        }
-
-        console.warn(`Price not found for item: ${itemCode}`);
-        return 0;
-    } catch (error) {
-        console.error('Error looking up price:', error);
-        return 0;
-    }
 }
 
 /**
@@ -63,41 +31,18 @@ export async function writeTransactionData(items: TransactionItem[], spreadsheet
         const today = new Date();
         const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
 
-        // Find next empty row
-        const existingData = await getSheetData(ssid, `${TRANSACTION_SHEET_NAME}!A:A`);
-        const nextRow = (existingData?.length || 0) + 1;
-        console.log(`[Transaction] Next empty row: ${nextRow}`);
-
-        // Prepare data rows with formulas
+        // Prepare row-agnostic formulas so append can write without reading the next row first.
         const rows = [];
         
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
-            const rowNum = nextRow + i;
-            
-            // Lookup price for this item (or use override)
-            let price = item.price;
-            if (price === undefined || price === null) {
-                 price = await lookupItemPrice(item.itemCode);
-            }
-
-            // Column F: มูลค่ารวม = C * D
-            const formulaF = `=IF(LEN(B${rowNum})>0, C${rowNum} * D${rowNum}, "")`;
-            
-            // Column G: ต้นทุนเฉลี่ยรวม = VLOOKUP cost * quantity
-            const formulaG = `=IF(LEN(B${rowNum})>0, IFERROR(VLOOKUP(B${rowNum}, '📊 รายงานสินค้าคงเหลือ'!A:G, 6, FALSE) * C${rowNum}, 0), 0)`;
-            
-            // Column H: กำไรขั้นต้น = F - G
-            const formulaH = `=IF(LEN(B${rowNum})>0, F${rowNum} - G${rowNum}, 0)`;
-            
-            // Column I: %กำไรขั้นต้น = H / F
-            const formulaI = `=IF(LEN(B${rowNum})>0, IF(F${rowNum}<>0, H${rowNum} / F${rowNum}, 0), 0)`;
-            
-            // Column J: กลุ่มสินค้า = VLOOKUP from ชื่อสินค้า column 6
-            const formulaJ = `=IFERROR(IF(B${rowNum}<>"", VLOOKUP(B${rowNum}, 'ชื่อสินค้า'!B:G, 6, 0), ""), "")`;
-            
-            // Column K: หมายเหตุ = VLOOKUP from รายงานสินค้าคงเหลือ column 17
-            const formulaK = `=IFERROR(VLOOKUP(B${rowNum}, '📊 รายงานสินค้าคงเหลือ'!A:Q, 17, 0), "")`;
+            const price = item.price ?? `=IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'${PRODUCT_SHEET_NAME}'!B:D,3,FALSE),0)`;
+            const formulaF = `=IF(LEN(INDIRECT("B"&ROW()))>0,INDIRECT("C"&ROW())*INDIRECT("D"&ROW()),"")`;
+            const formulaG = `=IF(LEN(INDIRECT("B"&ROW()))>0,IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'📊 รายงานสินค้าคงเหลือ'!A:G,6,FALSE)*INDIRECT("C"&ROW()),0),0)`;
+            const formulaH = `=IF(LEN(INDIRECT("B"&ROW()))>0,INDIRECT("F"&ROW())-INDIRECT("G"&ROW()),0)`;
+            const formulaI = `=IF(LEN(INDIRECT("B"&ROW()))>0,IF(INDIRECT("F"&ROW())<>0,INDIRECT("H"&ROW())/INDIRECT("F"&ROW()),0),0)`;
+            const formulaJ = `=IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'${PRODUCT_SHEET_NAME}'!B:G,6,FALSE),"")`;
+            const formulaK = `=IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'📊 รายงานสินค้าคงเหลือ'!A:Q,17,FALSE),"")`;
 
             rows.push([
                 dateStr,              // A: วันที่
@@ -115,19 +60,18 @@ export async function writeTransactionData(items: TransactionItem[], spreadsheet
             ]);
         }
 
-        // Write all rows at once
-        let targetSheetName = TRANSACTION_SHEET_NAME;
-        let range = `${targetSheetName}!A${nextRow}:L${nextRow + rows.length - 1}`;
-        
+        // Append all rows in one request.
         try {
-            console.log(`[Transaction] Attempting write to ${targetSheetName}...`);
-            await updateSheetData(ssid, range, rows);
+            console.log(`[Transaction] Attempting append to ${TRANSACTION_SHEET_NAME}...`);
+            await appendSheetData(ssid, `${TRANSACTION_SHEET_NAME}!A:L`, rows);
         } catch (primaryErr) {
-            console.warn(`[Transaction] Failed to write to ${targetSheetName}. Trying fallback...`, primaryErr);
-            // Fallback: Try without emoji
-            targetSheetName = '💰 Transaction จ่าย';
-            range = `${targetSheetName}!A${nextRow}:L${nextRow + rows.length - 1}`;
-            await updateSheetData(ssid, range, rows);
+            const code = (primaryErr as any)?.code || (primaryErr as any)?.status;
+            const message = primaryErr instanceof Error ? primaryErr.message : String(primaryErr);
+            if (code === 429 || message.toLowerCase().includes('quota exceeded')) {
+                throw primaryErr;
+            }
+            console.warn(`[Transaction] Failed to append to ${TRANSACTION_SHEET_NAME}. Trying fallback...`, primaryErr);
+            await appendSheetData(ssid, `Transaction จ่าย!A:L`, rows);
         }
 
         console.log(`Successfully wrote ${rows.length} items to Transaction sheet`);

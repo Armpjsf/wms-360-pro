@@ -285,7 +285,7 @@ export async function getSheetId(
     return sheet?.properties?.sheetId || null;
   } catch (error) {
     console.error(`Error getting sheet ID for ${sheetName}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -305,6 +305,12 @@ export async function resolveSpreadsheetId(
   type: 'doc' | 'inventory'
 ): Promise<string> {
   if (!branchId || branchId.toLowerCase() === 'hq' || branchId.toLowerCase() === 'main') {
+    return cleanSpreadsheetId(type === 'doc' ? DOC_SPREADSHEET_ID : PRODUCT_SPREADSHEET_ID);
+  }
+
+  // FMC currently shares the main spreadsheet. Resolve it without reading Config_Branches
+  // on every request, which also protects the order flow from Sheets read quota spikes.
+  if (branchId.toLowerCase() === 'fmc') {
     return cleanSpreadsheetId(type === 'doc' ? DOC_SPREADSHEET_ID : PRODUCT_SPREADSHEET_ID);
   }
 
@@ -486,15 +492,50 @@ export async function updateSheetData(
     });
     // Invalidate cache for relevant tags
     // @ts-ignore
-    revalidateTag("products");
+    revalidateTag("products", "max");
     // @ts-ignore
-    revalidateTag("transactions");
+    revalidateTag("transactions", "max");
     // @ts-ignore
-    revalidateTag("dashboard"); // Ensure dashboard updates too
+    revalidateTag("dashboard", "max"); // Ensure dashboard updates too
   } catch (error) {
     console.error(`Error updating sheet range ${range}:`, error);
     throw error;
   }
+}
+
+export async function batchUpdateSheetData(
+  spreadsheetId: string,
+  updates: Array<{ range: string; values: any[][] }>,
+) {
+  if (updates.length === 0) return;
+
+  const { googleSheets, auth } = await getGoogleSheets();
+  await googleSheets.spreadsheets.values.batchUpdate({
+    auth: auth as any,
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: updates,
+    },
+  });
+
+  revalidateTag("products", "max");
+  revalidateTag("transactions", "max");
+  revalidateTag("dashboard", "max");
+}
+
+export async function batchClearSheetRanges(
+  spreadsheetId: string,
+  ranges: string[],
+) {
+  if (ranges.length === 0) return;
+
+  const { googleSheets, auth } = await getGoogleSheets();
+  await googleSheets.spreadsheets.values.batchClear({
+    auth: auth as any,
+    spreadsheetId,
+    requestBody: { ranges },
+  });
 }
 
 // Helper to append values to a spreadsheet
@@ -516,11 +557,11 @@ export async function appendSheetRow(
     });
     // Invalidate cache immediately
     // @ts-ignore
-    revalidateTag("products");
+    revalidateTag("products", "max");
     // @ts-ignore
-    revalidateTag("transactions");
+    revalidateTag("transactions", "max");
     // @ts-ignore
-    revalidateTag("dashboard");
+    revalidateTag("dashboard", "max");
   } catch (error) {
     console.error(`Error appending to sheet ${range}:`, error);
     throw error;
@@ -545,11 +586,11 @@ export async function appendSheetData(
     });
     // Invalidate cache immediately
     // @ts-ignore
-    revalidateTag("products");
+    revalidateTag("products", "max");
     // @ts-ignore
-    revalidateTag("transactions");
+    revalidateTag("transactions", "max");
     // @ts-ignore
-    revalidateTag("dashboard");
+    revalidateTag("dashboard", "max");
   } catch (error) {
     console.error(`Error appending batch to sheet ${range}:`, error);
     throw error;

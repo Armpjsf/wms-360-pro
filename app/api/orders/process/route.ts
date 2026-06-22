@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, updateSheetData, clearSheetRange, appendSheetRow, PO_SPREADSHEET_ID } from '@/lib/googleSheets';
+import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
 import { writeTransactionData } from '@/lib/transactionUtils';
 
@@ -46,13 +46,13 @@ export async function POST(request: Request) {
     }
 
     // 3. Read Roll Tag Data
-    const [custIdData, custNameData, ordersData, itemsData, qtyData] = await Promise.all([
-        getSheetData(ssId, `${sourceSheet}!B4`),
-        getSheetData(ssId, `${sourceSheet}!B5`),
-        getSheetData(ssId, `${sourceSheet}!A9:A17`),
-        getSheetData(ssId, `${sourceSheet}!B9:B17`),
-        getSheetData(ssId, `${sourceSheet}!E9:E17`)
-    ]);
+    const rollTagData = await getSheetData(ssId, `${sourceSheet}!A4:E17`);
+    const custIdData = [[rollTagData?.[0]?.[1] || ""]];
+    const custNameData = [[rollTagData?.[1]?.[1] || ""]];
+    const itemRows = Array.from({ length: 9 }, (_, index) => rollTagData?.[index + 5] || []);
+    const ordersData = itemRows.map(row => [row[0] || ""]);
+    const itemsData = itemRows.map(row => [row[1] || ""]);
+    const qtyData = itemRows.map(row => [row[4] || ""]);
 
     const custName = custNameData?.[0]?.[0] || "Unknown";
     const custId = custIdData?.[0]?.[0] || "";
@@ -119,15 +119,10 @@ export async function POST(request: Request) {
     console.log(`[Process] Prepared ${dataToArchive.length} rows for Archive. Writing to ${DATA_SHEET}...`);
     if (dataToArchive.length > 0) {
         try {
-            // Write ALL rows
-            for (let k = 0; k < dataToArchive.length; k++) {
-                // Validate Row Data (No undefined)
-                const cleanRow = dataToArchive[k].map(d => (d === undefined || d === null) ? "" : d);
-                
-                console.log(`[Process] Writing row ${k+1}/${dataToArchive.length}...`);
-                // Use EXPLICIT A:A range to force append to bottom
-                await appendSheetRow(ssId, `'${DATA_SHEET}'!A:A`, cleanRow);
-            }
+            const cleanRows = dataToArchive.map(row =>
+                row.map(d => (d === undefined || d === null) ? "" : d)
+            );
+            await appendSheetData(ssId, `'${DATA_SHEET}'!A:I`, cleanRows);
             console.log(`[Process] ✅ Successfully wrote ${dataToArchive.length} rows to คลังข้อมูล`);
         } catch (err) {
             console.error(`[Process] ❌ Failed to write to คลังข้อมูล:`, err);
@@ -140,35 +135,21 @@ export async function POST(request: Request) {
 
     // 7. Update "Form" Header
     console.log(`[Process] Updating Form Header & Body...`);
-    await Promise.all([
-        updateSheetData(ssId, `${FORM_SHEET}!G3`, [[newDocId]]),
-        updateSheetData(ssId, `${FORM_SHEET}!F4`, [[today]]),
-        updateSheetData(ssId, `${FORM_SHEET}!F5`, [[today]]),
-        updateSheetData(ssId, `${FORM_SHEET}!D6`, [[custId]]),
-        updateSheetData(ssId, `${FORM_SHEET}!F6`, [[custName]])
-    ]);
-
-    // 8. Update "Form" Body
-    await Promise.all([
-        updateSheetData(ssId, `${FORM_SHEET}!B10:B18`, formSequences),
-        updateSheetData(ssId, `${FORM_SHEET}!C10:C18`, formOrders),
-        updateSheetData(ssId, `${FORM_SHEET}!D10:D18`, formItems),
-        updateSheetData(ssId, `${FORM_SHEET}!G10:G18`, formQty)
+    await batchUpdateSheetData(ssId, [
+        { range: `${FORM_SHEET}!G3`, values: [[newDocId]] },
+        { range: `${FORM_SHEET}!F4`, values: [[today]] },
+        { range: `${FORM_SHEET}!F5`, values: [[today]] },
+        { range: `${FORM_SHEET}!D6`, values: [[custId]] },
+        { range: `${FORM_SHEET}!F6`, values: [[custName]] },
+        { range: `${FORM_SHEET}!B10:B18`, values: formSequences },
+        { range: `${FORM_SHEET}!C10:C18`, values: formOrders },
+        { range: `${FORM_SHEET}!D10:D18`, values: formItems },
+        { range: `${FORM_SHEET}!G10:G18`, values: formQty },
     ]);
     
     console.log(`[Process] Form Updated.`);
 
-    // 9. Clear Roll Tag
-    await Promise.all([
-        clearSheetRange(ssId, `${sourceSheet}!B4`),
-        clearSheetRange(ssId, `${sourceSheet}!B6`),
-        clearSheetRange(ssId, `${sourceSheet}!A9:A17`),
-        clearSheetRange(ssId, `${sourceSheet}!B9:B17`),
-        clearSheetRange(ssId, `${sourceSheet}!D9:D17`),
-        clearSheetRange(ssId, `${sourceSheet}!E9:E17`)
-    ]);
-
-    // 10. Write to Transaction Sheet (RESTORED)
+    // 9. Write to Transaction Sheet before clearing the source Roll Tag.
     try {
         const { writeTransactionData } = await import('@/lib/transactionUtils');
         const { logAction } = await import('@/lib/auditTrail');
@@ -214,6 +195,17 @@ export async function POST(request: Request) {
         console.error(`[Process] ❌ Failed to write Transaction:`, txErr);
         throw new Error(`Archive success, but Transaction failed: ${txErr instanceof Error ? txErr.message : String(txErr)}`);
     }
+
+    // 10. Clear Roll Tag only after all required writes succeed.
+    await batchClearSheetRanges(ssId, [
+        `${sourceSheet}!B4`,
+        `${sourceSheet}!B6`,
+        `${sourceSheet}!A9:A17`,
+        `${sourceSheet}!B9:B17`,
+        `${sourceSheet}!D9:D17`,
+        `${sourceSheet}!E9:E17`,
+    ]);
+
     // 11. Notification (Push to APK)
     try {
         const { messaging } = await import('@/lib/firebaseAdmin');

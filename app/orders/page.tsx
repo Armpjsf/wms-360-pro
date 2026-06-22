@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2 } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 import SignatureModal from '@/components/SignatureModal';
@@ -102,9 +102,12 @@ function OrderManagement() {
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const statusRequestInFlight = useRef(false);
 
   // Fetch status from API
   const fetchStatus = useCallback(async (isManual = false) => {
+    if (statusRequestInFlight.current) return;
+    statusRequestInFlight.current = true;
     if (isManual) setLoadingAction('refresh');
 
     try {
@@ -144,6 +147,7 @@ function OrderManagement() {
       console.error('Status fetch error:', error);
       if (isManual) alert('Refresh Failed');
     } finally {
+      statusRequestInFlight.current = false;
       setLoading(false);
       if (isManual) setLoadingAction(null);
     }
@@ -159,7 +163,7 @@ function OrderManagement() {
       }
     };
 
-    const intervalId = window.setInterval(refreshIfVisible, 15000);
+    const intervalId = window.setInterval(refreshIfVisible, 30000);
     window.addEventListener('focus', refreshIfVisible);
     document.addEventListener('visibilitychange', refreshIfVisible);
 
@@ -189,7 +193,8 @@ function OrderManagement() {
       if (res.ok) {
         await fetchStatus(); // Refresh immediately
       } else {
-        alert('Error processing');
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || `Error processing (${res.status})`);
       }
     } catch (error) {
       console.error(error);
