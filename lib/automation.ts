@@ -80,21 +80,39 @@ async function executeAction(rule: AutomationRule, context: any) {
         const updatedRule = { ...rule, lastTriggered: new Date().toISOString() };
         await saveRule(updatedRule);
 
-        // TRIGGER PUSH NOTIFICATION
-        // For now, we map LOG_ALERT and LINE_NOTIFY to Web Push as well
-        if (action.type === 'LOG_ALERT' || action.type === 'LINE_NOTIFY') {
-             try {
-                 const { sendWebPush } = await import('./webPushSender');
-                 const message = action.payload.message || `Rule '${rule.name}' matched!`;
-                 
-                 await sendWebPush({
-                     title: "📢 แจ้งเตือนคลังสินค้า",
-                     body: `${message} (${context.sku})`,
-                     url: '/inventory?status=LOW'
-                 });
-             } catch (pushErr) {
-                 console.error("[Automation] Push Failed:", pushErr);
-             }
+        // TRIGGER PUSH NOTIFICATION — both FCM (APK) and Web Push (PWA)
+        if (action.type === 'LOG_ALERT' || action.type === 'LINE_NOTIFY' || action.type === 'EMAIL') {
+            const message = action.payload?.message || `Rule '${rule.name}' matched!`;
+            const title = "📢 แจ้งเตือนคลังสินค้า";
+            const body = `${message} (${context.sku})`;
+
+            // FCM — APK
+            try {
+                const { messaging } = await import('./firebaseAdmin');
+                const { getSheetData, SPREADSHEET_ID } = await import('./googleSheets');
+                if (messaging) {
+                    const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
+                    const tokens = deviceData?.map((r: any[]) => r[0]).filter((t: any) => t && t.length > 10) || [];
+                    if (tokens.length > 0) {
+                        await messaging.sendEachForMulticast({
+                            tokens,
+                            notification: { title, body },
+                            data: { type: 'stock_alert', sku: context.sku },
+                            android: { priority: 'high', notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' } },
+                        });
+                    }
+                }
+            } catch (fcmErr) {
+                console.error("[Automation] FCM Failed:", fcmErr);
+            }
+
+            // Web Push — PWA
+            try {
+                const { sendWebPush } = await import('./webPushSender');
+                await sendWebPush({ title, body, url: '/inventory?status=LOW' });
+            } catch (pushErr) {
+                console.error("[Automation] Web Push Failed:", pushErr);
+            }
         }
         
     } catch (e) {

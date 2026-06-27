@@ -2,18 +2,26 @@ import { NextResponse } from 'next/server';
 import { getGmailClient } from '@/lib/gmailClient';
 // force-rebuild
 import { extractRollTagData } from '@/lib/emailParser';
-import { writeRollTagData, PO_SPREADSHEET_ID, cleanupTempRollTagSheets, clearRollTagForm, ensureRollTagSheet } from '@/lib/googleSheets';
+import { writeRollTagData, PO_SPREADSHEET_ID, cleanupTempRollTagSheets, clearRollTagForm, ensureRollTagSheet, getSheetData } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
     // 0.1 Clean up temporary sheets from previous runs and clear Roll Tag 1 & 2
+    // Only clear if Roll Tag has no pending data — avoids wiping data a user or prior step left behind
     try {
         console.log("Starting Roll Tag sheets cleanup...");
         await cleanupTempRollTagSheets(PO_SPREADSHEET_ID);
-        await clearRollTagForm(PO_SPREADSHEET_ID, "Roll Tag1");
-        await clearRollTagForm(PO_SPREADSHEET_ID, "Roll Tag2");
+        for (const sheetName of ["Roll Tag1", "Roll Tag2"]) {
+            const check = await getSheetData(PO_SPREADSHEET_ID, `'${sheetName}'!B4`);
+            const hasData = check?.[0]?.[0];
+            if (hasData) {
+                console.log(`[Scan] Skipping clear for ${sheetName} — has pending data: "${hasData}"`);
+            } else {
+                await clearRollTagForm(PO_SPREADSHEET_ID, sheetName);
+            }
+        }
     } catch (cleanupErr) {
         console.error("Failed to run Roll Tag cleanup:", cleanupErr);
     }
@@ -34,7 +42,7 @@ export async function POST() {
     // Legacy: is:unread from:formica.com has:attachment
     const res = await gmail.users.messages.list({
         userId: 'me',
-        q: 'is:unread from:formica.com', 
+        q: 'is:unread from:formica.com has:attachment',
         maxResults: 10
     });
 
@@ -85,7 +93,10 @@ export async function POST() {
             let emailProcessed = false;
 
             if (allParts.length === 0) {
-                 debugLogs.push(`Skipped [${subject}]: No attachments found.`);
+                console.log(`[Scan] No attachments in: "${subject}"`);
+                debugLogs.push(`Skipped [${subject}]: No attachments found.`);
+            } else {
+                console.log(`[Scan] Found ${allParts.length} attachment(s) in: "${subject}"`);
             }
 
             for (const part of allParts) {
@@ -105,6 +116,7 @@ export async function POST() {
                         const buffer = Buffer.from(attachment.data.data, 'base64');
                         const extractedCustomers = extractRollTagData(buffer, fileName); 
                         
+                        console.log(`[Scan] extractedCustomers: ${extractedCustomers.length} from "${fileName}"`);
                         if (extractedCustomers.length > 0) {
                             for (const customerData of extractedCustomers) {
                                 if (currentRollTagIndex > 10) {

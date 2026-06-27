@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { submitPrintNodePdfJob } from '@/lib/printNode';
+import { acquireSheetLock, releaseSheetLock, PO_SPREADSHEET_ID } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,6 +33,7 @@ type PrintResult = {
   error?: string;
 };
 
+// In-memory guard: fast-path check within the same instance before hitting Sheets
 let automationRunning = false;
 let automationStartedAt = 0;
 
@@ -239,12 +241,23 @@ export async function GET(req: Request) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
+  // Fast-path: same-instance check (avoids Sheets API call in common case)
   const now = Date.now();
   if (automationRunning && now - automationStartedAt < LOCK_TTL_MS) {
     return NextResponse.json({
       success: false,
       skipped: true,
-      message: 'Email order automation is already running.',
+      message: 'Email order automation is already running (same instance).',
+    });
+  }
+
+  // Cross-instance check: acquire distributed lock via Google Sheets
+  const locked = await acquireSheetLock(PO_SPREADSHEET_ID);
+  if (!locked) {
+    return NextResponse.json({
+      success: false,
+      skipped: true,
+      message: 'Email order automation is already running (another instance).',
     });
   }
 
@@ -291,5 +304,6 @@ export async function GET(req: Request) {
   } finally {
     automationRunning = false;
     automationStartedAt = 0;
+    await releaseSheetLock(PO_SPREADSHEET_ID);
   }
 }

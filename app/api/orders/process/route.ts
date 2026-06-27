@@ -221,7 +221,7 @@ export async function POST(request: Request) {
 
         if (messaging && tokens.length > 0) {
             console.log(`[Process] Sending New Job Push to ${tokens.length} devices...`);
-            await messaging.sendEachForMulticast({
+            const pushResponse = await messaging.sendEachForMulticast({
                 tokens,
                 notification: {
                     title: "📦 งานใหม่เข้า (New Job)",
@@ -237,6 +237,12 @@ export async function POST(request: Request) {
                         sound: 'default',
                         clickAction: 'FCM_PLUGIN_ACTIVITY'
                     }
+                }
+            });
+            console.log(`[Process] FCM Result: ${pushResponse.successCount} sent, ${pushResponse.failureCount} failed.`);
+            pushResponse.responses.forEach((r, i) => {
+                if (!r.success) {
+                    console.error(`[Process] FCM token #${i} failed:`, r.error?.code, r.error?.message);
                 }
             });
         }

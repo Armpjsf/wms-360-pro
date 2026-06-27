@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
+import { messaging } from '@/lib/firebaseAdmin';
+import { getSheetData, SPREADSHEET_ID } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    // This endpoint would be called by a cron job or scheduler
-    // For now, it's a manual trigger for testing
-
-    // Fetch today's count items
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
-    
+
     const res = await fetch(`${baseUrl}/api/cycle-count/daily`);
     const items = await res.json();
 
@@ -20,8 +18,11 @@ export async function POST(req: Request) {
     }
 
     const itemCount = items.length;
-    
-    // Group by zone
+
+    if (itemCount === 0) {
+      return NextResponse.json({ success: true, message: 'No items to count today.' });
+    }
+
     const zoneCount: Record<string, number> = {};
     items.forEach((item: any) => {
       const zone = item.zone || 'Unknown';
@@ -32,36 +33,53 @@ export async function POST(req: Request) {
       .map(([zone, count]) => `Zone ${zone}: ${count}`)
       .join(' | ');
 
-    // Notification payload
-    const notification = {
-      title: '🔔 Cycle Count Today',
-      body: `📦 ${itemCount} items need counting\n📍 ${zoneText}`,
-      data: {
-        type: 'cycle_count',
-        count: itemCount,
-        zones: zoneCount,
-      }
-    };
+    const title = '🔔 ถึงเวลาตรวจนับสต็อก';
+    const body = `📦 ${itemCount} รายการ | ${zoneText}`;
 
-    // In production, send to FCM/APNS here
-    // For now, just return the notification that would be sent
-    console.log('Would send notification:', notification);
+    // FCM — APK
+    let fcmSent = 0;
+    let fcmFailed = 0;
+    if (messaging) {
+      const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
+      const tokens = deviceData?.map((r: any[]) => r[0]).filter((t: any) => t && t.length > 10) || [];
+      if (tokens.length > 0) {
+        const response = await messaging.sendEachForMulticast({
+          tokens,
+          notification: { title, body },
+          data: { type: 'cycle_count', items: JSON.stringify(items.slice(0, 5).map((i: any) => i.sku || i.name)) },
+          android: { priority: 'high', notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' } },
+        });
+        fcmSent = response.successCount;
+        fcmFailed = response.failureCount;
+        console.log(`[DailyNotif] FCM: ${fcmSent} sent, ${fcmFailed} failed`);
+      }
+    }
+
+    // Web Push — PWA
+    let webPushSent = 0;
+    try {
+      const { sendWebPush } = await import('@/lib/webPushSender');
+      const result = await sendWebPush({ title, body, url: '/cycle-count' });
+      webPushSent = result.success;
+    } catch (wpErr) {
+      console.error('[DailyNotif] Web Push error:', wpErr);
+    }
 
     return NextResponse.json({
       success: true,
-      notification,
       itemCount,
       zones: zoneCount,
-      message: 'Notification prepared (not sent - requires FCM/APNS setup)'
+      fcmSent,
+      fcmFailed,
+      webPushSent,
     });
 
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('Error sending daily notification:', error);
     return NextResponse.json({ error: 'Failed to send notification' }, { status: 500 });
   }
 }
 
-export async function GET() {
-  // Manual trigger for testing
-  return POST(new Request('http://localhost:3000/api/notifications/send-daily'));
+export async function GET(req: Request) {
+  return POST(req);
 }

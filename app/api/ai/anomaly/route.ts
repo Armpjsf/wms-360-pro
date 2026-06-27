@@ -31,10 +31,48 @@ export async function GET() {
     // 2. Run AI Analysis
     const anomalies = detectAnomalies(products, logs);
 
+    const criticalCount = anomalies.filter(a => a.type === 'CRITICAL').length;
+    const warningCount = anomalies.filter(a => a.type === 'WARNING').length;
+
+    // 3. Push notification if any CRITICAL anomalies found
+    if (criticalCount > 0) {
+        const title = `🚨 พบปัญหาคลังร้ายแรง ${criticalCount} รายการ`;
+        const firstCritical = anomalies.find(a => a.type === 'CRITICAL');
+        const body = firstCritical?.description || `ตรวจพบ Anomaly ${criticalCount} รายการ กรุณาตรวจสอบ`;
+
+        // FCM — APK
+        try {
+            const { messaging } = await import('@/lib/firebaseAdmin');
+            const { getSheetData, SPREADSHEET_ID } = await import('@/lib/googleSheets');
+            if (messaging) {
+                const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
+                const tokens = deviceData?.map((r: any[]) => r[0]).filter((t: any) => t && t.length > 10) || [];
+                if (tokens.length > 0) {
+                    await messaging.sendEachForMulticast({
+                        tokens,
+                        notification: { title, body },
+                        data: { type: 'anomaly', critical: String(criticalCount) },
+                        android: { priority: 'high', notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' } },
+                    });
+                }
+            }
+        } catch (fcmErr) {
+            console.error('[Anomaly] FCM Failed:', fcmErr);
+        }
+
+        // Web Push — PWA
+        try {
+            const { sendWebPush } = await import('@/lib/webPushSender');
+            await sendWebPush({ title, body, url: '/ai/anomaly' });
+        } catch (wpErr) {
+            console.error('[Anomaly] Web Push Failed:', wpErr);
+        }
+    }
+
     return NextResponse.json({
         total: anomalies.length,
-        critical: anomalies.filter(a => a.type === 'CRITICAL').length,
-        warning: anomalies.filter(a => a.type === 'WARNING').length,
+        critical: criticalCount,
+        warning: warningCount,
         issues: anomalies
     });
 

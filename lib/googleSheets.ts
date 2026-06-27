@@ -2903,6 +2903,53 @@ export async function clearRollTagForm(spreadsheetId: string, sheetName: string)
   }
 }
 
+// -------------------------------------------------------------
+// DISTRIBUTED LOCK (Google Sheets-backed, safe across Vercel instances)
+// Uses Roll Tag1!AA1 as the lock cell — outside the data range (A-E, rows 4-17)
+// -------------------------------------------------------------
+const LOCK_CELL = "Roll Tag1!AA1";
+const SHEET_LOCK_TTL_MS = 8 * 60 * 1000; // 8 minutes, same as in-memory fallback
+
+export async function acquireSheetLock(spreadsheetId: string): Promise<boolean> {
+  try {
+    const existing = await getSheetData(spreadsheetId, LOCK_CELL);
+    const lockValue = existing?.[0]?.[0];
+    if (lockValue) {
+      const startedAt = Number(lockValue);
+      if (!isNaN(startedAt) && Date.now() - startedAt < SHEET_LOCK_TTL_MS) {
+        console.log(`[SheetLock] Lock active (started ${Math.round((Date.now() - startedAt) / 1000)}s ago). Skipping.`);
+        return false;
+      }
+      console.log(`[SheetLock] Stale lock found. Overwriting.`);
+    }
+    const { googleSheets, auth } = await getGoogleSheets();
+    await googleSheets.spreadsheets.values.update({
+      auth: auth as any,
+      spreadsheetId,
+      range: LOCK_CELL,
+      valueInputOption: "RAW",
+      requestBody: { values: [[String(Date.now())]] },
+    });
+    return true;
+  } catch (err) {
+    console.error("[SheetLock] Failed to acquire lock:", err);
+    return false;
+  }
+}
+
+export async function releaseSheetLock(spreadsheetId: string): Promise<void> {
+  try {
+    const { googleSheets, auth } = await getGoogleSheets();
+    await googleSheets.spreadsheets.values.clear({
+      auth: auth as any,
+      spreadsheetId,
+      range: LOCK_CELL,
+    });
+  } catch (err) {
+    console.error("[SheetLock] Failed to release lock:", err);
+  }
+}
+
 export async function ensureRollTagSheet(spreadsheetId: string, sheetName: string) {
   const { googleSheets, auth } = await getGoogleSheets();
   try {
