@@ -368,7 +368,16 @@ export default function MobileJobsPage() {
                     
                     <div className="flex justify-between items-start mb-6 relative z-10">
                         <div>
-                            <div className="text-4xl font-black text-slate-900 tracking-tighter mb-1">{activeJob.docNum}</div>
+                            {(() => {
+                                const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
+                                const orderText = orders.length ? orders.join(', ') : activeJob.docNum;
+                                return (
+                                    <>
+                                        <div className="text-4xl font-black text-slate-900 tracking-tighter mb-1">{orderText}</div>
+                                        <div className="text-[11px] text-slate-400 font-semibold mb-1.5">{t('doc_no')}: {activeJob.docNum}</div>
+                                    </>
+                                );
+                            })()}
                             <div className="flex items-center gap-2 text-indigo-600 font-medium text-sm bg-indigo-50 px-3 py-1.5 rounded-xl w-fit">
                                 <User className="w-4 h-4" /> {activeJob.customer}
                             </div>
@@ -453,8 +462,8 @@ export default function MobileJobsPage() {
                     {waitingJobs.map((job) => (
                         <div key={job.docNum} className="bg-white border-l-4 border-l-orange-400 border-y border-r border-slate-200 rounded-r-2xl p-4 shadow-sm flex justify-between items-center">
                             <div>
-                                <div className="font-bold text-slate-800 text-sm">{job.docNum}</div>
-                                <div className="text-xs text-indigo-600 font-bold mb-0.5">{t('col_po_ref')}: {job.orderNo || "N/A"}</div>
+                                <div className="font-black text-slate-900 text-lg tracking-tight">{job.orderNo || job.docNum}</div>
+                                <div className="text-[11px] text-slate-400 font-semibold mb-0.5">{t('doc_no')}: {job.docNum}</div>
                                 <div className="text-xs text-slate-500 flex items-center gap-1">
                                     <User className="w-3 h-3" /> {job.customer}
                                 </div>

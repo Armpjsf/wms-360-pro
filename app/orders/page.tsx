@@ -714,8 +714,17 @@ function ActiveJobCard({
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 mb-4 border border-blue-100">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-slate-400 text-xs">{t('col_doc')}</p>
-                <p className="text-slate-900 font-mono font-bold">{activeForm.docNum}</p>
+                <p className="text-slate-400 text-xs">{t('col_po_ref')}</p>
+                {(() => {
+                  const orders = Array.from(new Set((activeForm.items || []).map((i: any) => i.orderNo).filter(Boolean)));
+                  const orderText = orders.length ? orders.join(', ') : activeForm.docNum;
+                  return (
+                    <>
+                      <p className="text-slate-900 font-mono font-black text-lg">{orderText}</p>
+                      <p className="text-slate-400 text-[10px] font-mono">{t('doc_no')}: {activeForm.docNum}</p>
+                    </>
+                  );
+                })()}
               </div>
               <div>
                 <p className="text-slate-400 text-xs">{t('col_status')}</p>
@@ -812,16 +821,11 @@ function WaitingJobsCard({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map((job) => (
             <div key={job.docNum} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-slate-900 font-bold">{job.docNum}</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-slate-900 font-black text-lg">{job.orderNo || job.docNum}</p>
                 <p className="text-slate-500 text-sm">{job.date}</p>
               </div>
-              {job.orderNo && (
-                 <div className="mb-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PO Ref:</span>
-                    <p className="text-indigo-600 font-bold text-sm">{job.orderNo}</p>
-                 </div>
-              )}
+              <p className="text-slate-400 text-[10px] font-mono mb-2">{t('doc_no')}: {job.docNum}</p>
               <p className="text-slate-600 text-sm mb-3">{job.customer}</p>
               <button
                 onClick={() => onRecall(job.docNum)}

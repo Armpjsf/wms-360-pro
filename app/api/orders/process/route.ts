@@ -215,10 +215,17 @@ export async function POST(request: Request) {
              codeArr[0] ? `${codeArr[0]} (x${formQty[idx][0]})` : null
         ).filter(Boolean).join(', ');
 
+        // Lead with the 6-digit Order number(s) — the primary reference used by
+        // HQ, branch, and customer. DocId is kept only in the data payload.
+        const orderNumbers = Array.from(new Set(
+            dataToArchive.map(r => String(r[3] || '').trim()).filter(Boolean)
+        ));
+        const orderText = orderNumbers.length > 0 ? orderNumbers.join(', ') : newDocId;
+
         await sendFcmToDevices({
-            title: "📦 งานใหม่เข้า (New Job)",
-            body: `ลูกค้า: ${custName} | เอกสาร: ${newDocId}\nรายการ: ${itemSummary}`,
-            data: { type: 'new_job', docId: newDocId },
+            title: `📦 งานใหม่ Order ${orderText}`,
+            body: `ลูกค้า: ${custName}\nรายการ: ${itemSummary}`,
+            data: { type: 'new_job', orderNo: orderText, docId: newDocId },
         }, { tag: 'Process' });
     } catch (notifyErr) {
         console.error("[Process] Failed to send Push Notification:", notifyErr);

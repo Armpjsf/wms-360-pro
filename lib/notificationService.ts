@@ -95,20 +95,21 @@ class NotificationService {
   }
 
   private handleNotificationTap(notification: any) {
-    // Navigate to appropriate page based on notification type
+    // Navigate to the appropriate page based on notification type
     const data = notification.notification?.data || notification.data;
-    if (data?.type === 'cycle_count') {
-      // Navigate to cycle count page
-      if (typeof window !== 'undefined') {
-        window.location.href = '/mobile/cycle-count';
-      }
-    }
-    
-    // Handle New Job
-    if (data?.type === 'new_job') {
-      if (typeof window !== 'undefined') {
-         window.location.href = '/mobile/jobs';
-      }
+    if (typeof window === 'undefined' || !data?.type) return;
+
+    const routes: Record<string, string> = {
+      cycle_count: '/mobile/cycle-count',
+      new_job: '/mobile/jobs',
+      signature: '/mobile/jobs',
+      anomaly: '/ai/anomaly',
+      stock_alert: '/inventory?status=LOW',
+    };
+
+    const target = routes[data.type];
+    if (target) {
+      window.location.href = target;
     }
   }
 
