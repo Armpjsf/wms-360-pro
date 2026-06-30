@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDeliveryHistory, addDeliveryHistory } from '@/lib/googleSheets';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
 
       // Prepare row for Sheets (10 columns matching DELIVERY_HISTORY_HEADERS)
       return [
-        date || new Date().toLocaleDateString('th-TH'),
+        date || getThaiDateString(),
         customer || "Unknown",
         location || "",
         orderNo || "",

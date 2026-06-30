@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, getTransactionsUncached, SPREADSHEET_ID } from '@/lib/googleSheets';
-import { messaging } from '@/lib/firebaseAdmin';
+import { getTransactionsUncached } from '@/lib/googleSheets';
+import { sendFcmToDevices } from '@/lib/fcmSender';
 
 export async function GET(req: Request) {
     // Check for authorization (Vercel Cron Header)
@@ -45,54 +45,18 @@ export async function GET(req: Request) {
         console.log(`[CycleCount] Items moved today: ${itemsToCount.join(', ')}`);
 
         if (itemsToCount.length > 0) {
-            
-            // 1. Fetch Tokens from Sheet
-            const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
-            const tokens = deviceData?.map((row: any[]) => row[0]).filter((t: any) => t && t.length > 10) || [];
+            const { sent } = await sendFcmToDevices({
+                title: "📦 ถึงเวลาตรวจนับสต็อก (Cycle Count)",
+                body: `วันนี้มีการเคลื่อนไหว ${itemsToCount.length} รายการ คลิกเพื่อดูรายละเอียด`,
+                data: {
+                    type: 'cycle_count',
+                    items: JSON.stringify(itemsToCount.slice(0, 5)),
+                },
+            }, { tag: 'CycleCount' });
 
-            if (tokens.length === 0) {
-                console.log('[CycleCount] No devices registered to send push.');
-                 return NextResponse.json({ 
-                    message: `Cycle Count Required for ${itemsToCount.length} items (No Devices Found In Sheet)`, 
-                    items: itemsToCount 
-                });
-            }
-
-            // 2. Send FCM Multicast
-            let sentCount = 0;
-            if (messaging) {
-                console.log(`[CycleCount] Sending Push to ${tokens.length} devices...`);
-                try {
-                    const response = await messaging.sendEachForMulticast({
-                        tokens: tokens,
-                        notification: {
-                            title: "📦 ถึงเวลาตรวจนับสต็อก (Cycle Count)",
-                            body: `วันนี้มีการเคลื่อนไหว ${itemsToCount.length} รายการ คลิกเพื่อดูรายละเอียด`,
-                        },
-                        data: {
-                            type: 'cycle_count',
-                            items: JSON.stringify(itemsToCount.slice(0, 5)) // Send top 5 items in data payload limit
-                        },
-                        android: {
-                            priority: 'high',
-                            notification: {
-                                sound: 'default',
-                                clickAction: 'FCM_PLUGIN_ACTIVITY'
-                            }
-                        }
-                    });
-                    sentCount = response.successCount;
-                    console.log('[CycleCount] FCM Response:', response.successCount + ' sent, ' + response.failureCount + ' failed.');
-                } catch (fcmErr) {
-                    console.error('[CycleCount] FCM Send Error:', fcmErr);
-                }
-            } else {
-                console.warn('[CycleCount] Firebase Messaging not initialized.');
-            }
-
-            return NextResponse.json({ 
-                message: `Cycle Count Notification sent to ${sentCount} devices`, 
-                items: itemsToCount 
+            return NextResponse.json({
+                message: `Cycle Count Notification sent to ${sent} devices`,
+                items: itemsToCount
             });
         }
 

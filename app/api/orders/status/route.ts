@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSheetData, getSheetFormula, PO_SPREADSHEET_ID, SPREADSHEET_ID, getGoogleSheets } from '@/lib/googleSheets';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -129,7 +130,7 @@ export async function GET(req: Request) {
             return null;
         }
 
-        const dateStr = new Date().toLocaleDateString('th-TH');
+        const dateStr = getThaiDateString();
 
         // Try to find items starting from row 5 (index 5 from A4)
         // But if we have less rows, just skip
@@ -241,7 +242,7 @@ export async function GET(req: Request) {
         activeForm = {
             docNum,
             customer: custName,
-            refDate: refDate || shippingDate || new Date().toLocaleDateString('th-TH'),
+            refDate: refDate || shippingDate || getThaiDateString(),
             status: "รอลูกค้า",
             items: items,
             signature: signatureVal // Include signature URL in response

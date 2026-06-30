@@ -977,6 +977,59 @@ export async function deleteDeliveryHistory(
     return true;
 }
 
+const DEVICES_SHEET = '📱 Devices';
+
+/**
+ * Remove dead FCM device tokens from the Devices sheet.
+ * Called after a multicast send returns `registration-token-not-registered`
+ * (or `invalid-argument`) so stale tokens don't accumulate.
+ * Deletes matching rows bottom-up to keep row indices stable.
+ */
+export async function removeDeadDeviceTokens(
+    deadTokens: string[],
+    spreadsheetId: string = SPREADSHEET_ID
+): Promise<number> {
+    const tokensToRemove = new Set(deadTokens.filter(Boolean));
+    if (tokensToRemove.size === 0) return 0;
+
+    try {
+        const rows = await getSheetData(spreadsheetId, `'${DEVICES_SHEET}'!A:A`);
+        if (!rows || rows.length === 0) return 0;
+
+        // Collect 0-based row indices whose token is dead
+        const rowIndices: number[] = [];
+        rows.forEach((row, i) => {
+            if (row[0] && tokensToRemove.has(row[0])) rowIndices.push(i);
+        });
+        if (rowIndices.length === 0) return 0;
+
+        const sheetId = await getSheetId(spreadsheetId, DEVICES_SHEET);
+        if (sheetId === null) return 0;
+
+        const { googleSheets, auth } = await getGoogleSheets();
+        // Delete descending so earlier deletions don't shift later indices
+        const requests = rowIndices
+            .sort((a, b) => b - a)
+            .map((idx) => ({
+                deleteDimension: {
+                    range: { sheetId, dimension: 'ROWS', startIndex: idx, endIndex: idx + 1 },
+                },
+            }));
+
+        await googleSheets.spreadsheets.batchUpdate({
+            auth: auth as any,
+            spreadsheetId,
+            requestBody: { requests },
+        });
+
+        console.log(`[Devices] Removed ${rowIndices.length} dead token(s).`);
+        return rowIndices.length;
+    } catch (err) {
+        console.error('[Devices] Failed to remove dead tokens:', err);
+        return 0;
+    }
+}
+
 // ============================================================================
 // CORE DATA FUNCTIONS (REAL)
 // ============================================================================

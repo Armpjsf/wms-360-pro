@@ -379,33 +379,14 @@ export async function POST(req: Request) {
     }
     */
 
-    // --- NOTIFICATION: Signature Completed (Push to APK) ---
+    // --- NOTIFICATION: Signature Completed (Push to APK) — non-blocking ---
     try {
-        // Dynamic Import to avoid circular deps or build issues
-        const { messaging } = await import('@/lib/firebaseAdmin');
-        const { getSheetData } = await import('@/lib/googleSheets');
-        const TX_SHEET_ID = '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
-
-        const deviceData = await getSheetData(TX_SHEET_ID, "'📱 Devices'!A:A");
-        const tokens = deviceData?.map((r:any) => r[0]).filter((t:any) => t && t.length > 10) || [];
-
-        if (messaging && tokens.length > 0) {
-             console.log(`[Finalize] Sending Signature Push to ${tokens.length} devices (Non-blocking background)...`);
-             messaging.sendEachForMulticast({
-                tokens,
-                notification: {
-                    title: "✍️ ได้รับลายเซ็นใหม่ (Signature Received)",
-                    body: `เอกสาร ${docNum} ลงนามเรียบร้อยแล้ว`,
-                },
-                android: {
-                    priority: 'high',
-                    notification: {
-                        sound: 'default',
-                        clickAction: 'FCM_PLUGIN_ACTIVITY'
-                    }
-                }
-             }).catch(notiErr => console.error("FCM Background Send Error:", notiErr));
-        }
+        const { sendFcmToDevices } = await import('@/lib/fcmSender');
+        sendFcmToDevices({
+            title: "✍️ ได้รับลายเซ็นใหม่ (Signature Received)",
+            body: `เอกสาร ${docNum} ลงนามเรียบร้อยแล้ว`,
+            data: { type: 'signature', docNum: String(docNum) },
+        }, { tag: 'Finalize' }).catch(notiErr => console.error("[Finalize] FCM Background Send Error:", notiErr));
     } catch (notiErr) {
         console.warn("[Finalize] Failed to send Signature Notification:", notiErr);
     }

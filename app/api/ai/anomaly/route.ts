@@ -42,20 +42,12 @@ export async function GET() {
 
         // FCM — APK
         try {
-            const { messaging } = await import('@/lib/firebaseAdmin');
-            const { getSheetData, SPREADSHEET_ID } = await import('@/lib/googleSheets');
-            if (messaging) {
-                const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
-                const tokens = deviceData?.map((r: any[]) => r[0]).filter((t: any) => t && t.length > 10) || [];
-                if (tokens.length > 0) {
-                    await messaging.sendEachForMulticast({
-                        tokens,
-                        notification: { title, body },
-                        data: { type: 'anomaly', critical: String(criticalCount) },
-                        android: { priority: 'high', notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' } },
-                    });
-                }
-            }
+            const { sendFcmToDevices } = await import('@/lib/fcmSender');
+            await sendFcmToDevices({
+                title,
+                body,
+                data: { type: 'anomaly', critical: String(criticalCount) },
+            }, { tag: 'Anomaly' });
         } catch (fcmErr) {
             console.error('[Anomaly] FCM Failed:', fcmErr);
         }

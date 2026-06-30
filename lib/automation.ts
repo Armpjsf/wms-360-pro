@@ -88,20 +88,12 @@ async function executeAction(rule: AutomationRule, context: any) {
 
             // FCM — APK
             try {
-                const { messaging } = await import('./firebaseAdmin');
-                const { getSheetData, SPREADSHEET_ID } = await import('./googleSheets');
-                if (messaging) {
-                    const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
-                    const tokens = deviceData?.map((r: any[]) => r[0]).filter((t: any) => t && t.length > 10) || [];
-                    if (tokens.length > 0) {
-                        await messaging.sendEachForMulticast({
-                            tokens,
-                            notification: { title, body },
-                            data: { type: 'stock_alert', sku: context.sku },
-                            android: { priority: 'high', notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' } },
-                        });
-                    }
-                }
+                const { sendFcmToDevices } = await import('./fcmSender');
+                await sendFcmToDevices({
+                    title,
+                    body,
+                    data: { type: 'stock_alert', sku: String(context.sku) },
+                }, { tag: 'Automation' });
             } catch (fcmErr) {
                 console.error("[Automation] FCM Failed:", fcmErr);
             }

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { messaging } from '@/lib/firebaseAdmin';
-import { getSheetData, SPREADSHEET_ID } from '@/lib/googleSheets';
+import { sendFcmToDevices } from '@/lib/fcmSender';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,23 +36,11 @@ export async function POST(req: Request) {
     const body = `📦 ${itemCount} รายการ | ${zoneText}`;
 
     // FCM — APK
-    let fcmSent = 0;
-    let fcmFailed = 0;
-    if (messaging) {
-      const deviceData = await getSheetData(SPREADSHEET_ID, "'📱 Devices'!A:A");
-      const tokens = deviceData?.map((r: any[]) => r[0]).filter((t: any) => t && t.length > 10) || [];
-      if (tokens.length > 0) {
-        const response = await messaging.sendEachForMulticast({
-          tokens,
-          notification: { title, body },
-          data: { type: 'cycle_count', items: JSON.stringify(items.slice(0, 5).map((i: any) => i.sku || i.name)) },
-          android: { priority: 'high', notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' } },
-        });
-        fcmSent = response.successCount;
-        fcmFailed = response.failureCount;
-        console.log(`[DailyNotif] FCM: ${fcmSent} sent, ${fcmFailed} failed`);
-      }
-    }
+    const { sent: fcmSent, failed: fcmFailed } = await sendFcmToDevices({
+      title,
+      body,
+      data: { type: 'cycle_count', items: JSON.stringify(items.slice(0, 5).map((i: any) => i.sku || i.name)) },
+    }, { tag: 'DailyNotif' });
 
     // Web Push — PWA
     let webPushSent = 0;

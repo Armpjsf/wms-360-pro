@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
 import { writeTransactionData } from '@/lib/transactionUtils';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 const ROLL_TAG_1 = "Roll Tag1";
 const ROLL_TAG_2 = "Roll Tag2";
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     console.log(`[Process] Generated DocId: ${newDocId}`);
 
     // 5. Prepare Data
-    const today = new Date().toLocaleDateString('th-TH'); // DD/MM/YYYY for Sheets
+    const today = getThaiDateString(); // Thai-timezone date for Sheets
 
     // Prepare Archive Data
     const dataToArchive = [];
@@ -208,44 +209,17 @@ export async function POST(request: Request) {
 
     // 11. Notification (Push to APK)
     try {
-        const { messaging } = await import('@/lib/firebaseAdmin');
-        const { getSheetData } = await import('@/lib/googleSheets');
-        const TX_SHEET_ID = '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
+        const { sendFcmToDevices } = await import('@/lib/fcmSender');
 
-        const itemSummary = formItems.map((codeArr, idx) => 
+        const itemSummary = formItems.map((codeArr, idx) =>
              codeArr[0] ? `${codeArr[0]} (x${formQty[idx][0]})` : null
         ).filter(Boolean).join(', ');
 
-        const deviceData = await getSheetData(TX_SHEET_ID, "'📱 Devices'!A:A");
-        const tokens = deviceData?.map((r:any) => r[0]).filter((t:any) => t && t.length > 10) || [];
-
-        if (messaging && tokens.length > 0) {
-            console.log(`[Process] Sending New Job Push to ${tokens.length} devices...`);
-            const pushResponse = await messaging.sendEachForMulticast({
-                tokens,
-                notification: {
-                    title: "📦 งานใหม่เข้า (New Job)",
-                    body: `ลูกค้า: ${custName} | เอกสาร: ${newDocId}\nรายการ: ${itemSummary}`,
-                },
-                data: {
-                    type: 'new_job',
-                    docId: newDocId
-                },
-                android: {
-                    priority: 'high',
-                    notification: {
-                        sound: 'default',
-                        clickAction: 'FCM_PLUGIN_ACTIVITY'
-                    }
-                }
-            });
-            console.log(`[Process] FCM Result: ${pushResponse.successCount} sent, ${pushResponse.failureCount} failed.`);
-            pushResponse.responses.forEach((r, i) => {
-                if (!r.success) {
-                    console.error(`[Process] FCM token #${i} failed:`, r.error?.code, r.error?.message);
-                }
-            });
-        }
+        await sendFcmToDevices({
+            title: "📦 งานใหม่เข้า (New Job)",
+            body: `ลูกค้า: ${custName} | เอกสาร: ${newDocId}\nรายการ: ${itemSummary}`,
+            data: { type: 'new_job', docId: newDocId },
+        }, { tag: 'Process' });
     } catch (notifyErr) {
         console.error("[Process] Failed to send Push Notification:", notifyErr);
     }

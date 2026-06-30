@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSheetData, updateSheetData, getGoogleSheets, exportSheetToPdf } from '@/lib/googleSheets';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 export const dynamic = 'force-static';
 
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
             const updates = [
                { range: `'${SHEET_FORM}'!G3`, values: [[newDocNum]] },
                { range: `'${SHEET_FORM}'!F6`, values: [[custName]] },
-               { range: `'${SHEET_FORM}'!F4`, values: [[new Date().toLocaleDateString('th-TH')]] }
+               { range: `'${SHEET_FORM}'!F4`, values: [[getThaiDateString()]] }
             ];
             // ... Mapping logic for array ...
             // This is getting complex to implement perfectly in one shot without robust helper.

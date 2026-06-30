@@ -6,6 +6,7 @@ import {
     PO_SPREADSHEET_ID 
 } from '@/lib/googleSheets';
 import { archiveCurrentForm } from '@/lib/orderUtils';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       const firstRow = archiveData[0];
       const custName = firstRow[1];
       const potentialSigLink = firstRow[7]; // Col H (PDF Link or Signature Link)
-      const today = new Date().toLocaleDateString('th-TH');
+      const today = getThaiDateString();
       
       // Update Header
       const updates = [

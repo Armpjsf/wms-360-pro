@@ -8,6 +8,7 @@ import {
     getGoogleSheets,
     PO_SPREADSHEET_ID 
 } from '@/lib/googleSheets';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 const FORM_SHEET = "ส่งสินค้า";
 const DATA_SHEET = "คลังข้อมูล";
@@ -26,7 +27,7 @@ export async function archiveCurrentForm(customStatus?: string, signatureLink?: 
 
         const docNum = dNum?.[0]?.[0];
         const custName = cName?.[0]?.[0] || "Unknown";
-        const today = new Date().toLocaleDateString('th-TH');
+        const today = getThaiDateString();
 
         if (!docNum) {
             return { success: false, error: 'No active job found' };
