@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { getSubscriptions, PushSubscription } from './subscriptionRepository';
+import { getSubscriptions, removeSubscriptions, PushSubscription } from './subscriptionRepository';
 
 // Initialize VAPID
 const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -29,6 +29,7 @@ export async function sendWebPush(payload: { title: string, body: string, url?: 
     // 2. Send in parallel
     let successCount = 0;
     let failedCount = 0;
+    const expiredEndpoints: string[] = [];
 
     const notificationPayload = JSON.stringify({
         title: payload.title,
@@ -47,10 +48,18 @@ export async function sendWebPush(payload: { title: string, body: string, url?: 
         } catch (error: any) {
             console.error(`[WebPush] Failed to send to ${sub.endpoint.slice(0, 20)}...`, error.statusCode);
             failedCount++;
-            
-            // TODO: If 410 (Gone), delete subscription
+
+            // 410 Gone / 404 Not Found => subscription expired, mark for removal
+            if (error.statusCode === 410 || error.statusCode === 404) {
+                expiredEndpoints.push(sub.endpoint);
+            }
         }
     }));
+
+    // 3. Clean up expired subscriptions
+    if (expiredEndpoints.length > 0) {
+        await removeSubscriptions(expiredEndpoints);
+    }
 
     console.log(`[WebPush] Result: ${successCount} sent, ${failedCount} failed.`);
     return { success: successCount, failed: failedCount };
