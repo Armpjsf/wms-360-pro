@@ -17,20 +17,12 @@ export async function POST(request: Request) {
     const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
 
+    // Only clear the active form. Do NOT clear the Roll Tag source sheets here:
+    // `process` already clears the specific Roll Tag it consumes, so wiping both
+    // tags would destroy any OTHER pending Roll Tag that hasn't been processed yet
+    // (data loss when multiple Roll Tags are staged at once).
     const { clearFormSheet } = await import('@/lib/orderUtils');
     await clearFormSheet(ssid);
-
-    // Also clear Roll Tags
-    const { clearSheetRange } = await import('@/lib/googleSheets');
-    await Promise.all([
-         clearSheetRange(ssid, "Roll Tag1!B4"),
-         clearSheetRange(ssid, "Roll Tag1!B6"),
-         clearSheetRange(ssid, "Roll Tag1!A9:E17"),
-         
-         clearSheetRange(ssid, "Roll Tag2!B4"),
-         clearSheetRange(ssid, "Roll Tag2!B6"),
-         clearSheetRange(ssid, "Roll Tag2!A9:E17"),
-    ]);
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error: any) {
