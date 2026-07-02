@@ -1,4 +1,4 @@
-import { getSheetData, appendSheetRow, updateSheetData, USER_SPREADSHEET_ID } from "./googleSheets";
+import { getSheetData, appendSheetRow, updateSheetData, getSheetId, getGoogleSheets, USER_SPREADSHEET_ID } from "./googleSheets";
 import bcrypt from 'bcryptjs';
 
 // ============================================================================
@@ -145,10 +145,41 @@ export async function updateUser(userId: string, data: any) {
 
          // Update B:D (Basic Info)
          await updateSheetData(USER_SPREADSHEET_ID, `'Users'!B${idx + 1}:D${idx + 1}`, [[newUsername, newRole, newStatus]]);
-         
+
          // Update G:H (Permissions)
          await updateSheetData(USER_SPREADSHEET_ID, `'Users'!G${idx + 1}:H${idx + 1}`, [[newBranches, newOwners]]);
     }
 
+    // Optional password reset (Column F). Only when a new password is provided.
+    if (data.password) {
+         const hashedPassword = await bcrypt.hash(data.password, 10);
+         await updateSheetData(USER_SPREADSHEET_ID, `'Users'!F${idx + 1}:F${idx + 1}`, [[hashedPassword]]);
+    }
+
+    return true;
+}
+
+export async function deleteUser(userId: string): Promise<boolean> {
+    const raw = await getSheetData(USER_SPREADSHEET_ID, "'Users'!A:A");
+    if (!raw) return false;
+
+    const idx = raw.findIndex(r => r[0] === userId);
+    if (idx === -1) return false; // idx is 0-based incl. header row = actual sheet row index
+
+    const sheetId = await getSheetId(USER_SPREADSHEET_ID, 'Users');
+    if (sheetId === null) return false;
+
+    const { googleSheets, auth } = await getGoogleSheets();
+    await googleSheets.spreadsheets.batchUpdate({
+        auth: auth as any,
+        spreadsheetId: USER_SPREADSHEET_ID,
+        requestBody: {
+            requests: [{
+                deleteDimension: {
+                    range: { sheetId, dimension: 'ROWS', startIndex: idx, endIndex: idx + 1 },
+                },
+            }],
+        },
+    });
     return true;
 }

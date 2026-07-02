@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUsers, addUser, updateUser } from '@/lib/users';
+import { getUsers, addUser, updateUser, deleteUser } from '@/lib/users';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logAction } from "@/lib/auditTrail";
@@ -56,6 +56,33 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true });
         }
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    } catch (error) {
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        const adminUser = session?.user as any;
+        const currentUser = adminUser?.username || 'Unknown Admin';
+        const currentUserId = adminUser?.id || 'admin';
+
+        const { id } = await req.json();
+        if (!id) return NextResponse.json({ error: 'Missing user id' }, { status: 400 });
+
+        const ok = await deleteUser(id);
+        if (!ok) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+        await logAction({
+            userId: currentUserId,
+            userName: currentUser,
+            action: 'DELETE',
+            module: 'users',
+            description: `Deleted user: ${id}`,
+        });
+
+        return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }

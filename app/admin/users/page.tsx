@@ -73,8 +73,8 @@ export default function UserManagerPage() {
   const handleAddUser = async () => {
       if(!newUser.username || (!isEditing && !newUser.password)) return; 
       
-      const payload = isEditing 
-        ? { action: 'edit', data: newUser }
+      const payload = isEditing
+        ? { action: 'update', id: newUser.id, data: newUser }
         : { action: 'add', data: newUser };
 
       await fetch('/api/admin/users', {
