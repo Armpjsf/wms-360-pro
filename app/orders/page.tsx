@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2 } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
-import SignatureModal from '@/components/SignatureModal';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 
@@ -98,7 +97,6 @@ function OrderManagement() {
   const [status, setStatus] = useState<OrderStatus>({ pending: [], activeForm: null, waiting: [], completed: [] });
   const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -279,43 +277,6 @@ function OrderManagement() {
   };
 
 
-  const handleFinalize = async () => {
-    if (!status.activeForm || !signatureData) {
-      alert(t('mobile_sign_complete') + ' first'); // Reuse "Sign first" if needed or use mobile string
-      return;
-    }
-
-    setLoadingAction('finalize');
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const branchId = params.get('branchId') || 'hq';
-
-      const res = await fetch(getApiUrl('/api/orders/finalize'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          docNum: status.activeForm.docNum,
-          signature: signatureData,
-          branchId
-        })
-      });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        setPdfUrl(url);
-      } else {
-        const err = await res.json();
-        alert('Error: ' + (err.error || 'Server error ' + res.status));
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Error: ' + error);
-    } finally {
-      setLoadingAction(null);
-    }
-  };
-
   const handleRecall = async (docNum: string) => {
     if (!confirm(`${t('recall_btn')} ${docNum}?`)) return;
 
@@ -404,8 +365,6 @@ function OrderManagement() {
         activeForm={status.activeForm}
         signatureData={signatureData}
         onCopyLine={handleCopyLineMsg}
-        onSignature={() => setShowSignatureModal(true)}
-        onFinalize={handleFinalize}
         onClear={handleClear}
         loadingAction={loadingAction}
         onRefresh={() => fetchStatus(true)}
@@ -419,19 +378,6 @@ function OrderManagement() {
 
       {/* Completed Jobs */}
       <CompletedJobsCard jobs={status.completed} />
-
-      {/* Signature Modal */}
-      {showSignatureModal && (
-        <SignatureModal
-          isOpen={showSignatureModal}
-          docNum="ADMIN-SIGN"
-          onClose={() => setShowSignatureModal(false)}
-          onSave={async (sig) => {
-            setSignatureData(sig);
-            setShowSignatureModal(false);
-          }}
-        />
-      )}
 
       {/* LINE Preview Modal */}
       {previewMessage && (
@@ -669,8 +615,6 @@ function ActiveJobCard({
   activeForm,
   signatureData,
   onCopyLine,
-  onSignature,
-  onFinalize,
   onClear,
   loadingAction,
   onRefresh
@@ -678,14 +622,11 @@ function ActiveJobCard({
   activeForm: ActiveForm | null;
   signatureData: string | null;
   onCopyLine: () => void;
-  onSignature: () => void;
-  onFinalize: () => void;
   onClear: () => void;
   loadingAction: string | null;
   onRefresh: () => void;
 }) {
   const { t } = useLanguage();
-  const isFinalizing = loadingAction === 'finalize';
   const isClearing = loadingAction === 'clear';
   const isLoading = !!loadingAction;
 
@@ -741,46 +682,34 @@ function ActiveJobCard({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          {/* Read-only signature status (customer signs on the warehouse
+              staff's device via /mobile/jobs, not here) */}
+          <div className={`mb-4 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border ${
+              signatureData
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                  : 'bg-amber-50 text-amber-700 border-amber-100'
+          }`}>
+              {signatureData
+                  ? <><CheckCircle2 className="w-4 h-4" /> {t('signed_status')}</>
+                  : <>⏳ {t('waiting_signature') || 'รอลูกค้าเซ็นรับ (ที่หน้างาน)'}</>}
+          </div>
+
+          {/* Admin actions */}
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={onCopyLine}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold transition-colors"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition-colors"
             >
               {t('copy_line')}
             </button>
             <button
-              onClick={onSignature}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold transition-colors"
-            >
-              {signatureData ? `✓ ${t('signed_status')}` : `✍️ ${t('sign_btn')}`}
-            </button>
-            <button
               onClick={onClear}
               disabled={isLoading}
-              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1 border border-emerald-100"
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1 border border-emerald-100"
             >
               {isClearing ? <Loader2 className="w-3 h-3 animate-spin"/> : <CheckCircle2 className="w-3 h-3" />}
               {isClearing ? t('processing') : t('clear_btn')}
             </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-
-              <button
-                onClick={onFinalize}
-                disabled={isLoading}
-                className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
-                    ${!signatureData 
-                        ? 'bg-slate-800 text-slate-500 border border-slate-700 hover:bg-slate-700 hover:text-slate-300' 
-                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-900/20'
-                    }
-                    ${isLoading ? 'opacity-70 cursor-wait' : ''}
-                `}
-              >
-                {isFinalizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
-                {isFinalizing ? t('processing') : t('finalize_print')}
-              </button>
           </div>
         </div>
       )}
