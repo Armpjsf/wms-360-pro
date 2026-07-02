@@ -1,6 +1,10 @@
 import { withAuth } from "next-auth/middleware"
+import { getToken } from "next-auth/jwt"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
-export default withAuth(
+// Page guard (redirects to /login) — unchanged behavior.
+const pageAuth = withAuth(
   // `withAuth` augments your `Request` with the user's token.
   function proxy(req) {
     // Custom Logic if needed
@@ -20,7 +24,7 @@ export default withAuth(
                path.startsWith('/ops/inbound') ||
                path.startsWith('/ops/outbound') ||
                path.startsWith('/admin/users')) {
-               return false; 
+               return false;
            }
         }
 
@@ -30,7 +34,7 @@ export default withAuth(
                 return false;
             }
         }
-        
+
         return true;
       },
     },
@@ -39,6 +43,32 @@ export default withAuth(
     },
   }
 )
+
+// API guard (returns 401 JSON instead of redirecting). Closes the gap where
+// 57 of 66 /api routes were callable without a session.
+// Public exceptions:
+//  - /api/auth/* — NextAuth's own endpoints (login must work logged-out)
+//  - /api/cron/* — protected by their own CRON_SECRET bearer check
+export default async function proxy(req: NextRequest, event: any) {
+  const { pathname } = req.nextUrl;
+
+  if (pathname.startsWith('/api/')) {
+    if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/cron')) {
+      return NextResponse.next();
+    }
+    // Let CORS preflights through; the actual request still gets checked.
+    if (req.method === 'OPTIONS') {
+      return NextResponse.next();
+    }
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
+  return (pageAuth as any)(req, event);
+}
 
 export const config = {
   matcher: [
@@ -50,8 +80,9 @@ export const config = {
     "/po-log/:path*",
     "/orders/:path*",
     "/mobile/:path*",
-    "/admin/:path*",      
-    "/damage/:path*",    
-    "/analytics/:path*", 
+    "/admin/:path*",
+    "/damage/:path*",
+    "/analytics/:path*",
+    "/api/:path*",
   ],
 }
