@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ClipboardList, Mail, Box } from 'lucide-react';
+import { ClipboardList, Mail, Box, ClipboardCheck } from 'lucide-react';
 
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import MobileDialogHost from '@/components/ui/MobileDialog';
@@ -15,6 +15,7 @@ export default function MobileNav() {
     { href: '/mobile/jobs', label: t('mobile_nav_jobs'), icon: ClipboardList },
     { href: '/mobile/orders', label: t('menu_orders'), icon: Mail },
     { href: '/mobile/inventory', label: t('menu_inventory'), icon: Box },
+    { href: '/mobile/cycle-count', label: t('mobile_nav_cycle_count'), icon: ClipboardCheck },
   ];
 
   return (

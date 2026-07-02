@@ -3,7 +3,8 @@
 import { getApiUrl } from "@/lib/config";
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Package, User, RefreshCw, X, Check, Wifi, WifiOff, Play } from 'lucide-react';
+import { MapPin, Package, User, RefreshCw, X, Check, Wifi, WifiOff, Play, LogOut } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -474,9 +475,20 @@ export default function MobileJobsPage() {
                 </div>
             </div>
             
-            <button onClick={fetchJobs} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-500 shadow-sm transition-all hover:shadow-md active:scale-95 hover:border-indigo-100">
-                <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex gap-2">
+                <button onClick={fetchJobs} className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-500 shadow-sm transition-all hover:shadow-md active:scale-95 hover:border-indigo-100">
+                    <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                    onClick={async () => {
+                        if (await appConfirm('ออกจากระบบ?')) signOut({ callbackUrl: '/login' });
+                    }}
+                    className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-rose-500 shadow-sm transition-all active:scale-95 hover:border-rose-100"
+                    title="ออกจากระบบ"
+                >
+                    <LogOut className="w-6 h-6" />
+                </button>
+            </div>
         </div>
 
         {loading && !activeJob && (

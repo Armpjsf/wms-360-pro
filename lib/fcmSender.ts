@@ -1,5 +1,6 @@
 import { messaging } from './firebaseAdmin';
-import { getSheetData, removeDeadDeviceTokens, SPREADSHEET_ID } from './googleSheets';
+import { getSheetData, removeDeadDeviceTokens } from './googleSheets';
+import { TRANSACTION_SPREADSHEET_ID } from './transactionUtils';
 
 const DEVICES_RANGE = "'📱 Devices'!A:A";
 const DEAD_TOKEN_CODES = new Set([
@@ -28,7 +29,10 @@ export async function sendFcmToDevices(
     opts: { tag?: string; spreadsheetId?: string } = {}
 ): Promise<{ sent: number; failed: number }> {
     const tag = opts.tag || 'FCM';
-    const ssid = opts.spreadsheetId || SPREADSHEET_ID;
+    // Device tokens are registered into the TRANSACTION spreadsheet (see
+    // /api/notifications/register). Reading the PRODUCT sheet here silently
+    // sent every push to 0 devices.
+    const ssid = opts.spreadsheetId || TRANSACTION_SPREADSHEET_ID;
 
     if (!messaging) {
         console.warn(`[${tag}] Firebase messaging not initialized.`);
