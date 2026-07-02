@@ -2,7 +2,7 @@
 
 import { getApiUrl } from '@/lib/config';
 import { useState, useEffect } from 'react';
-import { RefreshCw, User, Play, Undo2, CheckCircle2, Package, Inbox, Wifi, WifiOff, Check, Clock } from 'lucide-react';
+import { RefreshCw, User, Play, Undo2, CheckCircle2, Package, Inbox, Wifi, WifiOff, Check, Clock, MapPin } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -20,6 +20,7 @@ export default function MobileOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null); // guards double-taps
+  const [productLoc, setProductLoc] = useState<Map<string, string>>(new Map());
 
   const branchId = typeof window !== 'undefined'
     ? (new URLSearchParams(window.location.search).get('branchId') || 'hq')
@@ -41,6 +42,21 @@ export default function MobileOrdersPage() {
   };
 
   useEffect(() => { fetchStatus(); }, []);
+
+  // Load product locations for the item list
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(getApiUrl('/api/products'));
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const map = new Map<string, string>();
+          data.forEach((p: any) => map.set(p.name, p.location || '-'));
+          setProductLoc(map);
+        }
+      } catch { /* offline: skip locations */ }
+    })();
+  }, []);
 
   const post = async (path: string, body: any, id: string) => {
     if (busyId) return;
@@ -115,6 +131,31 @@ export default function MobileOrdersPage() {
               <div className="flex items-center gap-2 text-indigo-600 font-medium text-sm bg-indigo-50 px-3 py-1.5 rounded-xl w-fit mb-4">
                 <User className="w-4 h-4" /> {activeForm.customer}
               </div>
+
+              {/* Item list */}
+              {activeForm.items && activeForm.items.length > 0 && (
+                <div className="space-y-2 mb-4 bg-slate-50 rounded-2xl p-3 border border-slate-100/50">
+                  <div className="flex justify-between px-1">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">{t('items_list')}</span>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">{activeForm.items.length}</span>
+                  </div>
+                  {activeForm.items.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-100">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-slate-900 font-bold text-sm truncate">{item.itemCode || item.description}</div>
+                        {item.orderNo && <div className="text-slate-400 text-[11px]">Ref: {item.orderNo}</div>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-slate-900 font-black text-lg leading-none">x{item.qty}</div>
+                        <div className="text-orange-600 text-[10px] font-bold flex items-center justify-end gap-0.5 mt-1 bg-orange-50 px-1.5 py-0.5 rounded-lg border border-orange-100">
+                          <MapPin className="w-3 h-3" /> {productLoc.get(item.itemCode || item.description) || '-'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Signature status (read-only) */}
               <div className={`mb-4 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border ${activeForm.signature ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>

@@ -2,7 +2,7 @@
 
 import { getApiUrl } from '@/lib/config';
 import { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, MapPin, Package, Wifi, WifiOff } from 'lucide-react';
+import { Search, RefreshCw, MapPin, Package, Wifi, WifiOff, X, Tag, Boxes } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -14,6 +14,7 @@ interface Product {
   location?: string;
   image?: string;
   unit?: string;
+  price?: number;
 }
 
 export default function MobileInventoryPage() {
@@ -22,6 +23,7 @@ export default function MobileInventoryPage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
+  const [selected, setSelected] = useState<Product | null>(null);
 
   const fetchProducts = async () => {
     try {
@@ -88,7 +90,7 @@ export default function MobileInventoryPage() {
               {filtered.map((p, idx) => {
                 const low = typeof p.stock === 'number' && p.stock <= 0;
                 return (
-                  <div key={p.name + idx} className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex items-center gap-3">
+                  <button key={p.name + idx} onClick={() => setSelected(p)} className="w-full text-left bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex items-center gap-3 active:scale-[0.99] transition-transform">
                     {p.image ? (
                       <img src={`/api/proxy/image?url=${encodeURIComponent(p.image)}`} alt="" className="w-12 h-12 rounded-xl bg-slate-100 object-cover border border-slate-100 shrink-0" />
                     ) : (
@@ -106,7 +108,7 @@ export default function MobileInventoryPage() {
                       <div className={`font-black text-xl leading-none ${low ? 'text-red-500' : 'text-slate-900'}`}>{p.stock ?? '-'}</div>
                       <div className="text-[10px] text-slate-400 font-medium">{p.unit || t('stock_label') || 'คงเหลือ'}</div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
               {filtered.length === 0 && (
@@ -117,6 +119,45 @@ export default function MobileInventoryPage() {
         )}
 
       </div>
+
+      {/* Product detail bottom-sheet */}
+      {selected && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 backdrop-blur-sm" onClick={() => setSelected(null)}>
+          <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
+              <div className="flex items-center gap-4 mt-2">
+                {selected.image ? (
+                  <img src={`/api/proxy/image?url=${encodeURIComponent(selected.image)}`} alt="" className="w-20 h-20 rounded-2xl bg-slate-100 object-cover border border-slate-100" />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100"><Package className="w-8 h-8" /></div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-lg font-black text-slate-900 leading-tight">{selected.name}</div>
+                  {selected.category && <div className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1"><Tag className="w-3 h-3" /> {selected.category}</div>}
+                </div>
+              </div>
+              <button onClick={() => setSelected(null)} className="p-2 text-slate-400 hover:text-slate-600 shrink-0"><X className="w-6 h-6" /></button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <div className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1 mb-1"><Boxes className="w-3 h-3" /> คงเหลือ</div>
+                <div className={`text-2xl font-black ${typeof selected.stock === 'number' && selected.stock <= 0 ? 'text-red-500' : 'text-slate-900'}`}>{selected.stock ?? '-'} <span className="text-sm text-slate-400 font-medium">{selected.unit || ''}</span></div>
+              </div>
+              <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
+                <div className="text-[10px] uppercase font-bold text-orange-400 flex items-center gap-1 mb-1"><MapPin className="w-3 h-3" /> ตำแหน่ง</div>
+                <div className="text-2xl font-black text-orange-700">{selected.location || '-'}</div>
+              </div>
+            </div>
+
+            <button onClick={() => setSelected(null)} className="w-full mt-5 min-h-[52px] bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-2xl font-bold active:scale-[0.98] transition-all">
+              ปิด
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="fixed bottom-0 left-0 right-0 z-50"><MobileNav /></div>
     </div>
   );
