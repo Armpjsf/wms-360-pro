@@ -11,11 +11,9 @@ export default function Home() {
     // @ts-expect-error: Capacitor global check
     const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || window.Capacitor);
     
-    if (isMobile) {
-      router.push('/mobile/jobs');
-    } else {
-      router.push('/dashboard');
-    }
+    // replace() (not push) so the root spinner never sits in the back stack,
+    // avoiding a back-button loop back onto this loading screen.
+    router.replace(isMobile ? '/mobile/jobs' : '/dashboard');
   }, [router]);
 
   return (

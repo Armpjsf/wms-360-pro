@@ -97,20 +97,20 @@ class NotificationService {
   private handleNotificationTap(notification: any) {
     // Navigate to the appropriate page based on notification type
     const data = notification.notification?.data || notification.data;
-    if (typeof window === 'undefined' || !data?.type) return;
+    if (typeof window === 'undefined') return;
 
     const routes: Record<string, string> = {
       cycle_count: '/mobile/cycle-count',
       new_job: '/mobile/jobs',
       signature: '/mobile/jobs',
-      anomaly: '/ai/anomaly',
+      anomaly: '/mobile/cycle-count',
       stock_alert: '/inventory?status=LOW',
     };
 
-    const target = routes[data.type];
-    if (target) {
-      window.location.href = target;
-    }
+    // Priority: explicit url from payload > type-based route > jobs (default).
+    // Always navigate somewhere so a tap is never silently ignored.
+    const target = data?.url || routes[data?.type] || '/mobile/jobs';
+    window.location.href = target;
   }
 
   async scheduleLocalNotification(payload: NotificationPayload) {

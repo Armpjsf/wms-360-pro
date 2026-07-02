@@ -5,7 +5,10 @@ const config: CapacitorConfig = {
   appName: 'WMS 360 PRO',
   webDir: 'out',
   server: {
-    url: 'https://wms-360-pro.vercel.app',
+    // Warehouse staff use the APK primarily; open straight to the jobs menu
+    // so cold-starts (incl. notification taps) land on the right page instead
+    // of the root spinner. Requires an APK rebuild to take effect.
+    url: 'https://wms-360-pro.vercel.app/mobile/jobs',
     cleartext: true
   }
 };

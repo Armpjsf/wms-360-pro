@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSheetData, updateSheetData, PO_SPREADSHEET_ID } from '@/lib/googleSheets';
 import { messaging } from '@/lib/firebaseAdmin';
+import { TRANSACTION_SPREADSHEET_ID } from '@/lib/transactionUtils';
 
 // This endpoint is designed to be called by a Scheduler (Cron Job)
 // e.g., every 5 minutes.
@@ -8,10 +9,12 @@ import { messaging } from '@/lib/firebaseAdmin';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-    // Optional: Check for Cron Secret
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === 'production') {
-        // return new NextResponse('Unauthorized', { status: 401 });
+    // Check for Cron Secret (Vercel Cron sends Authorization: Bearer <CRON_SECRET>)
+    if (process.env.NODE_ENV === 'production') {
+        const authHeader = req.headers.get('authorization');
+        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
     }
 
     try {
@@ -36,8 +39,7 @@ export async function GET(req: Request) {
         // We use Z1 in 'Devices' sheet as a simple Key-Value store
         const DEVICES_SHEET = "'📱 Devices'";
         const STATE_CELL = "Z1";
-        const TRANSACTION_SPREADSHEET_ID = process.env.TRANSACTION_SPREADSHEET_ID!;
-        
+
         const stateData = await getSheetData(TRANSACTION_SPREADSHEET_ID, `${DEVICES_SHEET}!${STATE_CELL}`);
         const lastNotifiedJob = stateData && stateData[0] ? stateData[0][0] : "";
 
@@ -73,15 +75,19 @@ export async function GET(req: Request) {
                 data: {
                     type: 'new_job',
                     docNum: currentActiveJob,
-                    customer: customerName
+                    customer: customerName,
+                    url: '/mobile/jobs'
                 },
                 android: {
                     priority: 'high',
                     notification: {
                         sound: 'default',
                         clickAction: 'FCM_PLUGIN_ACTIVITY',
-                        channelId: 'default' 
+                        channelId: 'default'
                     }
+                },
+                webpush: {
+                    fcmOptions: { link: 'https://wms-360-pro.vercel.app/mobile/jobs' }
                 }
             });
             sentCount = response.successCount;

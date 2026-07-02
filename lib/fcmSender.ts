@@ -7,10 +7,14 @@ const DEAD_TOKEN_CODES = new Set([
     'messaging/invalid-argument',
 ]);
 
+const APP_BASE_URL = 'https://wms-360-pro.vercel.app';
+
 export interface FcmPayload {
     title: string;
     body: string;
     data?: Record<string, string>;
+    /** In-app path to open when the notification is tapped, e.g. '/mobile/jobs'. */
+    link?: string;
 }
 
 /**
@@ -38,15 +42,22 @@ export async function sendFcmToDevices(
         return { sent: 0, failed: 0 };
     }
 
+    // Carry the tap destination in data.url (read by the native tap handler)
+    // and in webpush.fcmOptions.link (used by the browser/PWA on click).
+    const data = { ...(payload.data || {}), ...(payload.link ? { url: payload.link } : {}) };
+
     console.log(`[${tag}] Sending push to ${tokens.length} devices...`);
     const res = await messaging.sendEachForMulticast({
         tokens,
         notification: { title: payload.title, body: payload.body },
-        data: payload.data || {},
+        data,
         android: {
             priority: 'high',
             notification: { sound: 'default', clickAction: 'FCM_PLUGIN_ACTIVITY' },
         },
+        ...(payload.link
+            ? { webpush: { fcmOptions: { link: `${APP_BASE_URL}${payload.link}` } } }
+            : {}),
     });
 
     console.log(`[${tag}] FCM Result: ${res.successCount} sent, ${res.failureCount} failed.`);

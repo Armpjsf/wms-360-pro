@@ -4,10 +4,11 @@ import { sendFcmToDevices } from '@/lib/fcmSender';
 
 export async function GET(req: Request) {
     // Check for authorization (Vercel Cron Header)
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === 'production') {
-        // Optional: Secure it later. For now, open for testing.
-        // return new NextResponse('Unauthorized', { status: 401 });
+    if (process.env.NODE_ENV === 'production') {
+        const authHeader = req.headers.get('authorization');
+        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
     }
 
     try {
@@ -52,6 +53,7 @@ export async function GET(req: Request) {
                     type: 'cycle_count',
                     items: JSON.stringify(itemsToCount.slice(0, 5)),
                 },
+                link: '/mobile/cycle-count',
             }, { tag: 'CycleCount' });
 
             return NextResponse.json({
