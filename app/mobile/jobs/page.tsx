@@ -56,6 +56,15 @@ export default function MobileJobsPage() {
   // Signature State
   const [showSigModal, setShowSigModal] = useState(false);
   const [signingDoc, setSigningDoc] = useState<string | null>(null);
+
+  // Tracks which job is currently being switched to (guards double-taps)
+  const [startingDoc, setStartingDoc] = useState<string | null>(null);
+
+  // Pull-to-refresh gesture state
+  const pullStartY = useRef<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const PULL_THRESHOLD = 70;
   
   // Connection State
   const [isConnected, setIsConnected] = useState(true); // Assume true initially or check
@@ -185,6 +194,41 @@ export default function MobileJobsPage() {
   // --- Auto-Trigger Signature for Customer ---
   const viewedDocs = useRef<Set<string>>(new Set());
 
+  // --- Pull-to-refresh handlers ---
+  const handleTouchStart = (e: React.TouchEvent) => {
+      // Only arm the gesture when scrolled to the very top and not already refreshing
+      if (window.scrollY <= 0 && !refreshing) {
+          pullStartY.current = e.touches[0].clientY;
+      } else {
+          pullStartY.current = null;
+      }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+      if (pullStartY.current === null) return;
+      const delta = e.touches[0].clientY - pullStartY.current;
+      // Apply resistance so the pull feels natural and is capped
+      if (delta > 0) setPullDistance(Math.min(delta * 0.5, 100));
+  };
+
+  const handleTouchEnd = async () => {
+      if (pullStartY.current === null) return;
+      const shouldRefresh = pullDistance > PULL_THRESHOLD;
+      pullStartY.current = null;
+      if (shouldRefresh) {
+          setRefreshing(true);
+          setPullDistance(56); // hold the spinner in view while fetching
+          try {
+              await fetchJobs();
+          } finally {
+              setRefreshing(false);
+              setPullDistance(0);
+          }
+      } else {
+          setPullDistance(0);
+      }
+  };
+
   // --- Signature Logic ---
   const handleSignClick = (docId: string) => {
       setSigningDoc(docId);
@@ -193,29 +237,34 @@ export default function MobileJobsPage() {
 
   // --- Restore/Start Job Logic ---
   const handleStartJob = async (docNum: string) => {
+      // Guard: ignore repeat taps while a switch is already in flight
+      if (startingDoc) return;
       if (!confirm(`Switch to job ${docNum}? Current form will be archived.`)) return;
-      
+
       try {
+          setStartingDoc(docNum);
           setLoading(true);
           const res = await fetch(getApiUrl('/api/jobs/restore'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ docNum })
           });
-          
+
           if (!res.ok) {
               const err = await res.json();
               throw new Error(err.error || "Failed to start job");
           }
-          
+
           // Refresh to see new active job
           await fetchJobs();
           // Scroll to top
           window.scrollTo(0, 0);
-          
+
       } catch (e: any) {
           alert("Error: " + e.message);
           setLoading(false);
+      } finally {
+          setStartingDoc(null);
       }
   };
 
@@ -312,11 +361,36 @@ export default function MobileJobsPage() {
   }
 
   return (
-    <div className="relative min-h-screen pb-24 bg-slate-50/50">
+    <div
+      className="relative min-h-screen pb-24 bg-slate-50/50"
+      style={{ overscrollBehaviorY: 'contain' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <AmbientBackground />
-      
-      <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6">
-      
+
+      {/* Pull-to-refresh indicator */}
+      <div
+        className="absolute top-0 left-0 right-0 flex justify-center pointer-events-none z-30"
+        style={{ height: pullDistance, opacity: pullDistance > 10 ? 1 : 0 }}
+      >
+        <div className="mt-2 bg-white shadow-md rounded-full p-2 border border-slate-100">
+          <RefreshCw
+            className={`w-6 h-6 text-indigo-500 ${refreshing ? 'animate-spin' : ''}`}
+            style={refreshing ? undefined : { transform: `rotate(${pullDistance * 3}deg)` }}
+          />
+        </div>
+      </div>
+
+      <div
+        className="relative z-10 max-w-lg mx-auto p-4 md:p-6"
+        style={{
+          transform: `translateY(${pullDistance}px)`,
+          transition: pullStartY.current === null ? 'transform 0.2s ease-out' : undefined,
+        }}
+      >
+
         <div className="flex justify-between items-center mb-8 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-2 z-20">
             <div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -470,9 +544,17 @@ export default function MobileJobsPage() {
                             </div>
                             <button
                                 onClick={() => handleStartJob(job.docNum)}
-                                className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                                disabled={startingDoc === job.docNum}
+                                className="bg-orange-100 text-orange-700 hover:bg-orange-200 disabled:opacity-60 min-h-[48px] px-6 py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 shrink-0"
                             >
-                                {t('start_btn')}
+                                {startingDoc === job.docNum ? (
+                                    <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-700 rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <Play className="w-4 h-4 fill-orange-700" />
+                                        {t('start_btn')}
+                                    </>
+                                )}
                             </button>
                         </div>
                     ))}
@@ -500,8 +582,9 @@ export default function MobileJobsPage() {
                                  </div>
                                  <button
                                     onClick={() => handleSignClick(job.id)}
-                                    className="bg-slate-900 hover:bg-slate-800 text-white text-xs px-4 py-2 rounded-xl font-bold shadow-lg shadow-slate-900/20"
+                                    className="bg-slate-900 hover:bg-slate-800 text-white text-sm min-h-[48px] px-6 py-3 rounded-2xl font-bold shadow-lg shadow-slate-900/20 flex items-center gap-2 active:scale-95 transition-all shrink-0"
                                  >
+                                    <Check className="w-4 h-4" />
                                     {t('sign_btn')}
                                  </button>
                             </div>
