@@ -238,22 +238,35 @@ export default function MobileJobsPage() {
       setReadySent(false);
   }, [activeJob?.docNum]);
 
-  // --- Mark goods ready: push an alert to admins ---
+  // --- Prep done: notify admins AND clear the form (job moves to the
+  // recall/waiting queue, still recallable until the customer signs) ---
   const handleMarkReady = async () => {
-      if (markingReady || readySent || !activeJob) return;
+      if (markingReady || !activeJob) return;
+      if (!confirm('ยืนยันว่าจัดเตรียมสินค้าเสร็จ?\nงานจะย้ายไปคิว "รอรับ" (เรียกกลับมาให้ลูกค้าเซ็นได้ตลอด)')) return;
       try {
           setMarkingReady(true);
           const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
           const orderText = orders.length ? orders.join(', ') : activeJob.docNum;
-          const res = await fetch(getApiUrl('/api/orders/ready'), {
+
+          // 1. Notify admins
+          await fetch(getApiUrl('/api/orders/ready'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ docNum: activeJob.docNum, orderText, customer: activeJob.customer })
           });
+
+          // 2. Clear the active form -> job stays in คลังข้อมูล and appears in the
+          // waiting/recall queue until it gets signed & finalized
+          const res = await fetch(getApiUrl('/api/orders/archive'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+          });
           if (!res.ok) throw new Error('failed');
-          setReadySent(true);
+
+          await fetchJobs(); // active clears; job shows up in the recall queue
       } catch (e: any) {
-          alert('แจ้งไม่สำเร็จ กรุณาลองใหม่');
+          alert('ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
       } finally {
           setMarkingReady(false);
       }
