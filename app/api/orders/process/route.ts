@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData } from '@/lib/googleSheets';
+import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData, updateSheetData, clearSheetRange } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
 import { writeTransactionData } from '@/lib/transactionUtils';
 import { getThaiDateString } from '@/lib/dateUtils';
@@ -8,6 +8,9 @@ const ROLL_TAG_1 = "Roll Tag1";
 const ROLL_TAG_2 = "Roll Tag2";
 const FORM_SHEET = "ส่งสินค้า";
 const DATA_SHEET = "คลังข้อมูล";
+// Concurrency-lock cell on the form sheet (unused by the form itself).
+const LOCK_CELL = `${FORM_SHEET}!Z1`;
+const LOCK_TTL_MS = 60000; // ignore locks older than this (crashed processes)
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,6 +22,8 @@ const corsHeaders = {
 };
 
 export async function POST(request: Request) {
+  let lockToken: string | null = null;
+  let lockSsId: string | null = null;
   try {
     const body = await request.json();
     const { tagId, branchId } = body; // 'RT1' or 'RT2'
@@ -29,11 +34,35 @@ export async function POST(request: Request) {
     const invSSID = await resolveSpreadsheetId(branchId, 'inventory');
 
     console.log(`[Process] Starting for Tag: ${tagId}, Branch: ${branchId || 'HQ'}, SS_ID: ${ssId}`);
-    
+
+    // 0. Concurrency lock — the active form (G3) is a single slot. Claim a lock
+    // cell then read it back; only the writer whose token survives proceeds, so
+    // two people processing at once can't clobber each other's job.
+    const myToken = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const held = (await getSheetData(ssId, LOCK_CELL))?.[0]?.[0];
+    if (held) {
+        const heldTs = parseInt(String(held).split('-')[0], 10);
+        if (!isNaN(heldTs) && Date.now() - heldTs < LOCK_TTL_MS) {
+            return NextResponse.json(
+                { error: 'มีการเปิดงานอื่นอยู่ กรุณารอสักครู่แล้วลองใหม่' },
+                { status: 409, headers: corsHeaders }
+            );
+        }
+    }
+    await updateSheetData(ssId, LOCK_CELL, [[myToken]]);
+    if ((await getSheetData(ssId, LOCK_CELL))?.[0]?.[0] !== myToken) {
+        return NextResponse.json(
+            { error: 'มีการเปิดงานอื่นอยู่ กรุณารอสักครู่แล้วลองใหม่' },
+            { status: 409, headers: corsHeaders }
+        );
+    }
+    lockToken = myToken;
+    lockSsId = ssId;
+
     // 1. Determine Source Sheet dynamically
     const tagNum = tagId.replace("RT", "").trim();
     const sourceSheet = `Roll Tag${tagNum}`;
-    
+
     // 2. Check "Form" Availability First
     const formCheck = await getSheetData(ssId, `${FORM_SHEET}!G3:G3`);
     if (formCheck && formCheck[0] && formCheck[0][0]) {
@@ -251,9 +280,18 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Order Process Error:", error);
     return NextResponse.json(
-        { error: error.message, stack: error.stack }, 
+        { error: error.message, stack: error.stack },
         { status: 500, headers: corsHeaders }
     );
+  } finally {
+    // Release the lock only if we still hold it
+    if (lockToken && lockSsId) {
+        try {
+            if ((await getSheetData(lockSsId, LOCK_CELL))?.[0]?.[0] === lockToken) {
+                await clearSheetRange(lockSsId, LOCK_CELL);
+            }
+        } catch { /* ignore release errors */ }
+    }
   }
 }
 
