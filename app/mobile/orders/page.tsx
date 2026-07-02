@@ -6,6 +6,7 @@ import { RefreshCw, User, Play, Undo2, CheckCircle2, Package, Inbox, Wifi, WifiO
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { usePullToRefresh, PullIndicator } from '@/components/ui/PullToRefresh';
 
 interface RollTag { id: string; customer: string; itemCount: number; }
 interface ActiveForm { docNum: string; customer: string; refDate?: string; status?: string; items?: any[]; signature?: string | null; }
@@ -117,10 +118,13 @@ export default function MobileOrdersPage() {
     post('/api/orders/archive', {}, 'clear');
   };
 
+  const ptr = usePullToRefresh(fetchStatus);
+
   return (
-    <div className="relative min-h-screen pb-24 bg-slate-50/50">
+    <div className="relative min-h-screen pb-24 bg-slate-50/50" style={ptr.rootStyle} {...ptr.bind}>
       <AmbientBackground />
-      <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6">
+      <PullIndicator pullDistance={ptr.pullDistance} refreshing={ptr.refreshing} />
+      <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6" style={ptr.contentStyle}>
 
         {/* Header */}
         <div className="flex justify-between items-center mb-6 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-2 z-20">

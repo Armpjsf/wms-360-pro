@@ -6,6 +6,7 @@ import { Search, RefreshCw, MapPin, Package, Wifi, WifiOff, X, Tag, Boxes, ScanL
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { usePullToRefresh, PullIndicator } from '@/components/ui/PullToRefresh';
 
 interface Product {
   name: string;
@@ -101,10 +102,13 @@ export default function MobileInventoryPage() {
     );
   }, [products, query]);
 
+  const ptr = usePullToRefresh(fetchProducts);
+
   return (
-    <div className="relative min-h-screen pb-24 bg-slate-50/50">
+    <div className="relative min-h-screen pb-24 bg-slate-50/50" style={ptr.rootStyle} {...ptr.bind}>
       <AmbientBackground />
-      <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6">
+      <PullIndicator pullDistance={ptr.pullDistance} refreshing={ptr.refreshing} />
+      <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6" style={ptr.contentStyle}>
 
         {/* Header */}
         <div className="mb-4 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-2 z-20">
