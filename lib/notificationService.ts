@@ -110,7 +110,16 @@ class NotificationService {
     // Priority: explicit url from payload > type-based route > jobs (default).
     // Always navigate somewhere so a tap is never silently ignored.
     const target = data?.url || routes[data?.type] || '/mobile/jobs';
-    window.location.href = target;
+
+    // If we're already on the target page, a plain href assignment does nothing
+    // (same URL) — the tap would look silent and the new job wouldn't appear.
+    // Force a reload in that case so the list refetches.
+    const targetPath = target.split('?')[0];
+    if (window.location.pathname === targetPath) {
+      window.location.reload();
+    } else {
+      window.location.href = target;
+    }
   }
 
   async scheduleLocalNotification(payload: NotificationPayload) {
