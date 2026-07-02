@@ -12,6 +12,7 @@ import SignatureModal from '@/components/SignatureModal';
 import MobileNav from '@/components/MobileNav';
 import { useNotification } from "@/components/providers/GlobalNotificationProvider";
 import { appAlert, appConfirm } from '@/components/ui/MobileDialog';
+import { enqueue, flushQueue, queueLength } from '@/lib/offlineQueue';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface ProductLoc {
@@ -194,6 +195,19 @@ export default function MobileJobsPage() {
 
       fetchJobs();
       // No more auto-polling to save Google API quota
+
+      // Replay any actions queued while offline (now and when we come back online)
+      const flush = async () => {
+          if (queueLength() === 0) return;
+          const sent = await flushQueue(getApiUrl);
+          if (sent > 0) {
+              appAlert(`ส่งรายการที่ค้างไว้ตอนออฟไลน์แล้ว ${sent} รายการ`);
+              fetchJobs();
+          }
+      };
+      flush();
+      window.addEventListener('online', flush);
+      return () => window.removeEventListener('online', flush);
   }, []);
 
   // --- Auto-Trigger Signature for Customer ---
@@ -267,7 +281,16 @@ export default function MobileJobsPage() {
 
           await fetchJobs(); // active clears; job shows up in the recall queue
       } catch (e: any) {
-          appAlert('ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
+          // Network drop mid-action: queue both steps for replay when back online
+          if (!navigator.onLine || e instanceof TypeError) {
+              const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
+              const orderText = orders.length ? orders.join(', ') : activeJob.docNum;
+              enqueue('/api/orders/ready', { docNum: activeJob.docNum, orderText, customer: activeJob.customer });
+              enqueue('/api/orders/archive', {});
+              appAlert('ออฟไลน์อยู่ — บันทึกไว้แล้ว จะส่งอัตโนมัติเมื่อกลับมาออนไลน์');
+          } else {
+              appAlert('ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
+          }
       } finally {
           setMarkingReady(false);
       }
