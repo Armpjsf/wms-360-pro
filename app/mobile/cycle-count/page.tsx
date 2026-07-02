@@ -8,6 +8,7 @@ import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 import { getApiUrl } from '@/lib/config';
+import { appAlert } from '@/components/ui/MobileDialog';
 import { useNotification } from '@/components/providers/GlobalNotificationProvider';
 
 interface DailyCountItem {
@@ -103,7 +104,7 @@ export default function CycleCountPage() {
 
   const handleCountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProduct || !actualQty) return alert(t('alert_input_actual'));
+    if (!selectedProduct || !actualQty) return void appAlert(t('alert_input_actual'));
 
     const sysQty = selectedProduct.system_qty;
     const actQty = parseFloat(actualQty);
@@ -142,15 +143,15 @@ export default function CycleCountPage() {
         setItems(prev => prev.filter(item => item.product_name !== selectedProduct.product_name));
 
         const result = await res.json();
-        alert(`✅ ${t('save_success')}${result.has_variance ? ` ${t('difference')}: ${result.variance}` : ''}`);
+        appAlert(`✅ ${t('save_success')}${result.has_variance ? ` ${t('difference')}: ${result.variance}` : ''}`);
         resetForm();
         fetchLogs();
         // setActiveTab('history'); // Keep user on count tab for continuous flow
       } else {
-        alert(`❌ ${t('save_failed')}`);
+        appAlert(`❌ ${t('save_failed')}`);
       }
     } catch (e) {
-      alert('Error: ' + e);
+      appAlert('Error: ' + e);
     }
   };
 

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { X, Check, Trash2, RotateCw } from 'lucide-react';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { appAlert } from '@/components/ui/MobileDialog';
 
 const SignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false }) as any;
 
@@ -99,7 +100,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
     const handleConfirm = async () => {
         if (!sigCanvasRef.current || sigCanvasRef.current.isEmpty()) {
-            alert(t('sign_instruction'));
+            appAlert(t('sign_instruction'));
             return;
         }
 
@@ -110,7 +111,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
             onClose();
         } catch (error) {
             console.error("Signature Save Failed", error);
-            alert("Error");
+            appAlert('บันทึกลายเซ็นไม่สำเร็จ กรุณาลองใหม่');
         } finally {
             setSaving(false);
         }

@@ -7,6 +7,7 @@ import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { usePullToRefresh, PullIndicator } from '@/components/ui/PullToRefresh';
+import { appAlert, appConfirm } from '@/components/ui/MobileDialog';
 
 interface RollTag { id: string; customer: string; itemCount: number; }
 interface ActiveForm { docNum: string; customer: string; refDate?: string; status?: string; items?: any[]; signature?: string | null; }
@@ -75,7 +76,7 @@ export default function MobileOrdersPage() {
       }
       await fetchStatus();
     } catch (e: any) {
-      alert('ผิดพลาด: ' + e.message);
+      appAlert('ผิดพลาด: ' + e.message);
     } finally {
       setBusyId(null);
     }
@@ -104,17 +105,17 @@ export default function MobileOrdersPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      alert(msg); // Fallback if clipboard is blocked: show text to copy manually
+      appAlert(msg); // Fallback if clipboard is blocked: show text to copy manually
     }
   };
 
   const handleProcess = (tagId: string) => post('/api/orders/process', { tagId }, `process-${tagId}`);
-  const handleRecall = (docNum: string) => {
-    if (!confirm(`ดึงงาน ${docNum} กลับมาทำใหม่?`)) return;
+  const handleRecall = async (docNum: string) => {
+    if (!(await appConfirm(`ดึงงาน ${docNum} กลับมาทำใหม่?`))) return;
     post('/api/orders/recall', { docNum }, `recall-${docNum}`);
   };
-  const handleClear = () => {
-    if (!confirm('ปิด/จัดเก็บงานที่กำลังทำอยู่?')) return;
+  const handleClear = async () => {
+    if (!(await appConfirm('ปิด/จัดเก็บงานที่กำลังทำอยู่?'))) return;
     post('/api/orders/archive', {}, 'clear');
   };
 

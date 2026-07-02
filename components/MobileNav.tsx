@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ClipboardList, Mail, Box } from 'lucide-react';
 
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import MobileDialogHost from '@/components/ui/MobileDialog';
 
 export default function MobileNav() {
   const { t } = useLanguage();
@@ -17,6 +18,9 @@ export default function MobileNav() {
   ];
 
   return (
+    <>
+    {/* App-styled alert/confirm host for all mobile pages */}
+    <MobileDialogHost />
     <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-50">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
@@ -40,5 +44,6 @@ export default function MobileNav() {
         })}
       </div>
     </nav>
+    </>
   );
 }

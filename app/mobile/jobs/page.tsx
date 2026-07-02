@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SignatureModal from '@/components/SignatureModal';
 import MobileNav from '@/components/MobileNav';
 import { useNotification } from "@/components/providers/GlobalNotificationProvider";
+import { appAlert, appConfirm } from '@/components/ui/MobileDialog';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface ProductLoc {
@@ -242,7 +243,7 @@ export default function MobileJobsPage() {
   // recall/waiting queue, still recallable until the customer signs) ---
   const handleMarkReady = async () => {
       if (markingReady || !activeJob) return;
-      if (!confirm('ยืนยันว่าจัดเตรียมสินค้าเสร็จ?\nงานจะย้ายไปคิว "รอรับ" (เรียกกลับมาให้ลูกค้าเซ็นได้ตลอด)')) return;
+      if (!(await appConfirm('ยืนยันว่าจัดเตรียมสินค้าเสร็จ?\nงานจะย้ายไปคิว "รอรับ" (เรียกกลับมาให้ลูกค้าเซ็นได้ตลอด)'))) return;
       try {
           setMarkingReady(true);
           const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
@@ -266,7 +267,7 @@ export default function MobileJobsPage() {
 
           await fetchJobs(); // active clears; job shows up in the recall queue
       } catch (e: any) {
-          alert('ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
+          appAlert('ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
       } finally {
           setMarkingReady(false);
       }
@@ -282,7 +283,7 @@ export default function MobileJobsPage() {
   const handleStartJob = async (docNum: string) => {
       // Guard: ignore repeat taps while a switch is already in flight
       if (startingDoc) return;
-      if (!confirm(`Switch to job ${docNum}? Current form will be archived.`)) return;
+      if (!(await appConfirm(`สลับไปทำงาน ${docNum}?\nงานปัจจุบันจะถูกพักไว้ในคิว`))) return;
 
       try {
           setStartingDoc(docNum);
@@ -304,7 +305,7 @@ export default function MobileJobsPage() {
           window.scrollTo(0, 0);
 
       } catch (e: any) {
-          alert("Error: " + e.message);
+          appAlert('ผิดพลาด: ' + e.message);
           setLoading(false);
       } finally {
           setStartingDoc(null);
@@ -350,7 +351,7 @@ export default function MobileJobsPage() {
           
       } catch (e: any) {
           console.error("Signature Save Error", e);
-          alert("Failed: " + e.message);
+          appAlert('บันทึกไม่สำเร็จ: ' + e.message);
       }
   };
 
