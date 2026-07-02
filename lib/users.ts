@@ -59,9 +59,12 @@ export async function verifyUser(username: string, password: string): Promise<Us
              return null;
         }
 
-        const userRow = raw.slice(1).find(r => r[1]?.toLowerCase() === username.toLowerCase());
-        
-        if (!userRow) {
+        // Collect ALL rows matching the username. With duplicates, find() would
+        // only try the first row and shadow the real account (e.g. a test user
+        // named "admin" blocking the Super Admin login).
+        const userRows = raw.slice(1).filter(r => r[1]?.toLowerCase() === username.toLowerCase());
+
+        if (userRows.length === 0) {
              if (allowDevAdmin && username === 'admin' && password === 'admin') {
                  return { 
                      id: 'admin', 
@@ -76,26 +79,25 @@ export async function verifyUser(username: string, password: string): Promise<Us
              return null;
         }
 
-        const storedHash = userRow[5];
-        const status = userRow[3];
+        // Try every matching row: the password decides which account logs in.
+        for (const userRow of userRows) {
+            const storedHash = userRow[5];
+            const status = userRow[3];
 
-        if (status !== 'Active') return null;
+            if (status !== 'Active' || !storedHash) continue;
 
-        let isValid = false;
-        if (storedHash) {
-            isValid = await bcrypt.compare(password, storedHash);
-        }
-
-        if (isValid) {
-            return {
-                id: userRow[0],
-                username: userRow[1],
-                role: userRow[2],
-                status: userRow[3],
-                lastLogin: new Date().toISOString(),
-                allowedBranches: userRow[6] ? userRow[6].split(',').map((s: string) => s.trim()) : ['*'],
-                allowedOwners: userRow[7] ? userRow[7].split(',').map((s: string) => s.trim()) : ['*']
-            };
+            const isValid = await bcrypt.compare(password, storedHash);
+            if (isValid) {
+                return {
+                    id: userRow[0],
+                    username: userRow[1],
+                    role: userRow[2],
+                    status: userRow[3],
+                    lastLogin: new Date().toISOString(),
+                    allowedBranches: userRow[6] ? userRow[6].split(',').map((s: string) => s.trim()) : ['*'],
+                    allowedOwners: userRow[7] ? userRow[7].split(',').map((s: string) => s.trim()) : ['*']
+                };
+            }
         }
 
         return null;
