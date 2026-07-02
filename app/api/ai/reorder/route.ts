@@ -149,3 +149,6 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to generate AI suggestions' }, { status: 500 });
   }
 }
+
+// Vercel: allow up to 60s (Hobby max) — this route does Sheets-heavy work.
+export const maxDuration = 60;

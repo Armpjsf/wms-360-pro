@@ -121,3 +121,6 @@ export async function GET() {
     );
   }
 }
+
+// Vercel: allow up to 60s (Hobby max) — this route does Sheets-heavy work.
+export const maxDuration = 60;

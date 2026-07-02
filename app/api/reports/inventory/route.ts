@@ -90,3 +90,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Vercel: allow up to 60s (Hobby max) — this route does Sheets-heavy work.
+export const maxDuration = 60;

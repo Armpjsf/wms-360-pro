@@ -298,3 +298,6 @@ export async function POST(request: Request) {
 export async function OPTIONS() {
     return NextResponse.json({}, { headers: corsHeaders });
 }
+
+// Vercel: allow up to 60s (Hobby max) — this route does Sheets-heavy work.
+export const maxDuration = 60;

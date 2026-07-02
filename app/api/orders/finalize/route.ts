@@ -470,3 +470,6 @@ function getThaiDate(): string {
     const y = thDate.getFullYear() + 543;
     return `${d}/${m}/${y}`;
 }
+
+// Vercel: allow up to 60s (Hobby max) — this route does Sheets-heavy work.
+export const maxDuration = 60;
