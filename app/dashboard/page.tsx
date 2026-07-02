@@ -15,9 +15,14 @@ import {
   BarChart, Bar, Cell, PieChart, Pie, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend
 } from 'recharts';
 import { cn } from "@/lib/utils";
-import WaterfallChart from "@/components/charts/WaterfallChart";
-import YearlyComparisonChart from "@/components/charts/YearlyComparisonChart";
-import AnnualTrendChart from "@/components/charts/AnnualTrendChart";
+import dynamic from "next/dynamic";
+
+// Lazy-load the heavy chart components so the dashboard shell paints fast
+// instead of blocking on the full chart bundle.
+const chartLoading = () => <div className="h-64 w-full rounded-2xl bg-slate-100 animate-pulse" />;
+const WaterfallChart = dynamic(() => import("@/components/charts/WaterfallChart"), { ssr: false, loading: chartLoading });
+const YearlyComparisonChart = dynamic(() => import("@/components/charts/YearlyComparisonChart"), { ssr: false, loading: chartLoading });
+const AnnualTrendChart = dynamic(() => import("@/components/charts/AnnualTrendChart"), { ssr: false, loading: chartLoading });
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
