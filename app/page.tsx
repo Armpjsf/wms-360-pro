@@ -2,14 +2,16 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
 
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Simple check for mobile width or Capacitor
-    // @ts-expect-error: Capacitor global check
-    const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || window.Capacitor);
+    // Native app (APK) always goes to the mobile UI. Capacitor.isNativePlatform()
+    // is reliable; the raw window.Capacitor global can be missing on cold start,
+    // which previously sent the APK to the heavy desktop /dashboard.
+    const isMobile = Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768);
     
     // replace() (not push) so the root spinner never sits in the back stack,
     // avoiding a back-button loop back onto this loading screen.

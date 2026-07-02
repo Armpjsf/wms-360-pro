@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { User, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { Capacitor } from '@capacitor/core';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -32,8 +33,10 @@ function LoginForm() {
         setError('Invalid username or password');
         setLoading(false);
       } else {
-        // Force full reload to ensure session is picked up and state is cleared
-        const isMobile = window.innerWidth < 768 || Boolean((window as any).Capacitor);
+        // Force full reload to ensure session is picked up and state is cleared.
+        // Capacitor.isNativePlatform() is the reliable native check (the raw
+        // window.Capacitor global can be missing on a cold start).
+        const isMobile = Capacitor.isNativePlatform() || window.innerWidth < 768;
         let targetUrl = callbackUrl;
         
         if (isMobile) {
