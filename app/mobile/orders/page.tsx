@@ -2,7 +2,7 @@
 
 import { getApiUrl } from '@/lib/config';
 import { useState, useEffect } from 'react';
-import { RefreshCw, User, Play, Undo2, CheckCircle2, Package, Inbox, Wifi, WifiOff, Check, Clock, MapPin } from 'lucide-react';
+import { RefreshCw, User, Play, Undo2, CheckCircle2, Package, Inbox, Wifi, WifiOff, Check, Clock, MapPin, Copy } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -21,6 +21,7 @@ export default function MobileOrdersPage() {
   const [isConnected, setIsConnected] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null); // guards double-taps
   const [productLoc, setProductLoc] = useState<Map<string, string>>(new Map());
+  const [copied, setCopied] = useState(false);
 
   const branchId = typeof window !== 'undefined'
     ? (new URLSearchParams(window.location.search).get('branchId') || 'hq')
@@ -76,6 +77,33 @@ export default function MobileOrdersPage() {
       alert('ผิดพลาด: ' + e.message);
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // Build the customer LINE message (matches the admin order page format)
+  const formatItemCode = (itemStr: string) => {
+    const s = String(itemStr || '').trim();
+    if (!s) return '';
+    const suffix = s.toUpperCase().endsWith('I') ? ' I' : '';
+    return s.length >= 8 ? `${s.slice(2, 6)} ${s.slice(6, 8)}${suffix}` : `${s}${suffix}`;
+  };
+
+  const handleCopyLine = async () => {
+    if (!activeForm) return;
+    const items = activeForm.items || [];
+    const orderNumbers = Array.from(new Set(items.map((i: any) => i.orderNo).filter(Boolean)));
+    const orderText = orderNumbers.length ? orderNumbers.join(', ') : activeForm.docNum;
+    let msg = 'จัดสินค้าเรียบร้อย\n';
+    msg += `เลขออเดอร์ ที่ : ${orderText}\n`;
+    msg += `ชื่อร้านค้า : ${activeForm.customer}\n`;
+    items.forEach((it: any) => { if (it.itemCode) msg += `${formatItemCode(it.itemCode)} = ${it.qty || 0}\n`; });
+    msg += '\nโปรดแจ้งเลขออเดอร์ทุกครั้ง เมื่อมารับสินค้าที่คลังสินค้า\nขอบคุณครับ';
+    try {
+      await navigator.clipboard.writeText(msg);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      alert(msg); // Fallback if clipboard is blocked: show text to copy manually
     }
   };
 
@@ -161,6 +189,15 @@ export default function MobileOrdersPage() {
               <div className={`mb-4 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border ${activeForm.signature ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
                 {activeForm.signature ? <><Check className="w-4 h-4" /> {t('signed_status')}</> : <><Clock className="w-4 h-4" /> รอลูกค้าเซ็นรับ</>}
               </div>
+
+              <button
+                onClick={handleCopyLine}
+                className={`w-full mb-3 min-h-[52px] py-3 rounded-2xl font-bold flex items-center justify-center gap-2 border-2 active:scale-[0.98] transition-all ${
+                  copied ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {copied ? <><Check className="w-5 h-5" /> คัดลอกแล้ว</> : <><Copy className="w-5 h-5" /> คัดลอกข้อความ LINE</>}
+              </button>
 
               <button
                 onClick={handleClear}

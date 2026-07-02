@@ -1,8 +1,8 @@
 'use client';
 
 import { getApiUrl } from '@/lib/config';
-import { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, MapPin, Package, Wifi, WifiOff, X, Tag, Boxes } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Search, RefreshCw, MapPin, Package, Wifi, WifiOff, X, Tag, Boxes, ScanLine } from 'lucide-react';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import MobileNav from '@/components/MobileNav';
 import { useLanguage } from '@/components/providers/LanguageProvider';
@@ -24,6 +24,9 @@ export default function MobileInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
   const [selected, setSelected] = useState<Product | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const scannerRef = useRef<any>(null);
 
   const fetchProducts = async () => {
     try {
@@ -39,6 +42,54 @@ export default function MobileInventoryPage() {
   };
 
   useEffect(() => { fetchProducts(); }, []);
+
+  const stopScan = useCallback(async () => {
+    if (scannerRef.current) {
+      try { await scannerRef.current.stop(); } catch { /* ignore */ }
+      scannerRef.current = null;
+    }
+    setScanning(false);
+  }, []);
+
+  const onScanned = useCallback((code: string) => {
+    const text = (code || '').trim();
+    stopScan();
+    // Jump straight to the product if we can match it; otherwise search by code
+    const match = products.find((p) =>
+      p.name?.toLowerCase() === text.toLowerCase() ||
+      p.name?.toLowerCase().includes(text.toLowerCase())
+    );
+    if (match) {
+      setSelected(match);
+      setQuery('');
+    } else {
+      setQuery(text);
+    }
+  }, [products, stopScan]);
+
+  const startScan = useCallback(async () => {
+    setScanError(null);
+    setScanning(true);
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      // Wait a tick so the target div is mounted
+      await new Promise((r) => setTimeout(r, 50));
+      const scanner = new Html5Qrcode('inv-scanner');
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 260, height: 180 } },
+        (decoded: string) => onScanned(decoded),
+        () => {}
+      );
+    } catch (err) {
+      console.error('Scanner error:', err);
+      setScanError('ไม่สามารถเปิดกล้องได้');
+      setScanning(false);
+    }
+  }, [onScanned]);
+
+  useEffect(() => () => { if (scannerRef.current) scannerRef.current.stop().catch(() => {}); }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,15 +120,24 @@ export default function MobileInventoryPage() {
               <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          {/* Search */}
-          <div className="relative">
-            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ค้นหาสินค้า / ตำแหน่ง..."
-              className="w-full h-12 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-medium focus:outline-none focus:border-indigo-400 focus:bg-white"
-            />
+          {/* Search + Scan */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ค้นหาสินค้า / ตำแหน่ง..."
+                className="w-full h-12 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-medium focus:outline-none focus:border-indigo-400 focus:bg-white"
+              />
+            </div>
+            <button
+              onClick={startScan}
+              className="shrink-0 h-12 w-12 flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 transition-all"
+              title="สแกนบาร์โค้ด"
+            >
+              <ScanLine className="w-6 h-6" />
+            </button>
           </div>
         </div>
 
@@ -154,6 +214,22 @@ export default function MobileInventoryPage() {
             <button onClick={() => setSelected(null)} className="w-full mt-5 min-h-[52px] bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-2xl font-bold active:scale-[0.98] transition-all">
               ปิด
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode scanner overlay */}
+      {scanning && (
+        <div className="fixed inset-0 z-[70] bg-slate-950 flex flex-col">
+          <div className="flex justify-between items-center p-4 text-white">
+            <span className="font-bold flex items-center gap-2"><ScanLine className="w-5 h-5" /> สแกนบาร์โค้ด</span>
+            <button onClick={stopScan} className="p-2 text-white/70 hover:text-white"><X className="w-7 h-7" /></button>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div id="inv-scanner" className="w-full max-w-sm rounded-2xl overflow-hidden" />
+          </div>
+          <div className="p-6 text-center text-white/60 text-sm">
+            {scanError ? <span className="text-red-400">{scanError}</span> : 'เล็งกล้องไปที่บาร์โค้ดสินค้า'}
           </div>
         </div>
       )}
