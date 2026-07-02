@@ -545,9 +545,9 @@ export default function MobileJobsPage() {
                         {markingReady ? (
                             <div className="w-6 h-6 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin" />
                         ) : readySent ? (
-                            <><Check className="w-6 h-6" /> <span>แจ้งแอดมินแล้ว</span></>
+                            <><Check className="w-6 h-6" /> <span>แจ้งเตรียมเสร็จแล้ว</span></>
                         ) : (
-                            <><Package className="w-6 h-6" /> <span>แจ้งของพร้อมส่ง</span></>
+                            <><Package className="w-6 h-6" /> <span>จัดเตรียมสินค้าเสร็จ</span></>
                         )}
                     </button>
 
