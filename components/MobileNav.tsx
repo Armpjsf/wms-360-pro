@@ -12,8 +12,8 @@ export default function MobileNav() {
 
   const navItems = [
     { href: '/mobile/jobs', label: t('mobile_nav_jobs'), icon: ClipboardList },
-    { href: '/orders', label: t('menu_orders'), icon: Mail },
-    { href: '/inventory', label: t('menu_inventory'), icon: Box },
+    { href: '/mobile/orders', label: t('menu_orders'), icon: Mail },
+    { href: '/mobile/inventory', label: t('menu_inventory'), icon: Box },
   ];
 
   return (
