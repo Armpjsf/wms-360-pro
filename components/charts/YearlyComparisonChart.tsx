@@ -50,7 +50,9 @@ export default function YearlyComparisonChart({ data, year1Label = "This Year", 
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
           itemStyle={{ color: '#1e293b', fontSize: '12px', fontWeight: 600 }}
-          formatter={(value: any) => [value?.toLocaleString() || '0', 'Qty'] as [string, string]}
+          // Use the series name (e.g. "Inbound 2026") as the label instead of a
+          // generic "Qty" so each row says which year and inbound/outbound it is.
+          formatter={(value: any, name: any) => [value?.toLocaleString() || '0', name] as [string, string]}
         />
         <Legend 
             verticalAlign="top" 
