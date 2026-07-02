@@ -102,6 +102,7 @@ class NotificationService {
     const routes: Record<string, string> = {
       cycle_count: '/mobile/cycle-count',
       new_job: '/mobile/jobs',
+      ready: '/mobile/jobs',
       signature: '/mobile/jobs',
       anomaly: '/mobile/cycle-count',
       stock_alert: '/inventory?status=LOW',

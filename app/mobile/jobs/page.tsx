@@ -60,6 +60,10 @@ export default function MobileJobsPage() {
   // Tracks which job is currently being switched to (guards double-taps)
   const [startingDoc, setStartingDoc] = useState<string | null>(null);
 
+  // "Goods ready" confirmation state for the active job
+  const [markingReady, setMarkingReady] = useState(false);
+  const [readySent, setReadySent] = useState(false);
+
   // Pull-to-refresh gesture state
   const pullStartY = useRef<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
@@ -226,6 +230,32 @@ export default function MobileJobsPage() {
           }
       } else {
           setPullDistance(0);
+      }
+  };
+
+  // Reset the "ready" confirmation whenever the active job changes
+  useEffect(() => {
+      setReadySent(false);
+  }, [activeJob?.docNum]);
+
+  // --- Mark goods ready: push an alert to admins ---
+  const handleMarkReady = async () => {
+      if (markingReady || readySent || !activeJob) return;
+      try {
+          setMarkingReady(true);
+          const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
+          const orderText = orders.length ? orders.join(', ') : activeJob.docNum;
+          const res = await fetch(getApiUrl('/api/orders/ready'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ docNum: activeJob.docNum, orderText, customer: activeJob.customer })
+          });
+          if (!res.ok) throw new Error('failed');
+          setReadySent(true);
+      } catch (e: any) {
+          alert('แจ้งไม่สำเร็จ กรุณาลองใหม่');
+      } finally {
+          setMarkingReady(false);
       }
   };
 
@@ -502,7 +532,26 @@ export default function MobileJobsPage() {
                         )}
                     </div>
 
-                    <button 
+                    {/* Notify admin that goods are prepared/ready to ship */}
+                    <button
+                         onClick={handleMarkReady}
+                         disabled={markingReady || readySent}
+                         className={`w-full mb-3 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 text-lg active:scale-[0.98] transition-all border-2 ${
+                             readySent
+                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                 : 'bg-white border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-600/10'
+                         }`}
+                    >
+                        {markingReady ? (
+                            <div className="w-6 h-6 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin" />
+                        ) : readySent ? (
+                            <><Check className="w-6 h-6" /> <span>แจ้งแอดมินแล้ว</span></>
+                        ) : (
+                            <><Package className="w-6 h-6" /> <span>แจ้งของพร้อมส่ง</span></>
+                        )}
+                    </button>
+
+                    <button
                          onClick={() => handleSignClick(activeJob.docNum)}
                          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-indigo-600/30 text-lg active:scale-[0.98] transition-all"
                     >
