@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, appendSheetRow, SPREADSHEET_ID, updateSheetData } from '@/lib/googleSheets';
+import { getSheetData, appendSheetRow, updateSheetData } from '@/lib/googleSheets';
+import { TRANSACTION_SPREADSHEET_ID } from '@/lib/transactionUtils';
 
-export const dynamic = 'force-static';
+// POST route ต้องเป็น dynamic (force-static ทำให้ POST ไม่ทำงานถูกต้อง)
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
@@ -9,12 +11,12 @@ export async function POST(request: Request) {
 
     if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 });
 
-    // 1. Check if "Devices" sheet exists/has data
-    // We'll use a specific sheet for devices
-    const SHEET_NAME = 'Devices';
-    
+    // เขียนลงชีต "📱 Devices" ในสเปรดชีต TRANSACTION ให้ตรงกับที่ sendFcmToDevices อ่าน
+    // (เดิมเขียนลงชีต 'Devices' ในสเปรดชีต Product คนละที่ ทำให้ token ไม่ไปถึงตัวส่ง = เงียบหมด)
+    const SHEET_NAME = '📱 Devices';
+
     // Check if token already exists to avoid duplicates
-    const rawData = await getSheetData(SPREADSHEET_ID, `'${SHEET_NAME}'!A:C`);
+    const rawData = await getSheetData(TRANSACTION_SPREADSHEET_ID, `'${SHEET_NAME}'!A:C`);
     
     let exists = false;
     let rowIndex = -1;
@@ -30,12 +32,12 @@ export async function POST(request: Request) {
     if (exists) {
         // Update timestamp (active)
         // Row is rowIndex + 1 (1-based)
-        await updateSheetData(SPREADSHEET_ID, `'${SHEET_NAME}'!C${rowIndex + 1}`, [[timestamp]]);
+        await updateSheetData(TRANSACTION_SPREADSHEET_ID, `'${SHEET_NAME}'!C${rowIndex + 1}`, [[timestamp]]);
         return NextResponse.json({ success: true, status: 'updated' });
     } else {
         // Append new
         // A: Token, B: Platform, C: LastActive
-        await appendSheetRow(SPREADSHEET_ID, `'${SHEET_NAME}'!A:C`, [token, platform || 'unknown', timestamp]);
+        await appendSheetRow(TRANSACTION_SPREADSHEET_ID, `'${SHEET_NAME}'!A:C`, [token, platform || 'unknown', timestamp]);
         return NextResponse.json({ success: true, status: 'registered' });
     }
 
