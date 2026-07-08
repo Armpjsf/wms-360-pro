@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { notificationService } from '@/lib/notificationService';
 
 export default function PushNotificationManager() {
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function PushNotificationManager() {
           PushNotifications.addListener('pushNotificationActionPerformed', notification => {
             console.log("Push Action:", notification);
             // Handle deep linking or navigation here
+            notificationService.handleNotificationTap(notification);
           });
 
         } catch (e) {

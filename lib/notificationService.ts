@@ -94,7 +94,7 @@ class NotificationService {
     }
   }
 
-  private handleNotificationTap(notification: any) {
+  handleNotificationTap(notification: any) {
     // Navigate to the appropriate page based on notification type
     const data = notification.notification?.data || notification.data;
     if (typeof window === 'undefined') return;
