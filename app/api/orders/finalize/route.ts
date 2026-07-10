@@ -9,7 +9,7 @@ import {
     getSheetData,
     addTransaction,
     getProducts,
-    appendSheetRow
+    appendSheetData
 } from '@/lib/googleSheets';
 import { PDFDocument } from 'pdf-lib';
 
@@ -206,10 +206,13 @@ export async function POST(req: Request) {
                          today             // I: Date
                      ]);
 
-                     for (const row of archiveRows) {
-                         const cleanRow = row.map(d => (d === undefined || d === null) ? "" : d);
-                         await appendSheetRow(ssid, `'${DATA_SHEET}'!A:A`, cleanRow);
-                     }
+                     // เขียนทีเดียวทั้งชุดด้วย range เต็มความกว้าง A:I (ไม่ใช่ A:A)
+                     // range A:A ทำให้ Google Sheets append เพี้ยนตำแหน่งคอลัมน์ (ข้อมูลไปโผล่ J–Q)
+                     // ต้องระบุ range ให้ตรงจำนวนคอลัมน์ของข้อมูล (9 คอลัมน์ = A:I) เหมือน process route
+                     const cleanArchiveRows = archiveRows.map(row =>
+                         row.map(d => (d === undefined || d === null) ? "" : d)
+                     );
+                     await appendSheetData(ssid, `'${DATA_SHEET}'!A:I`, cleanArchiveRows);
                      console.log(`[Finalize] Direct sign: Wrote ${archiveRows.length} rows to คลังข้อมูล as 'กำลังดำเนินการ'`);
 
                      // Write transactions (Reduce inventory!)

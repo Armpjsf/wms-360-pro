@@ -13,7 +13,25 @@ export default function LocalNotificationManager() {
         // Robust check for Native Platform (iOS/Android)
         if (!Capacitor.isNativePlatform()) {
              console.log("Web platform detected, skipping Local Notifications setup.");
-             return; 
+             return;
+        }
+
+        // ลงทะเบียน handler ตอน "กดที่การแจ้งเตือน" ก่อนอื่นเสมอ — เดิมไม่มี handler นี้เลย
+        // ทำให้กดแจ้งเตือนประจำวันแล้วแอปเปิดขึ้นมาแต่ไม่พาไปหน้างาน
+        try {
+            await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+                console.log('Local notification tapped:', action);
+                const url = action?.notification?.extra?.url || '/mobile/jobs';
+                if (typeof window !== 'undefined') {
+                    if (window.location.pathname === url.split('?')[0]) {
+                        window.location.reload();
+                    } else {
+                        window.location.href = url;
+                    }
+                }
+            });
+        } catch (e) {
+            console.warn('Failed to attach local notification tap handler:', e);
         }
 
         try {

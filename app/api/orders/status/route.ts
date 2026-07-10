@@ -41,6 +41,11 @@ export async function GET(req: Request) {
 
     console.log(`[Status] Fetching Roll Tags and Data Sheet for Branch: ${branchId || 'HQ'} (SSID: ${ssid})...`);
 
+    // Perf: เริ่มอ่าน "คลังข้อมูล" (A:I) แบบขนานตั้งแต่ตอนนี้ ไม่รอให้ Roll Tags/ฟอร์มเสร็จก่อน
+    // เดิมอ่านแบบ serial ต่อท้าย ทำให้เป็นอีก 1 round-trip บน critical path -> การ์ด "รอดำเนินการ" ขึ้นช้า
+    const archivePromise: Promise<any[][]> = getSheetData(ssid, "'คลังข้อมูล'!A:I")
+      .catch((e) => { console.error("Error fetching archive jobs:", e); return []; });
+
     const { googleSheets } = await getGoogleSheets();
 
     // Helper: Fetch all sheet titles from USER Spreadsheet (Form Link Mail) - Optimized Cache-First
@@ -255,8 +260,8 @@ export async function GET(req: Request) {
     let recentPendingPdf: any[] = [];
 
     try {
-        const dataSheetRaw = await getSheetData(ssid, "'คลังข้อมูล'!A:I");
-        
+        const dataSheetRaw = await archivePromise; // เริ่มยิงไปแล้วด้านบนแบบขนาน
+
         if (dataSheetRaw && dataSheetRaw.length > 1) {
             const waitingMap = new Map();
             const completedMap = new Map();
@@ -280,7 +285,8 @@ export async function GET(req: Request) {
                             docNum,
                             customer,
                             date: dateStr,
-                            orderNo: row[3] || "" // Col D matches 'lastValidOrderNo' in process/route.ts
+                            orderNo: row[3] || "", // Col D matches 'lastValidOrderNo' in process/route.ts
+                            status // ส่งสถานะจริงไปด้วย ให้ mobile รู้ว่างานนี้ "จัดของเสร็จแล้ว" (รอลูกค้า) หรือยัง (กำลังดำเนินการ)
                         });
                     }
                 }

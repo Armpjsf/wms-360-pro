@@ -62,10 +62,12 @@ export async function archiveCurrentForm(customStatus?: string, signatureLink?: 
             const existingRows = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum);
 
             // 5. Write to Archive (APPEND FIRST in batch)
-            const cleanRows = dataToArchive.map(row => 
+            // ใช้ range เต็มความกว้าง A:I (ข้อมูล 9 คอลัมน์) ไม่ใช่ A:A — range A:A ทำให้ append
+            // เพี้ยนตำแหน่งคอลัมน์ ข้อมูลไปโผล่ J–Q (บั๊กเดียวกับที่แก้ใน finalize route)
+            const cleanRows = dataToArchive.map(row =>
                 row.map(d => (d === undefined || d === null) ? "" : d)
             );
-            await appendSheetData(ssid, `'${DATA_SHEET}'!A:A`, cleanRows);
+            await appendSheetData(ssid, `'${DATA_SHEET}'!A:I`, cleanRows);
 
             // 6. Remove Old Entries in a single batchClear
             if (existingRows.length > 0) {

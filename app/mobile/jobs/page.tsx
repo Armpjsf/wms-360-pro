@@ -66,6 +66,8 @@ export default function MobileJobsPage() {
   // "Goods ready" confirmation state for the active job
   const [markingReady, setMarkingReady] = useState(false);
   const [readySent, setReadySent] = useState(false);
+  // จำ docNum ที่เคย "จัดของเสร็จ" (สถานะ รอลูกค้า) แล้ว recall กลับมา — ไม่ให้โชว์ปุ่มจัดเตรียมซ้ำ (ข้อ 3)
+  const preparedDocsRef = useRef<Set<string>>(new Set());
 
   // Pull-to-refresh gesture state
   const pullStartY = useRef<number | null>(null);
@@ -125,6 +127,7 @@ export default function MobileJobsPage() {
                       price: Number(p.price) || 0,
                       stock: Number(p.stock) || 0,
                       image: p.image || '',
+                      location: p.location || '-', // ต้องเก็บ location ด้วย มิฉะนั้นรอบหน้าที่โหลดจาก cache จะได้ '-'
                       updatedAt: Date.now()
                   })));
                   console.log("[Cache] Dexie IndexedDB updated with fresh server products");
@@ -308,6 +311,12 @@ export default function MobileJobsPage() {
       // Guard: ignore repeat taps while a switch is already in flight
       if (startingDoc) return;
       if (!(await appConfirm(`สลับไปทำงาน ${docNum}?\nงานปัจจุบันจะถูกพักไว้ในคิว`))) return;
+
+      // ถ้างานที่กำลังจะ recall มีสถานะ "รอลูกค้า" (จัดของเสร็จแล้ว) จำไว้ว่าไม่ต้องโชว์ปุ่มจัดเตรียมอีก
+      const recalledJob = waitingJobs.find((j) => j.docNum === docNum);
+      if (recalledJob?.status === 'รอลูกค้า') {
+          preparedDocsRef.current.add(docNum);
+      }
 
       try {
           setStartingDoc(docNum);
@@ -581,24 +590,30 @@ export default function MobileJobsPage() {
                         )}
                     </div>
 
-                    {/* Notify admin that goods are prepared/ready to ship */}
+                    {/* Notify admin that goods are prepared/ready to ship.
+                        ถ้างานนี้จัดของเสร็จไปแล้ว (recall กลับมาแบบ รอลูกค้า) ให้แสดงว่าเสร็จแล้ว ไม่ต้องกดซ้ำ */}
+                    {(() => {
+                        const alreadyPrepared = readySent || preparedDocsRef.current.has(activeJob.docNum);
+                        return (
                     <button
                          onClick={handleMarkReady}
-                         disabled={markingReady || readySent}
+                         disabled={markingReady || alreadyPrepared}
                          className={`w-full mb-3 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 text-lg active:scale-[0.98] transition-all border-2 ${
-                             readySent
+                             alreadyPrepared
                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                  : 'bg-white border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-600/10'
                          }`}
                     >
                         {markingReady ? (
                             <div className="w-6 h-6 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin" />
-                        ) : readySent ? (
+                        ) : alreadyPrepared ? (
                             <><Check className="w-6 h-6" /> <span>แจ้งเตรียมเสร็จแล้ว</span></>
                         ) : (
                             <><Package className="w-6 h-6" /> <span>จัดเตรียมสินค้าเสร็จ</span></>
                         )}
                     </button>
+                        );
+                    })()}
 
                     <button
                          onClick={() => handleSignClick(activeJob.docNum)}

@@ -1,4 +1,3 @@
-import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 
 export interface NotificationPayload {
@@ -20,77 +19,16 @@ class NotificationService {
     }
 
     try {
-      // Request permission
-      let permStatus = await PushNotifications.checkPermissions();
-
-      if (permStatus.receive === 'prompt') {
-        permStatus = await PushNotifications.requestPermissions();
-      }
-
-      if (permStatus.receive !== 'granted') {
-        console.warn('Push notification permission not granted');
-        return;
-      }
-
-      // Register with Apple / Google to receive push via APNS/FCM
-      await PushNotifications.register();
-
-      // Listen for registration
-      await PushNotifications.addListener('registration', (token) => {
-        console.log('Push registration success, token: ' + token.value);
-        // Send token to backend
-        this.sendTokenToBackend(token.value);
-      });
-
-      // Listen for registration errors
-      await PushNotifications.addListener('registrationError', (error: any) => {
-        console.error('Error on registration: ' + JSON.stringify(error));
-      });
-
-      // Listen for push notifications
-      await PushNotifications.addListener(
-        'pushNotificationReceived',
-        (notification) => {
-          console.log('Push notification received: ', notification);
-          // Handle notification when app is in foreground
-          this.handleNotification(notification);
-        }
-      );
-
-      // Listen for notification actions
-      await PushNotifications.addListener(
-        'pushNotificationActionPerformed',
-        (notification) => {
-          console.log('Push notification action performed', notification);
-          // Handle notification tap
-          this.handleNotificationTap(notification);
-        }
-      );
-
+      // การตั้งค่า push ทั้งหมด (ขอสิทธิ์ / register / รับ token / จัดการ tap) ทำโดย
+      // <PushNotificationManager /> ซึ่ง mount แบบ global ใน app/layout.tsx เพียงที่เดียว
+      // เดิม initialize() ลงทะเบียน listener + register() ซ้ำ ทำให้:
+      //   - token ถูกส่งไป 2 endpoint (device/register + notifications/register) เกิด token ซ้ำในชีต -> แจ้งเตือนซ้ำ
+      //   - handleNotificationTap ยิงสองครั้งต่อการกด 1 ที
+      // จึงยกเลิกการตั้งค่าซ้ำที่นี่ และให้ initialize() เป็น no-op บน native (คงไว้เพื่อ backward-compat ผู้เรียกเดิม)
       this.isInitialized = true;
-      console.log('Push notifications initialized');
+      console.log('Push notifications delegated to <PushNotificationManager />');
     } catch (error) {
       console.error('Error initializing push notifications:', error);
-    }
-  }
-
-  private async sendTokenToBackend(token: string) {
-    try {
-      await fetch('/api/notifications/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-    } catch (error) {
-      console.error('Error sending token to backend:', error);
-    }
-  }
-
-  private handleNotification(notification: any) {
-    // Show local notification if app is in foreground
-    if (notification.data?.type === 'cycle_count') {
-      // You can show a custom in-app notification here
-      console.log('Cycle count notification:', notification);
     }
   }
 
