@@ -14,24 +14,27 @@ export interface PushSubscription {
 }
 
 export async function saveSubscription(sub: PushSubscription) {
-    // 1. Check if already exists (Optional, but good to avoid dupes)
-    // For MVP, just append. Or we can read and check.
-    
-    // Format: Endpoint | P256dh | Auth | Timestamp
-    const row = [
-        sub.endpoint,
-        sub.keys.p256dh,
-        sub.keys.auth,
-        new Date().toISOString()
-    ];
-    
     try {
+        // 1. Check if already exists to avoid duplicates
+        const current = await getSubscriptions();
+        const exists = current.some(existing => existing.endpoint === sub.endpoint);
+        if (exists) {
+            console.log('Subscription already exists, skipping save:', sub.endpoint);
+            return;
+        }
+
+        // Format: Endpoint | P256dh | Auth | Timestamp
+        const row = [
+            sub.endpoint,
+            sub.keys.p256dh,
+            sub.keys.auth,
+            new Date().toISOString()
+        ];
+        
         await appendSheetRow(SPREADSHEET_ID, `${SHEET_NAME}!A:D`, row);
         console.log('Saved subscription:', sub.endpoint);
     } catch (error) {
         console.error('Failed to save subscription:', error);
-        // If sheet doesn't exist, we might need to create it?
-        // Assuming user creates it or we use auto-creation logic if we had it.
     }
 }
 
@@ -85,13 +88,24 @@ export async function getSubscriptions(): Promise<PushSubscription[]> {
         const rows = await getSheetData(SPREADSHEET_ID, `${SHEET_NAME}!A:C`);
         if (!rows) return [];
         
-        return rows.map(row => ({
-            endpoint: row[0],
-            keys: {
-                p256dh: row[1],
-                auth: row[2]
+        const seen = new Set<string>();
+        const uniqueSubscriptions: PushSubscription[] = [];
+
+        for (const row of rows) {
+            const endpoint = row[0];
+            if (endpoint && !seen.has(endpoint)) {
+                seen.add(endpoint);
+                uniqueSubscriptions.push({
+                    endpoint,
+                    keys: {
+                        p256dh: row[1],
+                        auth: row[2]
+                    }
+                });
             }
-        }));
+        }
+        
+        return uniqueSubscriptions;
     } catch (error) {
         console.error('Failed to get subscriptions:', error);
         return [];
