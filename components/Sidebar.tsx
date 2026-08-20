@@ -32,6 +32,7 @@ import {
   ScanLine,
   Settings,
   ShieldAlert,
+  ShoppingBag,
   SlidersHorizontal,
   Sparkles,
   Store,
@@ -162,6 +163,7 @@ export default function Sidebar() {
       label: 'Workflows',
       accent: 'bg-amber-500',
       items: [
+        { label: 'Marketplace Hub', href: '/integrations/marketplaces', icon: ShoppingBag, tone: 'rose' },
         { label: t('menu_orders'), href: '/orders', icon: Mail, tone: 'rose' },
         { label: t('menu_jobs'), href: '/mobile/jobs', icon: Briefcase, tone: 'violet' },
         { label: t('mobile_nav_cycle_count'), href: '/mobile/cycle-count', icon: ClipboardCheck, tone: 'teal' },
