@@ -20,9 +20,12 @@ import {
   Layers,
   ArrowRight,
   TrendingUp,
+  Download,
+  FileDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as XLSX from 'xlsx';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
@@ -44,6 +47,9 @@ export default function MarketplaceIntegrationsPage() {
   const [detectedPlatform, setDetectedPlatform] = useState<MarketplacePlatform | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [parsing, setParsing] = useState(false);
+
+  // Template Modal
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   // API Config State (Future Readiness)
   const [shopeeConfig, setShopeeConfig] = useState({
@@ -110,6 +116,113 @@ export default function MarketplaceIntegrationsPage() {
   const handleCopyWebhook = (url: string) => {
     navigator.clipboard.writeText(url);
     toast.success('คัดลอก Webhook URL แล้ว!');
+  };
+
+  // Download Sample Excel Template
+  const downloadSampleTemplate = (type: 'GENERIC' | 'SHOPEE' | 'TIKTOK' | 'LAZADA') => {
+    let data: any[] = [];
+    let filename = 'Order_Import_Template.xlsx';
+
+    if (type === 'SHOPEE') {
+      filename = 'Shopee_Order_Template_Sample.xlsx';
+      data = [
+        {
+          'หมายเลขคำสั่งซื้อ': '260820ABC001',
+          'สถานะคำสั่งซื้อ': 'ที่ต้องจัดส่ง',
+          'SKU อ้างอิง': 'SKU-BOX-01',
+          'ชื่อสินค้า': 'กล่องไปรษณีย์ ฝาชน เบอร์ A (14x20x6 cm)',
+          'จำนวน': 10,
+          'ราคาขาย': 45,
+          'ชื่อผู้รับ': 'คุณสมศรี มีสุข',
+          'เบอร์โทรศัพท์': '089-999-8888',
+          'ที่อยู่จัดส่ง': '88/8 ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี',
+          'รหัสไปรษณีย์': '12120',
+          'หมายเลขพัสดุ': 'SPXTH012345678',
+        },
+        {
+          'หมายเลขคำสั่งซื้อ': '260820ABC002',
+          'สถานะคำสั่งซื้อ': 'ที่ต้องจัดส่ง',
+          'SKU อ้างอิง': 'SKU-TAPE-02',
+          'ชื่อสินค้า': 'เทปใสปิดกล่อง 2 นิ้ว 100 หลา',
+          'จำนวน': 4,
+          'ราคาขาย': 35,
+          'ชื่อผู้รับ': 'คุณสมชาย ใจดี',
+          'เบอร์โทรศัพท์': '081-234-5678',
+          'ที่อยู่จัดส่ง': '123/45 ซอย 9 แขวงบางเขน เขตสายไหม กรุงเทพมหานคร',
+          'รหัสไปรษณีย์': '10220',
+          'หมายเลขพัสดุ': 'SPXTH098765432',
+        },
+      ];
+    } else if (type === 'TIKTOK') {
+      filename = 'TikTok_Order_Template_Sample.xlsx';
+      data = [
+        {
+          'Order ID': '578912345678901234',
+          'Order Status': 'Awaiting Shipment',
+          'Seller SKU': 'TT-SKU-99',
+          'Product Name': 'ถุงบับเบิ้ลกันกระแทก 20x30 cm',
+          'Quantity': 3,
+          'Product Unit Price': 120,
+          'Recipient': 'คุณอนันต์ กิจเจริญ',
+          'Phone Number': '082-345-6789',
+          'Shipping Address': '55/1 ถนนสุขุมวิท คลองเตย กรุงเทพมหานคร',
+          'Postal Code': '10110',
+          'Tracking ID': 'JNTTH0987654321',
+        },
+      ];
+    } else if (type === 'LAZADA') {
+      filename = 'Lazada_Order_Template_Sample.xlsx';
+      data = [
+        {
+          'orderNumber': '890123456789012',
+          'sellerSku': 'LZD-SKU-77',
+          'itemName': 'ซองพลาสติกไปรษณีย์กันน้ำ เบอร์ A3',
+          'quantity': 5,
+          'unitPrice': 80,
+          'customerName': 'คุณวิภาวรรณ สดใส',
+          'shippingAddress': '99 หมู่ 3 ต.บางกระดี อ.เมือง จ.ปทุมธานี 12000',
+          'trackingCode': 'LEXTH0123456789',
+        },
+      ];
+    } else {
+      // GENERIC STANDARD
+      filename = 'WMS_Standard_Order_Template.xlsx';
+      data = [
+        {
+          'หมายเลขคำสั่งซื้อ': 'ORD-2026-001',
+          'รหัสสินค้า (SKU)': 'SKU-001',
+          'ชื่อสินค้า': 'กล่องพัสดุ เบอร์ 0',
+          'จำนวน': 5,
+          'ราคา': 120,
+          'ชื่อผู้รับ': 'คุณสมชาย ใจดี',
+          'เบอร์โทรศัพท์': '081-234-5678',
+          'ที่อยู่จัดส่ง': '123/45 ซอย 9 แขวงบางเขน เขตสายไหม กรุงเทพมหานคร',
+          'รหัสไปรษณีย์': '10220',
+          'หมายเลขพัสดุ': 'TH0123456789A',
+        },
+        {
+          'หมายเลขคำสั่งซื้อ': 'ORD-2026-002',
+          'รหัสสินค้า (SKU)': 'SKU-002',
+          'ชื่อสินค้า': 'เทปกาวปิดกล่อง',
+          'จำนวน': 2,
+          'ราคา': 70,
+          'ชื่อผู้รับ': 'คุณสมศรี มีสุข',
+          'เบอร์โทรศัพท์': '089-999-8888',
+          'ที่อยู่จัดส่ง': '88/8 ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี',
+          'รหัสไปรษณีย์': '12120',
+          'หมายเลขพัสดุ': 'TH0987654321B',
+        },
+      ];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+    XLSX.writeFile(wb, filename);
+
+    triggerHaptic('success');
+    toast.success(`ดาวน์โหลด ${filename} เรียบร้อยแล้ว!`);
+    setShowTemplateModal(false);
   };
 
   return (
@@ -186,6 +299,24 @@ export default function MarketplaceIntegrationsPage() {
         {/* TAB 1: SMART FILE IMPORTER */}
         {activeTab === 'IMPORT' && (
           <div className="space-y-6">
+            {/* Top Action Bar: Template Download */}
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <FileDown className="w-5 h-5 text-orange-600" />
+                <span className="text-xs font-bold text-slate-700">
+                  ต้องการเทมเพลตตัวอย่างสำหรับกรอกออเดอร์?
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTemplateModal(true)}
+                className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                ดาวน์โหลดเทมเพลตตัวอย่าง (.xlsx)
+              </button>
+            </div>
+
             {/* Drag and Drop Zone */}
             <div
               onDragOver={e => {
@@ -524,6 +655,110 @@ export default function MarketplaceIntegrationsPage() {
             </div>
           </div>
         )}
+
+        {/* MODAL: Template Selector */}
+        <AnimatePresence>
+          {showTemplateModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowTemplateModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                onClick={e => e.stopPropagation()}
+                className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 text-slate-900"
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 className="font-black text-lg text-slate-900 flex items-center gap-2">
+                    <Download className="w-5 h-5 text-orange-600" />
+                    เลือกรูปแบบไฟล์เทมเพลต
+                  </h3>
+                  <button
+                    onClick={() => setShowTemplateModal(false)}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    ปิด
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-500">
+                  เลือกว่าคุณต้องการดาวน์โหลดเทมเพลตมาตรฐานทั่วไป หรือตัวอย่างไฟล์ตามรูปแบบของแต่ละแพลตฟอร์ม (.xlsx):
+                </p>
+
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => downloadSampleTemplate('GENERIC')}
+                    className="w-full p-3.5 rounded-2xl border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-left transition-all flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900">1. เทมเพลตมาตรฐาน WMS 360 PRO</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        เหมาะสำหรับออเดอร์ทั่วไป, หน้าร้าน, Facebook, LINE OA
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-orange-100 text-orange-800 rounded-lg font-bold text-[10px]">
+                      .xlsx
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => downloadSampleTemplate('SHOPEE')}
+                    className="w-full p-3.5 rounded-2xl border border-orange-200 hover:bg-orange-50/40 text-left transition-all flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-orange-950">2. ตัวอย่างรูปแบบไฟล์ Shopee</div>
+                      <div className="text-[11px] text-orange-800/70 mt-0.5">
+                        โครงสร้างหัวคอลัมน์เหมือน Shopee Seller Centre
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-orange-500 text-white rounded-lg font-bold text-[10px]">
+                      Shopee
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => downloadSampleTemplate('TIKTOK')}
+                    className="w-full p-3.5 rounded-2xl border border-slate-800 hover:bg-slate-900/5 text-left transition-all flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-950">3. ตัวอย่างรูปแบบไฟล์ TikTok Shop</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        โครงสร้างหัวคอลัมน์เหมือน TikTok Seller Center
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-slate-950 text-cyan-300 rounded-lg font-bold text-[10px]">
+                      TikTok
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => downloadSampleTemplate('LAZADA')}
+                    className="w-full p-3.5 rounded-2xl border border-blue-200 hover:bg-blue-50/40 text-left transition-all flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-blue-950">4. ตัวอย่างรูปแบบไฟล์ Lazada</div>
+                      <div className="text-[11px] text-blue-800/70 mt-0.5">
+                        โครงสร้างหัวคอลัมน์เหมือน Lazada Seller Center
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-blue-600 text-white rounded-lg font-bold text-[10px]">
+                      Lazada
+                    </span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
