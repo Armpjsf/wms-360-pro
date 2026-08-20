@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bot,
   Box,
+  Boxes,
   Briefcase,
   Building2,
   ChartNoAxesCombined,
@@ -25,6 +26,7 @@ import {
   Mail,
   Menu,
   PackageCheck,
+  Printer,
   QrCode,
   ReceiptText,
   ScanLine,
@@ -171,6 +173,7 @@ export default function Sidebar() {
       accent: 'bg-teal-500',
       items: [
         { label: t('menu_inventory'), href: '/inventory', icon: Box, tone: 'teal', viewerAllowed: true },
+        { label: '2D Warehouse Map', href: '/inventory/map', icon: LayoutGrid, tone: 'teal', viewerAllowed: true },
         { label: t('menu_stock_card'), href: '/inventory/stock-card', icon: ClipboardList, tone: 'blue', viewerAllowed: true },
         { label: t('menu_transactions'), href: '/inventory/transactions', icon: History, tone: 'cyan' },
         { label: t('print_labels'), href: '/inventory/print-labels', icon: Tags, tone: 'amber' },
@@ -180,6 +183,7 @@ export default function Sidebar() {
       label: 'Operations',
       accent: 'bg-emerald-500',
       items: [
+        { label: 'Smart Wave Picking', href: '/ops/wave-picking', icon: Boxes, tone: 'amber' },
         { label: t('menu_inbound'), href: '/ops/inbound', icon: ArrowDownToLine, tone: 'emerald' },
         { label: t('menu_outbound'), href: '/ops/outbound', icon: ArrowUpFromLine, tone: 'amber' },
         { label: t('menu_damage'), href: '/ops/damage', icon: ShieldAlert, tone: 'rose' },
@@ -204,6 +208,7 @@ export default function Sidebar() {
       accent: 'bg-cyan-500',
       items: [
         { label: t('menu_po_log'), href: '/po-log', icon: FileText, tone: 'steel' },
+        { label: 'Thermal Labels (100x150)', href: '/barcode/thermal-labels', icon: Printer, tone: 'amber' },
         { label: t('menu_barcode'), href: '/barcode/generator', icon: QrCode, tone: 'blue', adminOnly: true },
         { label: t('print_labels'), href: '/barcode/print', icon: Tags, tone: 'amber', adminOnly: true },
         { label: t('scan_barcode'), href: '/barcode/scanner', icon: ScanLine, tone: 'cyan', adminOnly: true },

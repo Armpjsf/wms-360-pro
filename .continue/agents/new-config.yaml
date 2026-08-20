@@ -1,0 +1,20 @@
+name: continue-config
+version: "1.0"
+models:
+  - name: Llama 3.1 8B
+    provider: ollama
+    model: llama3.1:8b
+    roles:
+      - chat
+      - edit
+      - apply
+  - name: Qwen2.5 Coder
+    provider: ollama
+    model: qwen2.5-coder:latest
+    roles:
+      - autocomplete
+  - name: Nomic Embed
+    provider: ollama
+    model: nomic-embed-text:latest
+    roles:
+      - embed

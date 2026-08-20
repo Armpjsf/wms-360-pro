@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WMS 360 PRO — คู่มือระบบ (Diagram)</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a30; --panel2:#172241; --line:#27406e;
+    --text:#e8eefc; --muted:#9fb2d8; --accent:#4f8cff; --accent2:#38d39f;
+    --rose:#ff6b8b; --amber:#ffb454; --violet:#a78bfa; --cyan:#36cfd6;
+    --shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"Segoe UI","Sarabun",system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 600px at 70% -10%,#1a2747 0%,var(--bg) 55%);
+    color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    padding:28px 24px 14px; max-width:1180px; margin:0 auto;
+  }
+  .badge{display:inline-block; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--accent2); border:1px solid var(--line); padding:4px 10px; border-radius:999px;}
+  h1{margin:12px 0 4px; font-size:30px}
+  .sub{color:var(--muted); margin:0 0 6px; max-width:760px}
+  .stack{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+  .chip{font-size:12px; background:var(--panel2); border:1px solid var(--line);
+    color:var(--muted); padding:5px 11px; border-radius:8px}
+  nav.tabs{position:sticky; top:0; z-index:20; backdrop-filter:blur(10px);
+    background:rgba(11,16,32,.82); border-bottom:1px solid var(--line); margin-top:14px}
+  .tabsInner{max-width:1180px; margin:0 auto; display:flex; gap:4px; padding:8px 16px; overflow-x:auto}
+  .tab{appearance:none; border:0; background:transparent; color:var(--muted);
+    font-size:14px; font-weight:600; padding:10px 16px; border-radius:10px; cursor:pointer; white-space:nowrap}
+  .tab:hover{color:var(--text); background:var(--panel)}
+  .tab.active{color:#fff; background:linear-gradient(180deg,var(--accent),#2f6fe0)}
+  main{max-width:1180px; margin:0 auto; padding:22px 16px 80px}
+  .view{display:none; animation:fade .35s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+  h2.section{font-size:20px; margin:6px 0 16px; display:flex; align-items:center; gap:10px}
+  h2.section::before{content:""; width:6px; height:22px; border-radius:4px; background:linear-gradient(var(--accent),var(--accent2))}
+  .note{color:var(--muted); font-size:14px; margin:-6px 0 18px}
+
+  /* ---- Architecture layered diagram ---- */
+  .arch{display:grid; gap:14px}
+  .layer{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow)}
+  .layer h3{margin:0 0 12px; font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+  .row{display:flex; flex-wrap:wrap; gap:12px}
+  .box{flex:1 1 180px; min-width:160px; background:var(--panel2); border:1px solid var(--line);
+    border-radius:12px; padding:13px 14px; cursor:default; transition:.18s}
+  .box:hover{transform:translateY(-3px); border-color:var(--accent); box-shadow:0 10px 24px rgba(79,140,255,.18)}
+  .box .t{font-weight:700; font-size:15px}
+  .box .d{font-size:12.5px; color:var(--muted); margin-top:4px}
+  .box .tag{display:inline-block; font-size:11px; margin-top:8px; padding:2px 8px; border-radius:6px;
+    background:rgba(79,140,255,.14); color:#bcd3ff; border:1px solid rgba(79,140,255,.3)}
+  .arrowDown{display:flex; justify-content:center; color:var(--line); font-size:22px; margin:-4px 0}
+  .b-blue{border-left:3px solid var(--accent)} .b-green{border-left:3px solid var(--accent2)}
+  .b-amber{border-left:3px solid var(--amber)} .b-violet{border-left:3px solid var(--violet)}
+  .b-rose{border-left:3px solid var(--rose)} .b-cyan{border-left:3px solid var(--cyan)}
+
+  /* ---- Sitemap tree ---- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px}
+  .group{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow)}
+  .group > .gh{display:flex; align-items:center; gap:9px; font-weight:800; font-size:15px; margin-bottom:10px}
+  .dot{width:10px; height:10px; border-radius:50%}
+  .leaf{display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:8px 10px; border-radius:9px; font-size:13.5px}
+  .leaf:hover{background:var(--panel2)}
+  .leaf code{color:var(--muted); font-size:11.5px}
+  .role{font-size:10px; padding:2px 7px; border-radius:6px; white-space:nowrap}
+  .r-admin{background:rgba(255,107,139,.16); color:#ffb3c2; border:1px solid rgba(255,107,139,.35)}
+  .r-view{background:rgba(56,211,159,.14); color:#9af0cf; border:1px solid rgba(56,211,159,.32)}
+  .r-user{background:rgba(159,178,216,.12); color:#c5d3f0; border:1px solid var(--line)}
+
+  /* ---- Flow ---- */
+  .flowPick{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px}
+  .fbtn{border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    padding:9px 14px; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer}
+  .fbtn:hover{color:var(--text)}
+  .fbtn.active{background:var(--panel2); color:#fff; border-color:var(--accent)}
+  .flow{display:none}
+  .flow.active{display:block; animation:fade .3s ease}
+  .chain{display:flex; flex-wrap:wrap; align-items:stretch; gap:0}
+  .step{background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; min-width:150px; max-width:230px; flex:0 0 auto}
+  .step .n{font-size:11px; color:var(--accent2); font-weight:700}
+  .step .s{font-weight:700; font-size:14px; margin-top:2px}
+  .step .x{font-size:12px; color:var(--muted); margin-top:4px}
+  .conn{display:flex; align-items:center; color:var(--accent); font-size:24px; padding:0 6px}
+  .flowDesc{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-top:16px; color:var(--muted); font-size:14px}
+  .flowDesc b{color:var(--text)}
+  footer{max-width:1180px; margin:0 auto; padding:0 16px 60px; color:var(--muted); font-size:12.5px}
+  @media(max-width:640px){ h1{font-size:24px} .conn{transform:rotate(90deg)} }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="badge">WMS 360 PRO · System Guide</span>
+  <h1>คู่มือระบบแบบ Diagram</h1>
+  <p class="sub">ระบบจัดการคลังสินค้า (Warehouse Management System) บน Next.js — รับเข้า/จ่ายออก, สต็อก, ออเดอร์, analytics, มัลติสาขา, แจ้งเตือน, ทำงาน offline และแอปมือถือผ่าน Capacitor</p>
+  <div class="stack">
+    <span class="chip">Next.js 16 · React 19</span>
+    <span class="chip">TypeScript · Tailwind 4</span>
+    <span class="chip">Google Sheets (ฐานข้อมูลหลัก)</span>
+    <span class="chip">Dexie / IndexedDB (offline)</span>
+    <span class="chip">NextAuth</span>
+    <span class="chip">Firebase + web-push</span>
+    <span class="chip">Capacitor Android</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tabsInner">
+    <button class="tab active" data-view="arch">สถาปัตยกรรมระบบ</button>
+    <button class="tab" data-view="site">แผนผังหน้าจอ (Sitemap)</button>
+    <button class="tab" data-view="flow">Data Flow / กระบวนการ</button>
+  </div>
+</nav>
+
+<main>
+  <!-- ============ ARCHITECTURE ============ -->
+  <section class="view active" id="arch">
+    <h2 class="section">สถาปัตยกรรมระบบ (Architecture)</h2>
+    <p class="note">ระบบเป็น 5 ชั้นหลัก จากผู้ใช้ลงไปถึงแหล่งข้อมูล — เลื่อนเมาส์บนกล่องเพื่อเน้น</p>
+    <div class="arch">
+
+      <div class="layer">
+        <h3>1 · Client / หน้าจอผู้ใช้</h3>
+        <div class="row">
+          <div class="box b-blue"><div class="t">เว็บ (App Router)</div><div class="d">React 19 + Tailwind, หน้าจอทั้งหมดใน <code>app/</code></div><span class="tag">PWA + Service Worker</span></div>
+          <div class="box b-violet"><div class="t">แอปมือถือ</div><div class="d">Capacitor Android ห่อเว็บเป็นแอป + scan กล้อง</div><span class="tag">android/</span></div>
+          <div class="box b-green"><div class="t">Offline Cache</div><div class="d">Dexie/IndexedDB เก็บสินค้า + คิวธุรกรรมตอนเน็ตหลุด</div><span class="tag">useOfflineSync</span></div>
+        </div>
+      </div>
+      <div class="arrowDown">▼</div>
+
+      <div class="layer">
+        <h3>2 · Auth & Access Control</h3>
+        <div class="row">
+          <div class="box b-amber"><div class="t">NextAuth (Credentials)</div><div class="d">Login ตรวจกับ <code>Users</code> sheet, รหัสผ่าน bcrypt</div></div>
+          <div class="box b-amber"><div class="t">Middleware</div><div class="d">กั้น route ตาม role ก่อนเข้าหน้า</div></div>
+          <div class="box b-rose"><div class="t">Roles</div><div class="d">Super Admin · Admin · Manager · User · Viewer</div></div>
+        </div>
+      </div>
+      <div class="arrowDown">▼</div>
+
+      <div class="layer">
+        <h3>3 · API Routes (เซิร์ฟเวอร์)</h3>
+        <div class="row">
+          <div class="box b-blue"><div class="t">Operations</div><div class="d">inbound · outbound · damage · cycle-count</div></div>
+          <div class="box b-blue"><div class="t">Orders</div><div class="d">process · finalize · fulfillment · recall · archive</div></div>
+          <div class="box b-cyan"><div class="t">Analytics</div><div class="d">summary · profit · aging · forecast · reports</div></div>
+          <div class="box b-violet"><div class="t">AI</div><div class="d">reorder · slotting · anomaly</div></div>
+          <div class="box b-green"><div class="t">Notifications</div><div class="d">push · subscribe · send-daily · cron</div></div>
+          <div class="box b-amber"><div class="t">Admin / Debug</div><div class="d">users · rules · audit · data-quality</div></div>
+        </div>
+      </div>
+      <div class="arrowDown">▼</div>
+
+      <div class="layer">
+        <h3>4 · Service / Logic (lib/)</h3>
+        <div class="row">
+          <div class="box b-green"><div class="t">googleSheets.ts</div><div class="d">อ่าน/เขียนข้อมูลหลัก + cache</div></div>
+          <div class="box b-blue"><div class="t">fifo.ts · pricing.ts</div><div class="d">คำนวณต้นทุน FIFO และราคา</div></div>
+          <div class="box b-violet"><div class="t">forecast · anomaly · slotting</div><div class="d">โมดูล AI/วิเคราะห์</div></div>
+          <div class="box b-amber"><div class="t">auditTrail · automation</div><div class="d">log ทุกการเปลี่ยนแปลง + กฎอัตโนมัติ</div></div>
+          <div class="box b-cyan"><div class="t">pdfService · emailParser</div><div class="d">สร้างเอกสาร PDF, อ่านอีเมลออเดอร์</div></div>
+        </div>
+      </div>
+      <div class="arrowDown">▼</div>
+
+      <div class="layer">
+        <h3>5 · External Data & Services</h3>
+        <div class="row">
+          <div class="box b-green"><div class="t">Google Sheets</div><div class="d">ฐานข้อมูลหลัก: สินค้า, ธุรกรรม, ผู้ใช้, สาขา</div></div>
+          <div class="box b-blue"><div class="t">Google Drive</div><div class="d">เก็บเอกสารส่งของ / รูปภาพ</div></div>
+          <div class="box b-cyan"><div class="t">Gmail API</div><div class="d">ดึงอีเมลออเดอร์เข้ามา parse</div></div>
+          <div class="box b-rose"><div class="t">Firebase + Web Push</div><div class="d">ส่ง push notification</div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ SITEMAP ============ -->
+  <section class="view" id="site">
+    <h2 class="section">แผนผังหน้าจอ (Sitemap)</h2>
+    <p class="note">จัดกลุ่มตามเมนูจริงใน Sidebar — ป้ายสีบอกสิทธิ์การเข้าถึง:
+      <span class="role r-admin">Admin เท่านั้น</span>
+      <span class="role r-view">Viewer ดูได้</span>
+      <span class="role r-user">User ทั่วไป</span>
+    </p>
+    <div class="grid" id="siteGrid"></div>
+  </section>
+
+  <!-- ============ FLOW ============ -->
+  <section class="view" id="flow">
+    <h2 class="section">Data Flow / กระบวนการงาน</h2>
+    <p class="note">เลือกกระบวนการเพื่อดูลำดับการไหลของข้อมูล</p>
+    <div class="flowPick" id="flowPick"></div>
+    <div id="flowBody"></div>
+  </section>
+</main>
+
+<footer>
+  สร้างจากการอ่านโค้ดจริงในโปรเจค <code>nextjs-wms</code> (WMS 360 PRO) · โครงสร้างอ้างอิง <code>app/</code>, <code>lib/</code>, <code>components/Sidebar.tsx</code>
+</footer>
+
+<script>
+// ---- Tabs ----
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.view).classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+});
+
+// ---- Sitemap data ----
+const groups = [
+  {name:'Command', color:'#4f8cff', items:[
+    {l:'Dashboard', h:'/dashboard', r:'view'},
+    {l:'HQ Command Center', h:'/hq', r:'view'},
+  ]},
+  {name:'Workflows', color:'#a78bfa', items:[
+    {l:'Orders', h:'/orders', r:'user'},
+    {l:'Jobs (มือถือ)', h:'/mobile/jobs', r:'user'},
+    {l:'Cycle Count (มือถือ)', h:'/mobile/cycle-count', r:'user'},
+    {l:'Scan Barcode (มือถือ)', h:'/mobile/scan', r:'user'},
+  ]},
+  {name:'Inventory', color:'#38d39f', items:[
+    {l:'Inventory', h:'/inventory', r:'view'},
+    {l:'Stock Card', h:'/inventory/stock-card', r:'view'},
+    {l:'Transactions', h:'/inventory/transactions', r:'user'},
+    {l:'Print Labels', h:'/inventory/print-labels', r:'user'},
+  ]},
+  {name:'Operations', color:'#ffb454', items:[
+    {l:'Inbound (รับเข้า)', h:'/ops/inbound', r:'user'},
+    {l:'Outbound (จ่ายออก)', h:'/ops/outbound', r:'user'},
+    {l:'Damage (ของเสีย)', h:'/ops/damage', r:'user'},
+    {l:'Cycle Count', h:'/ops/cycle-count', r:'user'},
+  ]},
+  {name:'Analytics', color:'#36cfd6', items:[
+    {l:'Analytics', h:'/analytics', r:'user'},
+    {l:'Summary Report', h:'/analytics/summary', r:'user'},
+    {l:'Aging', h:'/analytics/aging', r:'user'},
+    {l:'Forecast', h:'/analytics/forecast', r:'user'},
+    {l:'Profit', h:'/analytics/profit', r:'user'},
+    {l:'Reports', h:'/analytics/reports', r:'view'},
+    {l:'Inventory Report', h:'/analytics/reports/inventory', r:'view'},
+  ]},
+  {name:'Documents & Tools', color:'#9fb2d8', items:[
+    {l:'PO Log', h:'/po-log', r:'user'},
+    {l:'Barcode Generator', h:'/barcode/generator', r:'admin'},
+    {l:'Barcode Print', h:'/barcode/print', r:'admin'},
+    {l:'Scanner', h:'/barcode/scanner', r:'admin'},
+  ]},
+  {name:'Administration', color:'#ff6b8b', items:[
+    {l:'Admin', h:'/admin', r:'admin'},
+    {l:'Users', h:'/admin/users', r:'admin'},
+    {l:'Branches', h:'/admin/branches', r:'admin'},
+    {l:'Rules', h:'/admin/rules', r:'admin'},
+    {l:'Audit Trail', h:'/admin/audit-trail', r:'admin'},
+    {l:'Data Quality', h:'/admin/data-quality', r:'admin'},
+    {l:'Slotting', h:'/admin/slotting', r:'admin'},
+    {l:'Labels', h:'/admin/labels', r:'admin'},
+    {l:'Smart Restock (AI)', h:'/ai-reorder', r:'admin'},
+  ]},
+];
+const roleTag = {admin:'<span class="role r-admin">Admin</span>', view:'<span class="role r-view">Viewer</span>', user:'<span class="role r-user">User</span>'};
+document.getElementById('siteGrid').innerHTML = groups.map(g=>`
+  <div class="group">
+    <div class="gh"><span class="dot" style="background:${g.color}"></span>${g.name}</div>
+    ${g.items.map(i=>`<div class="leaf"><span>${i.l}<br><code>${i.h}</code></span>${roleTag[i.r]}</div>`).join('')}
+  </div>`).join('');
+
+// ---- Flows ----
+const flows = [
+  {key:'inbound', name:'รับเข้า (Inbound)', steps:[
+    {s:'หน้า Inbound', x:'กรอก SKU/จำนวน/เอกสาร'},
+    {s:'POST /api/inbound', x:'ตรวจข้อมูลด้วย Zod'},
+    {s:'getProducts()', x:'ดึงสินค้าจาก Sheets หาต้นทุน'},
+    {s:"addTransaction('IN')", x:'เขียนธุรกรรมเข้า Sheets'},
+    {s:'Audit Log', x:'บันทึกประวัติการรับเข้า'},
+  ], desc:'ผู้ใช้กรอกรายการรับเข้า → API ตรวจความถูกต้องด้วย <b>Zod</b> (รองรับ batch / วันหมดอายุ / owner) → ดึงข้อมูลสินค้าเพื่อใช้ต้นทุน → เขียนลง Google Sheets ผ่าน <b>addTransaction</b> → บันทึก audit log'},
+
+  {key:'outbound', name:'จ่ายออก (Outbound)', steps:[
+    {s:'หน้า Outbound', x:'เลือกสินค้า + จำนวน'},
+    {s:'POST /api/outbound', x:'แปลงเป็น TransactionItem'},
+    {s:'writeTransactionData', x:'ตัดสต็อก FIFO ลง Sheets'},
+    {s:'checkStockRules', x:'ตรวจกฎ automation'},
+    {s:'Audit + Alert', x:'แจ้งเตือนถ้าสต็อกต่ำ'},
+  ], desc:'จ่ายสินค้าออก → คำนวณตัดสต็อกแบบ <b>FIFO</b> และเขียนลง Sheets → ระบบ <b>automation</b> ตรวจว่าสต็อกคงเหลือต่ำกว่าเกณฑ์หรือไม่ → ถ้าใช่จะสร้าง alert/notification + บันทึก audit log'},
+
+  {key:'order', name:'ออเดอร์ (Order Fulfillment)', steps:[
+    {s:'Gmail / Email Parser', x:'ดึงอีเมลออเดอร์'},
+    {s:'หน้า Orders', x:'ตรวจ/แก้รายการ'},
+    {s:'/api/orders/process', x:'เริ่มจัดของ'},
+    {s:'/api/orders/finalize', x:'ปิดงาน + ตัดสต็อก'},
+    {s:'PDF + Notify', x:'สร้างเอกสาร → Drive + แจ้งเตือน'},
+  ], desc:'อีเมลออเดอร์ถูก <b>parse</b> เข้าระบบ → เจ้าหน้าที่ตรวจและจัดของ → finalize เพื่อตัดสต็อกและสร้างเอกสารส่งของ (PDF) เก็บใน Google Drive → ส่ง push notification แจ้งสถานะ'},
+
+  {key:'offline', name:'ทำงาน Offline & Sync', steps:[
+    {s:'ผู้ใช้ทำธุรกรรม', x:'เน็ตหลุด/มือถือ'},
+    {s:'Dexie Queue', x:'เก็บใน pendingTransactions'},
+    {s:'useOfflineSync', x:'เฝ้าดูสถานะออนไลน์'},
+    {s:'เน็ตกลับมา', x:'ส่งคิวเข้า API'},
+    {s:'Google Sheets', x:'บันทึกจริง + ล้างคิว'},
+  ], desc:'เมื่อออฟไลน์ ธุรกรรมจะถูกเก็บในคิว <b>Dexie/IndexedDB</b> (สถานะ PENDING) → hook <b>useOfflineSync</b> เฝ้าดู เมื่อกลับมาออนไลน์จะส่งคิวเข้า API ทีละรายการ → เขียนลง Sheets แล้วล้างคิว'},
+
+  {key:'cycle', name:'ตรวจนับสต็อก (Cycle Count)', steps:[
+    {s:'Cron / กำหนดการ', x:'/api/cron/cycle-count'},
+    {s:'มือถือ Cycle Count', x:'สแกน + นับจริง'},
+    {s:'POST /api/cycle-count', x:'ส่งผลนับ'},
+    {s:'เทียบกับ Sheets', x:'หาส่วนต่าง'},
+    {s:'ปรับ + Audit', x:'อัปเดตสต็อก + log'},
+  ], desc:'งานตรวจนับถูกสร้างโดย cron → พนักงานนับจริงผ่านแอปมือถือ → ระบบเทียบกับยอดใน Sheets หาส่วนต่าง → ปรับยอดและบันทึก audit log'},
+];
+
+const pick = document.getElementById('flowPick');
+const body = document.getElementById('flowBody');
+pick.innerHTML = flows.map((f,i)=>`<button class="fbtn ${i===0?'active':''}" data-k="${f.key}">${f.name}</button>`).join('');
+body.innerHTML = flows.map((f,i)=>`
+  <div class="flow ${i===0?'active':''}" id="fl-${f.key}">
+    <div class="chain">
+      ${f.steps.map((s,j)=>`
+        <div class="step"><div class="n">ขั้น ${j+1}</div><div class="s">${s.s}</div><div class="x">${s.x}</div></div>
+        ${j<f.steps.length-1?'<div class="conn">➜</div>':''}
+      `).join('')}
+    </div>
+    <div class="flowDesc">${f.desc}</div>
+  </div>`).join('');
+
+pick.querySelectorAll('.fbtn').forEach(b=>{
+  b.onclick=()=>{
+    pick.querySelectorAll('.fbtn').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.flow').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('fl-'+b.dataset.k).classList.add('active');
+  };
+});
+</script>
+</body>
+</html>
