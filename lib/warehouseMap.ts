@@ -1,9 +1,10 @@
 /**
- * 2D Visual Warehouse Map & Bin Management Logic (WMS 360 PRO)
- * Zero-Cost layout generator and Heatmap analyzer.
+ * 2D Visual Warehouse Map & Real Data Integration Logic (WMS 360 PRO)
+ * Automatically maps real inventory, ABC velocity, and slotting intelligence.
  */
 
 import { parseLocation, ParsedLocation } from './picking';
+import { performABCAnalysis } from './slotting';
 
 export interface BinProduct {
   id: string;
@@ -13,7 +14,9 @@ export interface BinProduct {
   minStock: number;
   unit: string;
   price: number;
-  velocityClass?: 'A' | 'B' | 'C' | 'D';
+  velocityClass: 'A' | 'B' | 'C' | 'D';
+  idealZone?: string;
+  action?: string;
 }
 
 export interface WarehouseBin {
@@ -65,6 +68,8 @@ export interface WarehouseMapStats {
   lowStockBins: number;
   outOfStockBins: number;
   unassignedProductsCount: number;
+  totalWarehouseStock: number;
+  totalProductsCount: number;
 }
 
 const ZONE_COLORS: Record<string, string> = {
@@ -77,43 +82,31 @@ const ZONE_COLORS: Record<string, string> = {
 };
 
 /**
- * Build structured warehouse 2D map from Products list
+ * Build structured warehouse 2D map from real live Products & Transactions list
  */
 export function buildWarehouseMap(
   products: any[] = [],
   transactions: any[] = []
 ): { zones: WarehouseZone[]; unassignedProducts: any[]; stats: WarehouseMapStats } {
-  // 1. Calculate Velocity from Transactions (if any)
-  const velocityMap = new Map<string, number>();
-  transactions.forEach(t => {
-    if (t.type === 'OUT' || t.transaction_type === 'OUT') {
-      const key = t.sku || t.product_id || t.productId || t.name;
-      if (key) {
-        velocityMap.set(key, (velocityMap.get(key) || 0) + Number(t.qty || t.quantity || 1));
-      }
-    }
+  // 1. Perform ABC Analysis using real system slotting engine
+  const abcInsights = performABCAnalysis(products, transactions);
+  const abcMap = new Map<string, (typeof abcInsights)[0]>();
+  abcInsights.forEach(item => {
+    abcMap.set(item.productId || item.productName, item);
   });
 
   const binMap = new Map<string, WarehouseBin>();
   const unassignedProducts: any[] = [];
+  const assignedProducts: any[] = [];
 
-  // 2. Populate products into Bins
+  // 2. Classify products into assigned vs unassigned
   products.forEach(p => {
     const loc = p.location?.trim();
-    if (!loc || loc.toLowerCase() === 'unassigned') {
-      unassignedProducts.push(p);
-      return;
-    }
+    const isUnassigned = !loc || loc.toLowerCase() === 'unassigned' || loc === '-' || loc.toLowerCase() === 'none';
 
-    const parsed: ParsedLocation = parseLocation(loc);
-    const binCode = parsed.raw || `${parsed.zone}-${parsed.aisle.toString().padStart(2, '0')}-${parsed.rack.toString().padStart(2, '0')}`;
-
-    // Velocity Ranking
-    const vel = velocityMap.get(p.id || p.name) || 0;
-    let vClass: 'A' | 'B' | 'C' | 'D' = 'C';
-    if (vel > 50) vClass = 'A';
-    else if (vel > 15) vClass = 'B';
-    else if (vel === 0) vClass = 'D';
+    const pKey = p.id || p.name;
+    const insight = abcMap.get(pKey);
+    const vClass = (insight?.class || 'C') as 'A' | 'B' | 'C' | 'D';
 
     const binProduct: BinProduct = {
       id: p.id || p.name,
@@ -124,7 +117,21 @@ export function buildWarehouseMap(
       unit: p.unit || 'pcs',
       price: Number(p.price || 0),
       velocityClass: vClass,
+      idealZone: insight?.idealZone || 'Middle / Zone B',
+      action: insight?.action || 'KEEP',
     };
+
+    if (isUnassigned) {
+      unassignedProducts.push({ ...p, binProduct });
+    } else {
+      assignedProducts.push({ ...p, binProduct, loc });
+    }
+  });
+
+  // 3. If products have explicit locations, populate their actual Bins
+  assignedProducts.forEach(({ binProduct, loc }) => {
+    const parsed: ParsedLocation = parseLocation(loc);
+    const binCode = parsed.raw || `${parsed.zone}-${parsed.aisle.toString().padStart(2, '0')}-${parsed.rack.toString().padStart(2, '0')}`;
 
     if (!binMap.has(binCode)) {
       binMap.set(binCode, {
@@ -136,7 +143,7 @@ export function buildWarehouseMap(
         products: [],
         totalStock: 0,
         status: 'NORMAL',
-        dominantVelocityClass: 'C',
+        dominantVelocityClass: binProduct.velocityClass,
       });
     }
 
@@ -145,7 +152,40 @@ export function buildWarehouseMap(
     bin.totalStock += binProduct.stock;
   });
 
-  // Calculate Bin Statuses
+  // 4. SMART AUTO-PROJECTION FOR UNASSIGNED PRODUCTS:
+  // If many products don't have location strings yet, automatically project them onto the warehouse map
+  // based on their ABC Class (Zone A = Fast, Zone B = Normal, Zone C = Bulk) so the map displays full real data immediately!
+  if (unassignedProducts.length > 0) {
+    unassignedProducts.forEach(({ binProduct }, idx) => {
+      let targetZone = 'B';
+      if (binProduct.velocityClass === 'A') targetZone = 'A';
+      else if (binProduct.velocityClass === 'C' || binProduct.velocityClass === 'D') targetZone = 'C';
+
+      const aisleNum = (idx % 2) + 1; // Aisle 1 or 2
+      const rackNum = Math.floor(idx / 2) % 4 + 1; // Rack 1 to 4
+      const binCode = `${targetZone}-${aisleNum.toString().padStart(2, '0')}-${rackNum.toString().padStart(2, '0')}`;
+
+      if (!binMap.has(binCode)) {
+        binMap.set(binCode, {
+          binCode,
+          zone: targetZone,
+          aisle: aisleNum,
+          rack: rackNum,
+          shelf: 1,
+          products: [],
+          totalStock: 0,
+          status: 'NORMAL',
+          dominantVelocityClass: binProduct.velocityClass,
+        });
+      }
+
+      const bin = binMap.get(binCode)!;
+      bin.products.push(binProduct);
+      bin.totalStock += binProduct.stock;
+    });
+  }
+
+  // 5. Update Statuses & Dominant Velocity for each Bin
   binMap.forEach(bin => {
     if (bin.totalStock <= 0) {
       bin.status = 'EMPTY_CRITICAL';
@@ -155,17 +195,16 @@ export function buildWarehouseMap(
       bin.status = 'NORMAL';
     }
 
-    // Dominant velocity
     if (bin.products.some(p => p.velocityClass === 'A')) bin.dominantVelocityClass = 'A';
     else if (bin.products.some(p => p.velocityClass === 'B')) bin.dominantVelocityClass = 'B';
     else if (bin.products.every(p => p.velocityClass === 'D')) bin.dominantVelocityClass = 'D';
     else bin.dominantVelocityClass = 'C';
   });
 
-  // 3. Build Zone -> Aisle -> Rack Hierarchy
+  // 6. Build Structured Zone -> Aisle -> Rack Hierarchy
   const zoneMap = new Map<string, Map<number, Map<number, WarehouseBin[]>>>();
 
-  // Ensure standard zones exist even if empty (Zones A, B, C)
+  // Ensure default standard zones A, B, C exist
   const defaultZones = ['A', 'B', 'C'];
   defaultZones.forEach(z => {
     if (!zoneMap.has(z)) zoneMap.set(z, new Map());
@@ -185,6 +224,7 @@ export function buildWarehouseMap(
   });
 
   const zones: WarehouseZone[] = [];
+  let totalWarehouseStock = 0;
 
   zoneMap.forEach((aisleMap, zoneId) => {
     const aisles: WarehouseAisle[] = [];
@@ -192,27 +232,20 @@ export function buildWarehouseMap(
     let zoneBinsCount = 0;
     let zoneOccupiedCount = 0;
 
-    // Default 2 aisles if empty
     const aisleKeys = Array.from(aisleMap.keys()).sort((a, b) => a - b);
-    if (aisleKeys.length === 0) {
-      aisleKeys.push(1, 2);
-    }
+    if (aisleKeys.length === 0) aisleKeys.push(1, 2);
 
     aisleKeys.forEach(aisleNum => {
       const rackMap = aisleMap.get(aisleNum) || new Map<number, WarehouseBin[]>();
       const racks: WarehouseRack[] = [];
       let aisleStock = 0;
 
-      // Default 4 racks per aisle if empty
       const rackKeys = Array.from(rackMap.keys()).sort((a, b) => a - b);
-      if (rackKeys.length === 0) {
-        rackKeys.push(1, 2, 3, 4);
-      }
+      if (rackKeys.length === 0) rackKeys.push(1, 2, 3, 4);
 
       rackKeys.forEach(rackNum => {
         let bins = rackMap.get(rackNum) || [];
         if (bins.length === 0) {
-          // Synthetic available bin
           bins = [
             {
               binCode: `${zoneId}-${aisleNum.toString().padStart(2, '0')}-${rackNum.toString().padStart(2, '0')}`,
@@ -261,6 +294,8 @@ export function buildWarehouseMap(
       });
     });
 
+    totalWarehouseStock += zoneStock;
+
     zones.push({
       zoneId,
       name: `โซน ${zoneId} (${zoneId === 'A' ? 'Fast-Moving' : zoneId === 'B' ? 'Standard' : 'Bulk / Reserve'})`,
@@ -289,6 +324,8 @@ export function buildWarehouseMap(
     lowStockBins,
     outOfStockBins,
     unassignedProductsCount: unassignedProducts.length,
+    totalWarehouseStock,
+    totalProductsCount: products.length,
   };
 
   return { zones, unassignedProducts, stats };

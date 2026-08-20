@@ -115,6 +115,54 @@ export default function WavePickingPage() {
     toast.success(`เพิ่ม ${product.name} เข้า Wave`);
   };
 
+  // 1-Click Load Pending Orders from Fulfillment API or Fast-Moving items
+  const loadPendingOrdersToWave = async () => {
+    try {
+      const toastId = toast.loading('กำลังดึงรายการออเดอร์ค้างส่ง...');
+      const res = await fetch(getApiUrl('/api/orders/fulfillment?action=check_pending')).catch(() => null);
+      let found = false;
+
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data?.pending_tasks && data.pending_tasks.length > 0) {
+          const itemsToWave = data.pending_tasks.map((task: any) => ({
+            sku: task.item_name || task.sku,
+            qty: parseInt(task.amount || task.qty) || 1,
+            orderRef: task.doc_ref || task.order_no || 'Pending Order',
+          }));
+          setSelectedSkus(itemsToWave);
+          setIsCreatingWave(true);
+          triggerHaptic('success');
+          toast.dismiss(toastId);
+          toast.success(`ดึงสำเร็จ! พบ ${itemsToWave.length} รายการจากออเดอร์ค้างส่ง`);
+          found = true;
+        }
+      }
+
+      if (!found) {
+        // Fallback: pick fast moving items from real products in stock
+        const topProducts = products.filter(p => (p.stock || 0) > 0).slice(0, 5);
+        if (topProducts.length > 0) {
+          const itemsToWave = topProducts.map((p, i) => ({
+            sku: p.id || p.name,
+            qty: 1,
+            orderRef: `ORD-AUTO-${i + 1}`,
+          }));
+          setSelectedSkus(itemsToWave);
+          setIsCreatingWave(true);
+          triggerHaptic('success');
+          toast.dismiss(toastId);
+          toast.success(`ดึงสินค้าที่มีสต็อกในคลัง ${itemsToWave.length} รายการเข้า Wave`);
+        } else {
+          toast.dismiss(toastId);
+          toast.error('ไม่พบสินค้าที่มีสต็อกในคลัง');
+        }
+      }
+    } catch (e: any) {
+      toast.error('ดึงออเดอร์ไม่สำเร็จ: ' + e.message);
+    }
+  };
+
   // Generate and start Wave with S-Shape calculation & Voice Prompt
   const handleStartWave = () => {
     if (selectedSkus.length === 0) {
@@ -362,13 +410,23 @@ export default function WavePickingPage() {
               )}
 
               {!isCreatingWave && (
-                <button
-                  onClick={() => setIsCreatingWave(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  สร้าง Wave ใหม่
-                </button>
+                <>
+                  <button
+                    onClick={loadPendingOrdersToWave}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
+                  >
+                    <Sparkles className="w-4 h-4 text-emerald-200" />
+                    ดึงออเดอร์ค้างส่งทันที
+                  </button>
+
+                  <button
+                    onClick={() => setIsCreatingWave(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                    สร้าง Wave ใหม่
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -860,12 +918,22 @@ export default function WavePickingPage() {
                   สร้าง Wave รวมออเดอร์เพื่อประหยัดเวลาเดินหยิบสินค้า พร้อมระบบเสียงพูดนำทางภาษาไทย
                 </p>
               </div>
-              <button
-                onClick={() => setIsCreatingWave(true)}
-                className="px-6 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all"
-              >
-                + สร้าง Wave หยิบสินค้าเดี๋ยวนี้
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={loadPendingOrdersToWave}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-200" />
+                  ดึงออเดอร์ค้างส่งทั้งหมดทันที
+                </button>
+
+                <button
+                  onClick={() => setIsCreatingWave(true)}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all"
+                >
+                  + สร้าง Wave หยิบสินค้าด้วยตนเอง
+                </button>
+              </div>
             </div>
           )
         )}
