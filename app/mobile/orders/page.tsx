@@ -115,8 +115,9 @@ export default function MobileOrdersPage() {
     post('/api/orders/recall', { docNum }, `recall-${docNum}`);
   };
   const handleClear = async () => {
+    if (!activeForm) return;
     if (!(await appConfirm('ปิด/จัดเก็บงานที่กำลังทำอยู่?'))) return;
-    post('/api/orders/archive', {}, 'clear');
+    post('/api/orders/archive', { docNum: activeForm.docNum }, 'clear');
   };
 
   const ptr = usePullToRefresh(fetchStatus);

@@ -12,6 +12,7 @@ import {
     appendSheetData
 } from '@/lib/googleSheets';
 import { PDFDocument } from 'pdf-lib';
+import { withFormLock, restoreOrderToForm, archiveCurrentForm, lockErrorStatus } from '@/lib/orderUtils';
 
 const FORM_SHEET = "ส่งสินค้า";
 const DATA_SHEET = "คลังข้อมูล";
@@ -43,7 +44,18 @@ export async function POST(req: Request) {
     // Resolver for Multi-Branch Isolation
     const { resolveSpreadsheetId, addDeliveryHistory } = await import('@/lib/googleSheets');
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
-    
+
+    return await withFormLock(ssid, async () => {
+    // งานที่จะเซ็นต้องอยู่บนฟอร์มก่อนสร้าง PDF — ถ้าไม่ใช่ ให้ดึงขึ้นฟอร์มก่อน
+    // (เดิมจะสร้าง PDF จากงานอะไรก็ตามที่ค้างบนฟอร์ม แล้วปิดงานผิดใบ)
+    if (!/^RT\d+$/i.test(docNum!)) {
+        const onForm = String((await getSheetData(ssid, `'${FORM_SHEET}'!G3:G3`))?.[0]?.[0] || '').trim();
+        if (onForm !== docNum) {
+            console.log(`[Finalize] ${docNum} not on form (current: ${onForm || '-'}). Restoring...`);
+            await restoreOrderToForm(docNum!, ssid);
+        }
+    }
+
     // --- Pre-fetch data for Delivery History & Active Job check in parallel ---
     const [custNameData, ordersData, itemsData, qtyData, activeCheck] = await Promise.all([
         getSheetData(ssid, `'${FORM_SHEET}'!F6`),
@@ -119,6 +131,10 @@ export async function POST(req: Request) {
         
         if (sourceInfo) {
              console.log(`[Finalize] Found job in ${sourceInfo.sheet}. Promoting to ${FORM_SHEET}...`);
+             // เก็บงานที่ค้างบนฟอร์มกลับคลังข้อมูลก่อน (คงสถานะเดิม) ไม่ให้ถูกเขียนทับหาย
+             if (currentActiveDoc) {
+                 await archiveCurrentForm(undefined, undefined, ssid);
+             }
              
              // Extract Data from Roll Tag
              const rtData = sourceInfo.data;
@@ -212,7 +228,7 @@ export async function POST(req: Request) {
                      const cleanArchiveRows = archiveRows.map(row =>
                          row.map(d => (d === undefined || d === null) ? "" : d)
                      );
-                     await appendSheetData(ssid, `'${DATA_SHEET}'!A:I`, cleanArchiveRows);
+                     await appendSheetData(ssid, `'${DATA_SHEET}'!A:I`, cleanArchiveRows, 'INSERT_ROWS');
                      console.log(`[Finalize] Direct sign: Wrote ${archiveRows.length} rows to คลังข้อมูล as 'กำลังดำเนินการ'`);
 
                      // Write transactions (Reduce inventory!)
@@ -400,7 +416,7 @@ export async function POST(req: Request) {
     const { findSheetTitle } = await import('@/lib/googleSheets');
     const actualDataSheet = await findSheetTitle(ssid, ["คลังข้อมูล", "Archive", "Data"], "คลังข้อมูล");
     
-    const rowIndices = await findAllRowIndices(ssid, actualDataSheet, 0, docNum);
+    const rowIndices = await findAllRowIndices(ssid, actualDataSheet, 0, docNum!);
     console.log(`[Finalize] Found ${rowIndices.length} rows to update in ${actualDataSheet}:`, rowIndices);
     
     if (rowIndices.length === 0) {
@@ -452,10 +468,11 @@ export async function POST(req: Request) {
             'Content-Disposition': `inline; filename="${encodeURIComponent(pdfName)}"`
         }
     });
+    });
 
   } catch (error: any) {
     console.error("Finalize Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: error.message }, { status: lockErrorStatus(error), headers: corsHeaders });
   }
 }
 

@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
+import { getSheetData, resolveSpreadsheetId } from '@/lib/googleSheets';
+import {
+    withFormLock,
+    archiveCurrentForm,
+    setDocsStatus,
+    lockErrorStatus,
+    FORM_SHEET,
+    STATUS_PREPARED,
+} from '@/lib/orderUtils';
 
 export const dynamic = 'force-dynamic';
-
-const FORM_SHEET = "ส่งสินค้า";
-const DATA_SHEET = "คลังข้อมูล";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -11,55 +17,49 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// "จัดสินค้าเสร็จ" -> สถานะงานเป็น "รอลูกค้า"
+// body: { docNum } | { docNums: [...] } — ต้องระบุงานเสมอ
+// (เดิมไม่รับ docNum แล้วไปปิดงานที่อยู่ใน G3 ตอนนั้น ซึ่งอาจเป็นงานใหม่ที่แอดมินเพิ่งกดเข้ามา)
+// ไม่ระบุงาน = รูปแบบเก่า (คิวออฟไลน์ค้างในเครื่อง) -> ใช้งานที่อยู่บนฟอร์ม
 export async function POST(request: Request) {
   try {
-    const { branchId } = await request.json().catch(() => ({}));
+    const body = await request.json().catch(() => ({}));
+    const { branchId } = body;
+    const requested: string[] = (Array.isArray(body.docNums) ? body.docNums : body.docNum ? [body.docNum] : [])
+      .map((d: any) => String(d || '').trim())
+      .filter(Boolean);
 
-    const { resolveSpreadsheetId, getSheetData, findAllRowIndices, getGoogleSheets } = await import('@/lib/googleSheets');
-    const { clearFormSheet } = await import('@/lib/orderUtils');
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
 
-    // 1. "จัดสินค้าเสร็จ" -> อัปเดตสถานะของงานที่ active ในคลังข้อมูลเป็น "รอลูกค้า"
-    //    (เดิม route นี้แค่ล้างฟอร์ม ไม่แตะสถานะ ทำให้งานค้างที่ "กำลังดำเนินการ"/"กำลังแก้ไข" ตลอด = ข้อ 5)
-    try {
-      const dNum = await getSheetData(ssid, `${FORM_SHEET}!G3`);
-      const docNum = dNum?.[0]?.[0];
-      if (docNum && String(docNum).trim() !== "") {
-        const rowIndices = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum);
-        if (rowIndices.length > 0) {
-          const { googleSheets, auth } = await getGoogleSheets();
-          await googleSheets.spreadsheets.values.batchUpdate({
-            auth: auth as any,
-            spreadsheetId: ssid,
-            requestBody: {
-              valueInputOption: "USER_ENTERED",
-              data: rowIndices.map((idx) => ({
-                range: `'${DATA_SHEET}'!G${idx}`,
-                values: [["รอลูกค้า"]],
-              })),
-            },
-          });
-          console.log(`[Archive] Marked ${rowIndices.length} rows of ${docNum} as 'รอลูกค้า'`);
-        } else {
-          console.warn(`[Archive] No คลังข้อมูล rows found for ${docNum} to mark 'รอลูกค้า'`);
-        }
+    const result = await withFormLock(ssid, async () => {
+      const active = String((await getSheetData(ssid, `${FORM_SHEET}!G3`))?.[0]?.[0] || '').trim();
+      const targets = requested.length > 0 ? Array.from(new Set(requested)) : (active ? [active] : []);
+
+      const updated: string[] = [];
+      // งานที่อยู่บนฟอร์ม: เก็บกลับคลังข้อมูล (รวมที่แก้ในฟอร์ม) + ล้างฟอร์ม
+      if (active && targets.includes(active)) {
+        await archiveCurrentForm(STATUS_PREPARED, undefined, ssid);
+        updated.push(active);
       }
-    } catch (statusErr) {
-      // อย่าให้การอัปเดตสถานะล้มเหลวมาบล็อกการล้างฟอร์ม (งานยังต้องถูกเคลียร์ออกจากจอ)
-      console.error("[Archive] Failed to update status to 'รอลูกค้า':", statusErr);
-    }
+      // งานอื่นๆ: เปลี่ยนสถานะในแถวเดิม ไม่แตะฟอร์ม
+      const others = targets.filter((d) => d !== active);
+      const res = others.length > 0
+        ? await setDocsStatus(ssid, others, STATUS_PREPARED)
+        : { updated: [], notFound: [], skipped: [] };
 
-    // 2. ล้างฟอร์มงานที่ทำอยู่ (ไม่ล้าง Roll Tag source — process จัดการเองแล้ว
-    //    การล้างทั้งสอง tag จะทำลาย Roll Tag อื่นที่ยังไม่ได้ประมวลผล)
-    await clearFormSheet(ssid);
+      return { updated: [...updated, ...res.updated], notFound: res.notFound, skipped: res.skipped };
+    });
 
-    return NextResponse.json({ success: true }, { headers: corsHeaders });
+    console.log(`[Archive] Marked prepared:`, result);
+    return NextResponse.json({ success: true, ...result }, { headers: corsHeaders });
   } catch (error: any) {
     console.error("Archive API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: error.message }, { status: lockErrorStatus(error), headers: corsHeaders });
   }
 }
 
 export async function OPTIONS() {
     return NextResponse.json({}, { headers: corsHeaders });
 }
+
+export const maxDuration = 60;

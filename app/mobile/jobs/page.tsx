@@ -3,7 +3,7 @@
 import { getApiUrl } from "@/lib/config";
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Package, User, RefreshCw, X, Check, Wifi, WifiOff, Play, LogOut } from 'lucide-react';
+import { MapPin, Package, User, RefreshCw, X, Check, Wifi, WifiOff, Play, LogOut, ChevronDown, CheckCheck } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Skeleton } from "@/components/ui/Skeleton";
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
@@ -63,8 +63,10 @@ export default function MobileJobsPage() {
   // Tracks which job is currently being switched to (guards double-taps)
   const [startingDoc, setStartingDoc] = useState<string | null>(null);
 
-  // "Goods ready" confirmation state for the active job
-  const [markingReady, setMarkingReady] = useState(false);
+  // "Goods ready" confirmation state (active job, a queued job, or "all")
+  const [markingReady, setMarkingReady] = useState<string | null>(null);
+  // งานในคิวที่กางดูรายการสินค้าอยู่ (หยิบของได้โดยไม่ต้องสลับงาน)
+  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [readySent, setReadySent] = useState(false);
   // จำ docNum ที่เคย "จัดของเสร็จ" (สถานะ รอลูกค้า) แล้ว recall กลับมา — ไม่ให้โชว์ปุ่มจัดเตรียมซ้ำ (ข้อ 3)
   const preparedDocsRef = useRef<Set<string>>(new Set());
@@ -257,47 +259,78 @@ export default function MobileJobsPage() {
       setReadySent(false);
   }, [activeJob?.docNum]);
 
-  // --- Prep done: notify admins AND clear the form (job moves to the
-  // recall/waiting queue, still recallable until the customer signs) ---
-  const handleMarkReady = async () => {
-      if (markingReady || !activeJob) return;
-      if (!(await appConfirm('ยืนยันว่าจัดเตรียมสินค้าเสร็จ?\nงานจะย้ายไปคิว "รอรับ" (เรียกกลับมาให้ลูกค้าเซ็นได้ตลอด)'))) return;
+  const orderTextOf = (job: any): string => {
+      const orders: string[] = job.orderNos?.length
+          ? job.orderNos
+          : Array.from(new Set<string>((job.items || []).map((i: any) => String(i.orderNo || '').trim()).filter(Boolean)));
+      return orders.length ? orders.join(', ') : job.docNum;
+  };
+
+  const isPrepared = (job: any) =>
+      job.status === 'รอลูกค้า' || job.archiveStatus === 'รอลูกค้า' || preparedDocsRef.current.has(job.docNum);
+
+  // --- Prep done: ระบุเลขงานทุกครั้ง (1 งาน หรือหลายงานพร้อมกัน) ---
+  // เดิมส่งค่าว่างไป server แล้ว server ปิดงานที่อยู่บนฟอร์มตอนนั้น ซึ่งอาจไม่ใช่งานที่พนักงานกด
+  const markPrepared = async (jobs: any[], key: string, confirmText: string) => {
+      if (markingReady || jobs.length === 0) return;
+      if (!(await appConfirm(confirmText))) return;
+
+      const docNums = jobs.map((j) => j.docNum);
+      const orderText = jobs.map(orderTextOf).join(', ');
+      const customer = Array.from(new Set(jobs.map((j) => j.customer).filter(Boolean))).join(', ');
+      const readyPayload = { docNum: docNums.join(', '), orderText, customer };
+
       try {
-          setMarkingReady(true);
-          const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
-          const orderText = orders.length ? orders.join(', ') : activeJob.docNum;
-
-          // 1. Notify admins
-          await fetch(getApiUrl('/api/orders/ready'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ docNum: activeJob.docNum, orderText, customer: activeJob.customer })
-          });
-
-          // 2. Clear the active form -> job stays in คลังข้อมูล and appears in the
-          // waiting/recall queue until it gets signed & finalized
+          setMarkingReady(key);
           const res = await fetch(getApiUrl('/api/orders/archive'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({})
+              body: JSON.stringify({ docNums })
           });
-          if (!res.ok) throw new Error('failed');
+          if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              appAlert(err.error || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
+              return;
+          }
 
-          await fetchJobs(); // active clears; job shows up in the recall queue
+          docNums.forEach((d) => preparedDocsRef.current.add(d));
+          if (activeJob && docNums.includes(activeJob.docNum)) setReadySent(true);
+
+          // แจ้งแอดมินหลังบันทึกสถานะสำเร็จแล้วเท่านั้น
+          fetch(getApiUrl('/api/orders/ready'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(readyPayload)
+          }).catch(() => {});
+
+          await fetchJobs();
       } catch (e: any) {
           // Network drop mid-action: queue both steps for replay when back online
           if (!navigator.onLine || e instanceof TypeError) {
-              const orders = Array.from(new Set((activeJob.items || []).map((i: any) => i.orderNo).filter(Boolean)));
-              const orderText = orders.length ? orders.join(', ') : activeJob.docNum;
-              enqueue('/api/orders/ready', { docNum: activeJob.docNum, orderText, customer: activeJob.customer });
-              enqueue('/api/orders/archive', {});
+              enqueue('/api/orders/archive', { docNums });
+              enqueue('/api/orders/ready', readyPayload);
               appAlert('ออฟไลน์อยู่ — บันทึกไว้แล้ว จะส่งอัตโนมัติเมื่อกลับมาออนไลน์');
           } else {
               appAlert('ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
           }
       } finally {
-          setMarkingReady(false);
+          setMarkingReady(null);
       }
+  };
+
+  const handleMarkReady = () => {
+      if (!activeJob) return;
+      markPrepared([activeJob], activeJob.docNum,
+          `ยืนยันว่าจัดเตรียมสินค้าเสร็จ?
+Order ${orderTextOf(activeJob)}`);
+  };
+
+  const toggleExpanded = (docNum: string) => {
+      setExpandedDocs((prev) => {
+          const next = new Set(prev);
+          if (next.has(docNum)) next.delete(docNum); else next.add(docNum);
+          return next;
+      });
   };
 
   // --- Signature Logic ---
@@ -593,18 +626,18 @@ export default function MobileJobsPage() {
                     {/* Notify admin that goods are prepared/ready to ship.
                         ถ้างานนี้จัดของเสร็จไปแล้ว (recall กลับมาแบบ รอลูกค้า) ให้แสดงว่าเสร็จแล้ว ไม่ต้องกดซ้ำ */}
                     {(() => {
-                        const alreadyPrepared = readySent || preparedDocsRef.current.has(activeJob.docNum);
+                        const alreadyPrepared = readySent || isPrepared(activeJob);
                         return (
                     <button
                          onClick={handleMarkReady}
-                         disabled={markingReady || alreadyPrepared}
+                         disabled={!!markingReady || alreadyPrepared}
                          className={`w-full mb-3 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 text-lg active:scale-[0.98] transition-all border-2 ${
                              alreadyPrepared
                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                  : 'bg-white border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-600/10'
                          }`}
                     >
-                        {markingReady ? (
+                        {markingReady === activeJob.docNum || markingReady === 'all' ? (
                             <div className="w-6 h-6 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin" />
                         ) : alreadyPrepared ? (
                             <><Check className="w-6 h-6" /> <span>แจ้งเตรียมเสร็จแล้ว</span></>
@@ -638,6 +671,29 @@ export default function MobileJobsPage() {
         )}
 
         {/* --- Waiting/Paused Queue (From Archive) --- */}
+        {(() => {
+            // งานที่ยังจัดไม่เสร็จทั้งหมด (งานบนฟอร์ม + งานในคิว) — ให้กดจัดเสร็จทีเดียวได้
+            const unprepared = [
+                ...(activeJob && !readySent && !isPrepared(activeJob) ? [activeJob] : []),
+                ...waitingJobs.filter((j) => !isPrepared(j)),
+            ];
+            if (unprepared.length < 2) return null;
+            return (
+                <button
+                    onClick={() => markPrepared(unprepared, 'all',
+                        `ยืนยันว่าจัดเตรียมสินค้าเสร็จทั้งหมด ${unprepared.length} งาน?\nOrder ${unprepared.map(orderTextOf).join(', ')}`)}
+                    disabled={!!markingReady}
+                    className="w-full mb-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 text-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                    {markingReady === 'all' ? (
+                        <div className="w-6 h-6 border-2 border-emerald-200 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <><CheckCheck className="w-6 h-6" /> <span>จัดเสร็จทั้งหมด ({unprepared.length} งาน)</span></>
+                    )}
+                </button>
+            );
+        })()}
+
         {waitingJobs.length > 0 && (
             <motion.div
                 initial={{ opacity: 0 }}
@@ -646,31 +702,86 @@ export default function MobileJobsPage() {
             >
                 <h2 className="text-slate-400 font-bold uppercase tracking-wider text-xs mb-4 px-2">{t('ready_to_process')} ({waitingJobs.length})</h2>
                 <div className="space-y-3">
-                    {waitingJobs.map((job) => (
-                        <div key={job.docNum} className="bg-white border-l-4 border-l-orange-400 border-y border-r border-slate-200 rounded-r-2xl p-4 shadow-sm flex justify-between items-center">
-                            <div>
-                                <div className="font-black text-slate-900 text-lg tracking-tight">{job.orderNo || job.docNum}</div>
-                                <div className="text-[11px] text-slate-400 font-semibold mb-0.5">{t('doc_no')}: {job.docNum}</div>
-                                <div className="text-xs text-slate-500 flex items-center gap-1">
-                                    <User className="w-3 h-3" /> {job.customer}
+                    {waitingJobs.map((job) => {
+                        const prepared = isPrepared(job);
+                        const expanded = expandedDocs.has(job.docNum);
+                        return (
+                        <div key={job.docNum} className={`bg-white border-l-4 ${prepared ? 'border-l-emerald-400' : 'border-l-orange-400'} border-y border-r border-slate-200 rounded-r-2xl p-4 shadow-sm`}>
+                            <div className="flex justify-between items-center gap-3">
+                                <button type="button" onClick={() => toggleExpanded(job.docNum)} className="text-left min-w-0 flex-1">
+                                    <div className="font-black text-slate-900 text-lg tracking-tight truncate">{orderTextOf(job)}</div>
+                                    <div className="text-[11px] text-slate-400 font-semibold mb-0.5">{t('doc_no')}: {job.docNum}</div>
+                                    <div className="text-xs text-slate-500 flex items-center gap-1">
+                                        <User className="w-3 h-3" /> {job.customer}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                        {prepared ? (
+                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">จัดเสร็จแล้ว</span>
+                                        ) : (
+                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">กำลังจัด</span>
+                                        )}
+                                        {job.items?.length > 0 && (
+                                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-0.5">
+                                                {job.items.length} รายการ
+                                                <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                                <div className="flex flex-col gap-2 shrink-0">
+                                    {!prepared && (
+                                        <button
+                                            onClick={() => markPrepared([job], job.docNum, `ยืนยันว่าจัดเตรียมสินค้าเสร็จ?\nOrder ${orderTextOf(job)}`)}
+                                            disabled={!!markingReady}
+                                            className="bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-60 min-h-[44px] px-4 py-2 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                        >
+                                            {markingReady === job.docNum || markingReady === 'all' ? (
+                                                <div className="w-5 h-5 border-2 border-emerald-200 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <><Package className="w-4 h-4" /> จัดเสร็จ</>
+                                            )}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => handleStartJob(job.docNum)}
+                                        disabled={startingDoc === job.docNum}
+                                        className="bg-orange-100 text-orange-700 hover:bg-orange-200 disabled:opacity-60 min-h-[44px] px-4 py-2 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                    >
+                                        {startingDoc === job.docNum ? (
+                                            <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-700 rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Play className="w-4 h-4 fill-orange-700" />
+                                                {prepared ? 'เรียกมาเซ็น' : t('start_btn')}
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => handleStartJob(job.docNum)}
-                                disabled={startingDoc === job.docNum}
-                                className="bg-orange-100 text-orange-700 hover:bg-orange-200 disabled:opacity-60 min-h-[48px] px-6 py-3 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center gap-2 shrink-0"
-                            >
-                                {startingDoc === job.docNum ? (
-                                    <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-700 rounded-full animate-spin" />
-                                ) : (
-                                    <>
-                                        <Play className="w-4 h-4 fill-orange-700" />
-                                        {t('start_btn')}
-                                    </>
-                                )}
-                            </button>
+
+                            {expanded && job.items?.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                                    {job.items.map((it: any, idx: number) => {
+                                        const details = productDetails.get(it.itemCode);
+                                        return (
+                                            <div key={idx} className="flex items-center gap-3 text-xs">
+                                                <span className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold shrink-0">{idx + 1}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-slate-800 font-bold truncate">{it.itemCode}</div>
+                                                    <div className="text-slate-400 text-[10px]">Ref: {it.orderNo}</div>
+                                                </div>
+                                                <span className="text-slate-900 font-black">x{it.qty}</span>
+                                                <span className="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-bold text-[10px] flex items-center gap-0.5">
+                                                    <MapPin className="w-3 h-3" />{details?.location || '-'}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </motion.div>
         )}

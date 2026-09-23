@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, PO_SPREADSHEET_ID } from '@/lib/googleSheets';
+import { getSheetData, resolveSpreadsheetId } from '@/lib/googleSheets';
+import { readArchive, rowNumbersOf } from '@/lib/orderUtils';
 
 const FORM_SHEET = "ส่งสินค้า";
 
-export const dynamic = 'force-static';
+// ต้องเป็น dynamic — เดิม force-static ทำให้ได้ข้อความที่แคชไว้ตั้งแต่ตอน build
+export const dynamic = 'force-dynamic';
 
 function formatItemCode(itemStr: string): string {
     if (!itemStr) return "";
@@ -24,20 +26,38 @@ function formatItemCode(itemStr: string): string {
     }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const docNum = searchParams.get('docNum');
+    const ssid = await resolveSpreadsheetId(searchParams.get('branchId'), 'doc');
+
     // Read Data needed for Message
     // F6 = Customer Name
     // C10:C25 = Order Nos
     // D10:D25 = Item Codes
     // G10:G25 = Quantities
 
-    const [custNameData, ordersData, itemsData, qtyData] = await Promise.all([
-        getSheetData(PO_SPREADSHEET_ID, `${FORM_SHEET}!F6`),
-        getSheetData(PO_SPREADSHEET_ID, `${FORM_SHEET}!C10:C25`),
-        getSheetData(PO_SPREADSHEET_ID, `${FORM_SHEET}!D10:D25`),
-        getSheetData(PO_SPREADSHEET_ID, `${FORM_SHEET}!G10:G25`)
-    ]);
+    // ?docNum= อ่านจากคลังข้อมูล (งานไหนก็ได้) / ไม่ระบุ = งานที่อยู่บนฟอร์ม
+    let custNameData: any[][], ordersData: any[][], itemsData: any[][], qtyData: any[][];
+    if (docNum) {
+        const data = await readArchive(ssid);
+        const rows = rowNumbersOf(data, docNum).map((r) => data[r - 1]);
+        if (rows.length === 0) {
+            return NextResponse.json({ error: `Job ${docNum} not found` }, { status: 404 });
+        }
+        custNameData = [[rows[0][1]]];
+        ordersData = rows.map((r) => [r[3] || '']);
+        itemsData = rows.map((r) => [r[4] || '']);
+        qtyData = rows.map((r) => [r[5] ?? '']);
+    } else {
+        [custNameData, ordersData, itemsData, qtyData] = await Promise.all([
+            getSheetData(ssid, `${FORM_SHEET}!F6`),
+            getSheetData(ssid, `${FORM_SHEET}!C10:C25`),
+            getSheetData(ssid, `${FORM_SHEET}!D10:D25`),
+            getSheetData(ssid, `${FORM_SHEET}!G10:G25`)
+        ]);
+    }
 
     const customerName = custNameData?.[0]?.[0] || "Unknown";
 

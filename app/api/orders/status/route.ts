@@ -15,9 +15,10 @@ const ROLL_TAG_1 = "Roll Tag1";
 const ROLL_TAG_2 = "Roll Tag2";
 const FORM_SHEET = "ส่งสินค้า";
 
-// Simple in-memory cache to prevent flickering
-let lastGoodResponse: any = null;
-let lastFetchTime = 0;
+// Short in-memory cache (per spreadsheet/branch) for rapid double-clicks / page transitions.
+// ห้ามใช้ตัวแปรเดียวรวมทุกสาขา และห้ามคืนข้อมูลเก่าแทนผลว่าง — ทำให้หน้าจอค้างงานที่ปิดไปแล้ว
+const STATUS_CACHE_MS = 4000;
+const statusCache = new Map<string, { response: any; time: number }>();
 
 // Global Sheet Titles Cache to avoid redundant slow Sheets API calls (1 hour TTL)
 const sheetTitlesCache = new Map<string, { titles: string[], timestamp: number }>();
@@ -33,10 +34,9 @@ export async function GET(req: Request) {
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
 
     // 0. High Performance: Intercept with a 4-second in-memory cache to solve rapid double-clicks or mobile page transition latency
-    const cacheAge = Date.now() - lastFetchTime;
-    if (!bypassCache && lastGoodResponse && cacheAge < 4000) {
-        console.log(`[Status API] Instant Cache hit! Returning cached status (${Math.round(cacheAge/1000)}s old)`);
-        return NextResponse.json(lastGoodResponse, { headers: corsHeaders });
+    const cached = statusCache.get(ssid);
+    if (!bypassCache && cached && Date.now() - cached.time < STATUS_CACHE_MS) {
+        return NextResponse.json(cached.response, { headers: corsHeaders });
     }
 
     console.log(`[Status] Fetching Roll Tags and Data Sheet for Branch: ${branchId || 'HQ'} (SSID: ${ssid})...`);
@@ -191,7 +191,7 @@ export async function GET(req: Request) {
     }
 
     // 2. Check Active Form (ส่งสินค้า sheet)
-    let activeForm = null;
+    let activeForm: any = null;
     const docNumRaw = formCheck && formCheck[0] ? formCheck[0][0] : null;
     
     if (docNumRaw && docNumRaw.trim() !== "") {
@@ -263,7 +263,7 @@ export async function GET(req: Request) {
         const dataSheetRaw = await archivePromise; // เริ่มยิงไปแล้วด้านบนแบบขนาน
 
         if (dataSheetRaw && dataSheetRaw.length > 1) {
-            const waitingMap = new Map();
+            const waitingMap = new Map<string, any>();
             const completedMap = new Map();
             const recentMap = new Map();
             
@@ -272,23 +272,30 @@ export async function GET(req: Request) {
                 const row = dataSheetRaw[i];
                 if (!row || row.length < 7) continue;
                 
-                const docNum = row[0];
+                const docNum = String(row[0] || "").trim();
                 const customer = row[1];
                 const status = row[6];
                 const link = row[7]; // Col H (PDF Link)
                 const dateStr = row[8] || "";
                 
-                // Active / Waiting for Loading / Waiting for Customer (Unify visibility)
-                if ((status === "กำลังดำเนินการ" || status === "รอลูกค้า") && docNum) {
-                    if (!waitingMap.has(docNum)) {
-                        waitingMap.set(docNum, {
+                // งานที่ยังไม่ปิด: กำลังดำเนินการ / รอลูกค้า / กำลังแก้ไข (สถานะเก่าจาก recall —
+                // เดิมไม่แสดงที่ไหนเลย งานจึง "หาย" จากทั้งแอดมินและพนักงาน)
+                if ((status === "กำลังดำเนินการ" || status === "รอลูกค้า" || status === "กำลังแก้ไข") && docNum) {
+                    let job = waitingMap.get(docNum);
+                    if (!job) {
+                        job = {
                             docNum,
                             customer,
                             date: dateStr,
-                            orderNo: row[3] || "", // Col D matches 'lastValidOrderNo' in process/route.ts
-                            status // ส่งสถานะจริงไปด้วย ให้ mobile รู้ว่างานนี้ "จัดของเสร็จแล้ว" (รอลูกค้า) หรือยัง (กำลังดำเนินการ)
-                        });
+                            orderNo: "",
+                            orderNos: [] as string[],
+                            // "รอลูกค้า" = จัดสินค้าเสร็จแล้ว, อื่นๆ = ยังจัดอยู่
+                            status: status === "รอลูกค้า" ? "รอลูกค้า" : "กำลังดำเนินการ",
+                            items: [] as any[],
+                        };
+                        waitingMap.set(docNum, job);
                     }
+                    job.items.push({ seq: Number(row[2]) || 0, orderNo: row[3] || "", itemCode: row[4] || "", qty: row[5] ?? "" });
                 }
                 // Pending PDF (Recent) - NEW
                 else if (status === "รอ PDF" && docNum) {
@@ -322,7 +329,18 @@ export async function GET(req: Request) {
                 }
             }
             
-            waitingJobs = Array.from(waitingMap.values());
+            const activeDoc = activeForm ? String(activeForm.docNum).trim() : "";
+            for (const job of waitingMap.values()) {
+                job.items.sort((a: any, b: any) => a.seq - b.seq);
+                job.orderNos = Array.from(new Set(job.items.map((i: any) => String(i.orderNo).trim()).filter(Boolean)));
+                job.orderNo = job.orderNos.join(', ');
+                if (activeForm && job.docNum === activeDoc) {
+                    // งานที่อยู่บนฟอร์ม แสดงในการ์ด "กำลังทำ" อย่างเดียว ไม่ซ้ำในคิว
+                    activeForm.archiveStatus = job.status;
+                    activeForm.status = job.status; // เดิม hardcode "รอลูกค้า" ทำให้ดูเหมือนจัดเสร็จแล้วทุกงาน
+                }
+            }
+            waitingJobs = Array.from(waitingMap.values()).filter((j) => j.docNum !== activeDoc);
             completedJobs = Array.from(completedMap.values());
             recentPendingPdf = Array.from(recentMap.values());
         }
@@ -339,31 +357,10 @@ export async function GET(req: Request) {
         recent: recentPendingPdf
     };
 
-    if (bypassCache) {
-        console.log("[Status] Returning uncached automation response");
-        return NextResponse.json(response, { headers: corsHeaders });
+    if (!bypassCache) {
+        statusCache.set(ssid, { response, time: Date.now() });
     }
-
-    // Cache the response if it has meaningful data
-    const hasData = pendingTasks.length > 0 || activeForm || waitingJobs.length > 0;
-    
-    if (hasData) {
-        lastGoodResponse = response;
-        lastFetchTime = Date.now();
-        console.log("[Status] Returning fresh data + cached");
-        return NextResponse.json(response, { headers: corsHeaders });
-    } else {
-        // No data in current fetch
-        // If we have recent cached data (< 30 seconds old), return it instead of empty
-        const cacheAge = Date.now() - lastFetchTime;
-        if (lastGoodResponse && cacheAge < 30000) {
-            console.log(`[Status] Returning cached data (${Math.round(cacheAge/1000)}s old) to prevent flicker`);
-            return NextResponse.json(lastGoodResponse, { headers: corsHeaders });
-        } else {
-            console.log("[Status] No data and no recent cache - returning empty");
-            return NextResponse.json(response, { headers: corsHeaders });
-        }
-    }
+    return NextResponse.json(response, { headers: corsHeaders });
 
   } catch (error: any) {
     console.error("🔥 [API ERROR] /api/orders/status FAILED:", error);

@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData, updateSheetData, clearSheetRange } from '@/lib/googleSheets';
+import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
-import { writeTransactionData } from '@/lib/transactionUtils';
 import { getThaiDateString } from '@/lib/dateUtils';
+import { withFormLock, archiveCurrentForm, clearFormSheet, lockErrorStatus, STATUS_IN_PROGRESS } from '@/lib/orderUtils';
 
 const ROLL_TAG_1 = "Roll Tag1";
 const ROLL_TAG_2 = "Roll Tag2";
 const FORM_SHEET = "ส่งสินค้า";
 const DATA_SHEET = "คลังข้อมูล";
-// Concurrency-lock cell on the form sheet (unused by the form itself).
-const LOCK_CELL = `${FORM_SHEET}!Z1`;
-const LOCK_TTL_MS = 60000; // ignore locks older than this (crashed processes)
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -22,8 +19,6 @@ const corsHeaders = {
 };
 
 export async function POST(request: Request) {
-  let lockToken: string | null = null;
-  let lockSsId: string | null = null;
   try {
     const body = await request.json();
     const { tagId, branchId } = body; // 'RT1' or 'RT2'
@@ -35,48 +30,37 @@ export async function POST(request: Request) {
 
     console.log(`[Process] Starting for Tag: ${tagId}, Branch: ${branchId || 'HQ'}, SS_ID: ${ssId}`);
 
-    // 0. Concurrency lock — the active form (G3) is a single slot. Claim a lock
-    // cell then read it back; only the writer whose token survives proceeds, so
-    // two people processing at once can't clobber each other's job.
-    const myToken = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const held = (await getSheetData(ssId, LOCK_CELL))?.[0]?.[0];
-    if (held) {
-        const heldTs = parseInt(String(held).split('-')[0], 10);
-        if (!isNaN(heldTs) && Date.now() - heldTs < LOCK_TTL_MS) {
-            return NextResponse.json(
-                { error: 'มีการเปิดงานอื่นอยู่ กรุณารอสักครู่แล้วลองใหม่' },
-                { status: 409, headers: corsHeaders }
-            );
-        }
-    }
-    await updateSheetData(ssId, LOCK_CELL, [[myToken]]);
-    if ((await getSheetData(ssId, LOCK_CELL))?.[0]?.[0] !== myToken) {
-        return NextResponse.json(
-            { error: 'มีการเปิดงานอื่นอยู่ กรุณารอสักครู่แล้วลองใหม่' },
-            { status: 409, headers: corsHeaders }
-        );
-    }
-    lockToken = myToken;
-    lockSsId = ssId;
-
+    // 0. ฟอร์ม (G3) มีได้ทีละงาน — ใช้ lock กลางร่วมกับ recall/restore/archive/finalize
+    return await withFormLock(ssId, async () => {
     // 1. Determine Source Sheet dynamically
     const tagNum = tagId.replace("RT", "").trim();
     const sourceSheet = `Roll Tag${tagNum}`;
+
+    // 1.5 Roll Tag ว่าง = ถูกจัดการไปแล้ว (เช่นกดซ้ำ/อีกเครื่องกดก่อน) — ห้ามสร้างเอกสารเปล่า
+    const rollTagData = await getSheetData(ssId, `${sourceSheet}!A4:E17`);
+    const hasItems = Array.from({ length: 9 }, (_, i) => rollTagData?.[i + 5]?.[1])
+        .some((code) => String(code || '').trim() !== '');
+    if (!hasItems) {
+        return NextResponse.json(
+            { error: `${sourceSheet} ไม่มีรายการแล้ว (อาจถูกจัดการไปแล้ว) กรุณารีเฟรช` },
+            { status: 409, headers: corsHeaders }
+        );
+    }
 
     // 2. Check "Form" Availability First
     const formCheck = await getSheetData(ssId, `${FORM_SHEET}!G3:G3`);
     if (formCheck && formCheck[0] && formCheck[0][0]) {
         console.log(`[Process] Form Busy (Doc: ${formCheck[0][0]}). Auto-Archiving...`);
-        // Form is busy -> Auto-Archive to "Waiting" list
-        const { archiveCurrentForm } = await import('@/lib/orderUtils');
+        // เก็บงานเดิมกลับคลังข้อมูลโดย "คงสถานะเดิม" (ยังไม่ได้หยิบ = กำลังดำเนินการ)
         const archiveRes = await archiveCurrentForm(undefined, undefined, ssId);
         if (!archiveRes.success) {
              throw new Error("Failed to auto-archive current job: " + archiveRes.error);
         }
+    } else {
+        await clearFormSheet(ssId); // กันเศษข้อมูลค้างในแถว 19-25 / ลายเซ็นเก่า
     }
 
-    // 3. Read Roll Tag Data
-    const rollTagData = await getSheetData(ssId, `${sourceSheet}!A4:E17`);
+    // 3. Read Roll Tag Data (อ่านไว้แล้วด้านบน)
     const custIdData = [[rollTagData?.[0]?.[1] || ""]];
     const custNameData = [[rollTagData?.[1]?.[1] || ""]];
     const itemRows = Array.from({ length: 9 }, (_, index) => rollTagData?.[index + 5] || []);
@@ -126,7 +110,7 @@ export async function POST(request: Request) {
             dataToArchive.push([
                 newDocId, custName, currentSequence, 
                 lastValidOrderNo, itemCode, qtyVal, 
-                "กำลังดำเนินการ", "", today
+                STATUS_IN_PROGRESS, "", today
             ]);
             
             // Form Data
@@ -152,7 +136,7 @@ export async function POST(request: Request) {
             const cleanRows = dataToArchive.map(row =>
                 row.map(d => (d === undefined || d === null) ? "" : d)
             );
-            await appendSheetData(ssId, `'${DATA_SHEET}'!A:I`, cleanRows);
+            await appendSheetData(ssId, `'${DATA_SHEET}'!A:I`, cleanRows, 'INSERT_ROWS');
             console.log(`[Process] ✅ Successfully wrote ${dataToArchive.length} rows to คลังข้อมูล`);
         } catch (err) {
             console.error(`[Process] ❌ Failed to write to คลังข้อมูล:`, err);
@@ -277,21 +261,14 @@ export async function POST(request: Request) {
         }
     }, { headers: corsHeaders });
 
+    });
+
   } catch (error: any) {
     console.error("Order Process Error:", error);
     return NextResponse.json(
-        { error: error.message, stack: error.stack },
-        { status: 500, headers: corsHeaders }
+        { error: error.message },
+        { status: lockErrorStatus(error), headers: corsHeaders }
     );
-  } finally {
-    // Release the lock only if we still hold it
-    if (lockToken && lockSsId) {
-        try {
-            if ((await getSheetData(lockSsId, LOCK_CELL))?.[0]?.[0] === lockToken) {
-                await clearSheetRange(lockSsId, LOCK_CELL);
-            }
-        } catch { /* ignore release errors */ }
-    }
   }
 }
 

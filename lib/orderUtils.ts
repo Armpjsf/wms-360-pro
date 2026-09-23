@@ -1,299 +1,291 @@
-import { 
-    getSheetData, 
-    updateSheetData, 
-    clearSheetRange, 
-    appendSheetRow,
+import {
+    getSheetData,
+    updateSheetData,
+    clearSheetRange,
     appendSheetData,
-    findAllRowIndices,
-    getGoogleSheets,
-    PO_SPREADSHEET_ID 
+    batchUpdateSheetData,
+    batchClearSheetRanges,
+    deleteSheetRows,
+    PO_SPREADSHEET_ID
 } from '@/lib/googleSheets';
 import { getThaiDateString } from '@/lib/dateUtils';
 
-const FORM_SHEET = "ส่งสินค้า";
-const DATA_SHEET = "คลังข้อมูล";
+export const FORM_SHEET = "ส่งสินค้า";
+export const DATA_SHEET = "คลังข้อมูล";
+const FORM_FIRST_ROW = 10;
+const FORM_MAX_ROWS = 16; // B10:G25
 
-export async function archiveCurrentForm(customStatus?: string, signatureLink?: string, spreadsheetId?: string) {
-    try {
-        const ssid = spreadsheetId || PO_SPREADSHEET_ID;
-        // 1. Get Active Job Data from Form
-        const [dNum, cName, oData, iData, qData] = await Promise.all([
-            getSheetData(ssid, `${FORM_SHEET}!G3`),
-            getSheetData(ssid, `${FORM_SHEET}!F6`),
-            getSheetData(ssid, `${FORM_SHEET}!C10:C25`),
-            getSheetData(ssid, `${FORM_SHEET}!D10:D25`),
-            getSheetData(ssid, `${FORM_SHEET}!G10:G25`)
-        ]);
+// สถานะในคอลัมน์ G ของ คลังข้อมูล
+export const STATUS_IN_PROGRESS = "กำลังดำเนินการ"; // แอดมินกดจัดการงานแล้ว รอพนักงานหยิบ
+export const STATUS_PREPARED = "รอลูกค้า";          // พนักงานจัดสินค้าเสร็จ รอลูกค้ามารับ/เซ็น
+export const STATUS_DONE = "เสร็จสิ้น";              // เซ็นรับแล้ว มี PDF
+export const STATUS_LEGACY_EDITING = "กำลังแก้ไข";  // สถานะเก่าจากการ recall — ไม่เขียนใหม่แล้ว
 
-        const docNum = dNum?.[0]?.[0];
-        const custName = cName?.[0]?.[0] || "Unknown";
-        const today = getThaiDateString();
+// คลังข้อมูล: [DocNum(A), CustName(B), Seq(C), OrderNo(D), Item(E), Qty(F), Status(G), Link(H), Date(I)]
+export type ArchiveRow = any[];
 
-        if (!docNum) {
-            return { success: false, error: 'No active job found' };
-        }
+/** สถานะของงานที่ยังไม่ปิด — "กำลังแก้ไข" (เก่า) และค่าว่าง ถือเป็นกำลังดำเนินการ */
+export function normalizeOpenStatus(status: any): string {
+    const s = String(status || "").trim();
+    if (!s || s === STATUS_LEGACY_EDITING) return STATUS_IN_PROGRESS;
+    return s;
+}
 
-        // 3. Prepare New Archive Data
-        const dataToArchive = [];
-        let currentSequence = 1;
+// ============================================================================
+// Form lock — ชีต ส่งสินค้า มีงานได้ทีละ 1 ใบ ทุก route ที่เขียนฟอร์มหรือสถานะ
+// ต้องผ่าน lock นี้ ไม่งั้นคอมกับมือถือกดพร้อมกันแล้วข้อมูลในฟอร์มปนกัน
+// ============================================================================
 
-        if (iData) {
-            console.log(`[Archive] Processing ${iData.length} items from form...`);
-            for (let i = 0; i < iData.length; i++) {
-                const itemCode = iData[i]?.[0]?.trim();
-                
-                if (itemCode) {
-                     const orderNo = oData?.[i]?.[0]?.trim() || "";
-                     const qty = qData?.[i]?.[0] || "";
-                     
-                     // [DocNum, CustName, Seq, OrderNo, Item, Qty, Status, Link, Date]
-                     dataToArchive.push([
-                        docNum, custName, currentSequence, 
-                        orderNo, itemCode, qty, 
-                        customStatus || "รอลูกค้า", signatureLink || "", today
-                     ]);
-                     currentSequence++;
-                }
-            }
-        }
+const LOCK_CELL = `${FORM_SHEET}!Z1`;
+const LOCK_TTL_MS = 60000; // lock ที่เก่ากว่านี้ถือว่า process ตายไปแล้ว
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-        if (dataToArchive.length > 0) {
-            // 4. Find Old Entries for this DocNum
-            const existingRows = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum);
-
-            // 5. Write to Archive (APPEND FIRST in batch)
-            // ใช้ range เต็มความกว้าง A:I (ข้อมูล 9 คอลัมน์) ไม่ใช่ A:A — range A:A ทำให้ append
-            // เพี้ยนตำแหน่งคอลัมน์ ข้อมูลไปโผล่ J–Q (บั๊กเดียวกับที่แก้ใน finalize route)
-            const cleanRows = dataToArchive.map(row =>
-                row.map(d => (d === undefined || d === null) ? "" : d)
-            );
-            await appendSheetData(ssid, `'${DATA_SHEET}'!A:I`, cleanRows);
-
-            // 6. Remove Old Entries in a single batchClear
-            if (existingRows.length > 0) {
-                console.log(`[Archive] Removing ${existingRows.length} old rows...`);
-                const { googleSheets, auth } = await getGoogleSheets();
-                await googleSheets.spreadsheets.values.batchClear({
-                    auth: auth as any,
-                    spreadsheetId: ssid,
-                    requestBody: {
-                        ranges: existingRows.map(row => `'${DATA_SHEET}'!A${row}:I${row}`)
-                    }
-                });
-            }
-        } else {
-             console.warn(`[Archive] No items found to save for ${docNum}. Skipping archive write.`);
-        }
-
-        // 5. Clear Form in a single batch call
-        await clearFormSheet(ssid);
-
-        return { success: true };
-
-    } catch (error: any) {
-        console.error("Archive Helper Error:", error);
-        throw error;
+export class FormBusyError extends Error {
+    status = 409;
+    constructor() {
+        super('ระบบกำลังบันทึกงานอื่นอยู่ กรุณารอสักครู่แล้วลองใหม่');
     }
 }
 
-export async function saveTransactionAndClear(branchId?: string) {
-    try {
-        // Resolve Spreadsheet IDs
-        const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
-        const docSSID = await resolveSpreadsheetId(branchId, 'doc');
-        const invSSID = await resolveSpreadsheetId(branchId, 'inventory');
+export async function withFormLock<T>(ssid: string, fn: () => Promise<T>, waitMs = 15000): Promise<T> {
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const deadline = Date.now() + waitMs;
+    const readLock = async () => String((await getSheetData(ssid, LOCK_CELL))?.[0]?.[0] || "");
 
-        const { writeTransactionData } = await import('@/lib/transactionUtils');
-        
-        // 1. Get Active Job Data (READ ONLY for Transaction)
-        console.log(`[Clear] Reading form data for Transaction...`);
-        const [ordersData, itemsData, qtyData, docNumData] = await Promise.all([
-            getSheetData(docSSID, `${FORM_SHEET}!C10:C25`),
-            getSheetData(docSSID, `${FORM_SHEET}!D10:D25`),
-            getSheetData(docSSID, `${FORM_SHEET}!G10:G25`),
-            getSheetData(docSSID, `${FORM_SHEET}!G3`)
-        ]);
-        const docNum = docNumData?.[0]?.[0] || "";
-        console.log(`[Clear] Read ${itemsData?.length || 0} items for Transaction (Doc: ${docNum}).`);
-
-        const transactionItems: any[] = [];
-        if (itemsData) {
-            for (let i = 0; i < itemsData.length; i++) {
-                const itemCode = itemsData[i]?.[0]?.trim();
-                if (itemCode) {
-                     const orderNo = ordersData?.[i]?.[0]?.trim() || "";
-                     const qty = qtyData?.[i]?.[0] || 0; 
-                     
-                     transactionItems.push({
-                          itemCode: itemCode,
-                          quantity: Number(qty) || 0,
-                          orderNumber: orderNo,
-                          docNumber: docNum
-                     });
-                }
-            }
+    while (true) {
+        const held = await readLock();
+        const heldTs = parseInt(held.split('-')[0], 10);
+        const free = !held || isNaN(heldTs) || Date.now() - heldTs > LOCK_TTL_MS;
+        if (free) {
+            await updateSheetData(ssid, LOCK_CELL, [[token]]);
+            await sleep(250); // ให้คนที่เขียนพร้อมกันเขียนทับให้เสร็จก่อนอ่านยืนยัน
+            if ((await readLock()) === token) break;
         }
-
-        // 2. Update Archive (Delete Old + Write New) + Clear Form
-        const archiveResult = await archiveCurrentForm(undefined, undefined, docSSID);
-        if (!archiveResult.success) {
-            throw new Error("Failed to archive/update form data: " + archiveResult.error);
-        }
-
-        // 3. Write to Transaction
-        if (transactionItems.length > 0) {
-            console.log(`[Clear] Writing ${transactionItems.length} items to Transaction (SSID: ${invSSID})...`);
-            await writeTransactionData(transactionItems, invSSID); // Passing invSSID
-        }
-
-        return { success: true };
-
-    } catch (error: any) {
-        console.error("Transaction/Clear Helper Error:", error);
-        throw error;
+        if (Date.now() > deadline) throw new FormBusyError();
+        await sleep(600 + Math.random() * 500);
     }
+
+    try {
+        return await fn();
+    } finally {
+        try {
+            if ((await readLock()) === token) await clearSheetRange(ssid, LOCK_CELL);
+        } catch { /* ignore release errors */ }
+    }
+}
+
+// ============================================================================
+// คลังข้อมูล helpers
+// ============================================================================
+
+export async function readArchive(ssid: string): Promise<ArchiveRow[]> {
+    return (await getSheetData(ssid, `'${DATA_SHEET}'!A:I`)) || [];
+}
+
+/** เลขแถว (1-based) ของทุกแถวที่เป็นของ docNum */
+export function rowNumbersOf(data: ArchiveRow[], docNum: string): number[] {
+    const target = String(docNum).trim();
+    const out: number[] = [];
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i]?.[0] ?? "").trim() === target) out.push(i + 1);
+    }
+    return out;
+}
+
+/**
+ * เปลี่ยนสถานะของงานในคลังข้อมูล "ในแถวเดิม" (ไม่ append+ลบ)
+ * งานที่เสร็จสิ้นแล้วจะไม่ถูกย้อนสถานะ
+ */
+export async function setDocsStatus(ssid: string, docNums: string[], status: string) {
+    const data = await readArchive(ssid);
+    const updated: string[] = [];
+    const notFound: string[] = [];
+    const skipped: string[] = [];
+    const updates: { range: string; values: any[][] }[] = [];
+
+    for (const docNum of docNums) {
+        const rows = rowNumbersOf(data, docNum);
+        if (rows.length === 0) { notFound.push(docNum); continue; }
+        const open = rows.filter((r) => String(data[r - 1]?.[6] || "").trim() !== STATUS_DONE);
+        if (open.length === 0) { skipped.push(docNum); continue; }
+        open.forEach((r) => updates.push({ range: `'${DATA_SHEET}'!G${r}`, values: [[status]] }));
+        updated.push(docNum);
+    }
+
+    await batchUpdateSheetData(ssid, updates);
+    return { updated, notFound, skipped };
+}
+
+/**
+ * เขียนแถวของงานกลับลงคลังข้อมูลโดยใช้แถวเดิมก่อน ถ้ามีแถวเพิ่มจะแทรกท้ายชีต
+ * ถ้าแถวลดลงจะลบแถวที่เกินทิ้งจริง — ไม่ทิ้งแถวว่างคั่นไว้
+ */
+async function writeDocRows(ssid: string, newRows: ArchiveRow[], existingRows: number[]) {
+    const reuse = Math.min(newRows.length, existingRows.length);
+    await batchUpdateSheetData(
+        ssid,
+        existingRows.slice(0, reuse).map((r, i) => ({
+            range: `'${DATA_SHEET}'!A${r}:I${r}`,
+            values: [newRows[i]],
+        }))
+    );
+    if (newRows.length > reuse) {
+        await appendSheetData(ssid, `'${DATA_SHEET}'!A:I`, newRows.slice(reuse), 'INSERT_ROWS');
+    }
+    if (existingRows.length > reuse) {
+        await deleteSheetRows(ssid, DATA_SHEET, existingRows.slice(reuse));
+    }
+}
+
+// ============================================================================
+// Active form (ชีต ส่งสินค้า)
+// ============================================================================
+
+/**
+ * เอางานที่อยู่บนฟอร์มออกไปเก็บในคลังข้อมูล แล้วล้างฟอร์ม
+ * - customStatus ไม่ระบุ = คงสถานะเดิมของงานไว้ (เดิมใส่ "รอลูกค้า" ทำให้งานที่ยังไม่ได้หยิบ
+ *   กลายเป็น "จัดเสร็จ" ทันทีที่แอดมินกดจัดการงานถัดไป)
+ * - ต้องเรียกภายใน withFormLock
+ */
+export async function archiveCurrentForm(customStatus?: string, signatureLink?: string, spreadsheetId?: string) {
+    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+    const [dNum, cName, oData, iData, qData, sigData] = await Promise.all([
+        getSheetData(ssid, `${FORM_SHEET}!G3`),
+        getSheetData(ssid, `${FORM_SHEET}!F6`),
+        getSheetData(ssid, `${FORM_SHEET}!C10:C25`),
+        getSheetData(ssid, `${FORM_SHEET}!D10:D25`),
+        getSheetData(ssid, `${FORM_SHEET}!G10:G25`),
+        getSheetData(ssid, `${FORM_SHEET}!H33`)
+    ]);
+
+    const docNum = String(dNum?.[0]?.[0] || "").trim();
+    if (!docNum) {
+        return { success: false, error: 'No active job found' };
+    }
+
+    const data = await readArchive(ssid);
+    const existingRows = rowNumbersOf(data, docNum);
+    const oldRow = existingRows.length > 0 ? data[existingRows[0] - 1] : null;
+
+    const custName = cName?.[0]?.[0] || oldRow?.[1] || "Unknown";
+    const status = customStatus || normalizeOpenStatus(oldRow?.[6]);
+    const link = signatureLink || sigData?.[0]?.[0] || oldRow?.[7] || "";
+    const date = oldRow?.[8] || getThaiDateString();
+
+    // ฟอร์มใส่เลข order เฉพาะแถวแรกของแต่ละกลุ่ม -> ต้องพาเลข order ต่อลงแถวถัดไปด้วย
+    // (เดิมไม่ได้พาต่อ ทำให้รายการที่ 2+ ของแต่ละ order หลุดเลข order ในคลังข้อมูล)
+    const newRows: ArchiveRow[] = [];
+    let lastOrderNo = "";
+    for (let i = 0; i < (iData?.length || 0); i++) {
+        const orderNo = String(oData?.[i]?.[0] || "").trim();
+        if (orderNo) lastOrderNo = orderNo;
+        const itemCode = String(iData?.[i]?.[0] || "").trim();
+        if (!itemCode) continue;
+        newRows.push([
+            docNum, custName, newRows.length + 1,
+            lastOrderNo, itemCode, qData?.[i]?.[0] ?? "",
+            status, link, date
+        ]);
+    }
+
+    if (newRows.length > 0) {
+        await writeDocRows(ssid, newRows, existingRows);
+    } else if (existingRows.length > 0 && customStatus) {
+        // ฟอร์มไม่มีรายการ แต่ยังต้องอัปเดตสถานะของงานเดิม
+        await setDocsStatus(ssid, [docNum], customStatus);
+    } else {
+        console.warn(`[Archive] No items found to save for ${docNum}. Keeping archive rows as-is.`);
+    }
+
+    await clearFormSheet(ssid);
+    return { success: true, docNum };
 }
 
 export async function clearFormSheet(spreadsheetId?: string) {
-    try {
-        const ssid = spreadsheetId || PO_SPREADSHEET_ID;
-        const { googleSheets, auth } = await getGoogleSheets();
-        await googleSheets.spreadsheets.values.batchClear({
-            auth: auth as any,
-            spreadsheetId: ssid,
-            requestBody: {
-                ranges: [
-                    `${FORM_SHEET}!G3`,
-                    `${FORM_SHEET}!F4:F5`,
-                    `${FORM_SHEET}!D6`,
-                    `${FORM_SHEET}!F6`,
-                    `${FORM_SHEET}!B10:D25`,
-                    `${FORM_SHEET}!G10:G25`
-                ]
-            }
-        });
-        return { success: true };
-    } catch (error: any) {
-        console.error("Clear Form Error:", error);
-        throw error;
-    }
+    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+    await batchClearSheetRanges(ssid, [
+        `${FORM_SHEET}!G3`,
+        `${FORM_SHEET}!F4:F5`,
+        `${FORM_SHEET}!D6`,
+        `${FORM_SHEET}!F6`,
+        `${FORM_SHEET}!B10:D25`,
+        `${FORM_SHEET}!G10:G25`,
+        `${FORM_SHEET}!G33:H33`, // ลายเซ็นของงานก่อนหน้า ต้องไม่ติดไปงานถัดไป
+    ]);
+    return { success: true };
 }
 
+/**
+ * ดึงงานจากคลังข้อมูลขึ้นฟอร์ม (งานที่อยู่บนฟอร์มเดิมจะถูกเก็บกลับโดยคงสถานะไว้)
+ * ไม่เปลี่ยนสถานะของงาน — เดิมตั้งเป็น "กำลังแก้ไข" ซึ่งไม่มีหน้าไหนแสดง ทำให้งานหาย
+ * ต้องเรียกภายใน withFormLock
+ */
 export async function restoreOrderToForm(docNum: string, spreadsheetId?: string) {
-    try {
-        const ssid = spreadsheetId || PO_SPREADSHEET_ID;
-        console.log(`[Restore] Attempting to restore ${docNum} to Form (SSID: ${ssid})...`);
-        
-        // 1. Check if Form is Busy
-        const formCheck = await getSheetData(ssid, `${FORM_SHEET}!G3:G3`);
-        if (formCheck && formCheck[0] && formCheck[0][0]) {
-            const currentDoc = formCheck[0][0];
-            if (currentDoc === docNum) {
-                console.log(`[Restore] Job ${docNum} is already on Form. Doing nothing.`);
-                return { success: true, message: "Already active" };
-            }
-            console.log(`[Restore] Form busy with ${currentDoc}. Archiving it first...`);
-            await archiveCurrentForm(undefined, undefined, ssid);
-        }
+    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+    docNum = String(docNum).trim();
 
-        // 2. Clear Form (Clean State)
-        await clearFormSheet(ssid);
-
-        // 3. Fetch Data from Archive (Data Sheet)
-        const rowIndices = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum);
-        if (!rowIndices || rowIndices.length === 0) {
-            throw new Error(`Job ${docNum} not found in Archive`);
-        }
-
-        // Read all rows in a single batchGet call
-        const { googleSheets, auth } = await getGoogleSheets();
-        const ranges = rowIndices.map(idx => `'${DATA_SHEET}'!A${idx}:I${idx}`);
-        const response = await googleSheets.spreadsheets.values.batchGet({
-            auth: auth as any,
-            spreadsheetId: ssid,
-            ranges: ranges,
-        });
-
-        const jobRows: any[][] = [];
-        if (response.data.valueRanges) {
-            for (const vr of response.data.valueRanges) {
-                if (vr.values && vr.values[0]) {
-                    jobRows.push(vr.values[0]);
-                }
-            }
-        }
-
-        if (jobRows.length === 0) throw new Error("Failed to read job data rows");
-
-        // 4. Extract Header Info (from first row)
-        // Col A: DocNum, B: CustName, C: Seq, D: OrderNo, E: Item, F: Qty, G: Status, H: Link, I: Date
-        const headerRow = jobRows[0];
-        const custName = headerRow[1];
-        const dateStr = headerRow[8]; // Date saved
-        
-        // 6. Map Body Items
-        // Form:
-        // B: Seq (Col C of Archive)
-        // C: OrderNo (Col D of Archive)
-        // D: Item (Col E of Archive)
-        // G: Qty (Col F of Archive)
-        
-        const formSequences = [];
-        const formOrders = [];
-        const formItems = [];
-        const formQty = [];
-
-        for (const row of jobRows) {
-            formSequences.push([row[2]]); // Seq
-            formOrders.push([row[3]]);    // OrderNo
-            formItems.push([row[4]]);     // Item
-            formQty.push([row[5]]);       // Qty
-        }
-
-        // 5 & 7. Update Header & Body in a single batchUpdate call
-        const startRow = 10;
-        const endRow = startRow + jobRows.length - 1;
-        
-        const updates = [
-            { range: `${FORM_SHEET}!G3`, values: [[docNum]] },
-            { range: `${FORM_SHEET}!F4`, values: [[dateStr]] },
-            { range: `${FORM_SHEET}!F6`, values: [[custName]] },
-            { range: `${FORM_SHEET}!B${startRow}:B${endRow}`, values: formSequences },
-            { range: `${FORM_SHEET}!C${startRow}:C${endRow}`, values: formOrders },
-            { range: `${FORM_SHEET}!D${startRow}:D${endRow}`, values: formItems },
-            { range: `${FORM_SHEET}!G${startRow}:G${endRow}`, values: formQty }
-        ];
-
-        await googleSheets.spreadsheets.values.batchUpdate({
-            auth: auth as any,
-            spreadsheetId: ssid,
-            requestBody: {
-                valueInputOption: "USER_ENTERED",
-                data: updates,
-            },
-        });
-
-        // 8. Update Archive Status in a single batchUpdate call instead of concurrent ones
-        console.log(`[Restore] Updating ${rowIndices.length} rows in Archive to 'กำลังแก้ไข' (Editing)...`);
-        const statusUpdates = rowIndices.map(idx => ({
-             range: `'${DATA_SHEET}'!G${idx}`,
-             values: [['กำลังแก้ไข']]
-        }));
-
-        await googleSheets.spreadsheets.values.batchUpdate({
-            auth: auth as any,
-            spreadsheetId: ssid,
-            requestBody: {
-                valueInputOption: "USER_ENTERED",
-                data: statusUpdates,
-            },
-        });
-
-        console.log(`[Restore] Successfully restored ${docNum} to Form.`);
-        return { success: true };
-
-    } catch (error: any) {
-        console.error("Restore Order Error:", error);
-        throw error;
+    const current = String((await getSheetData(ssid, `${FORM_SHEET}!G3:G3`))?.[0]?.[0] || "").trim();
+    if (current === docNum) {
+        return { success: true, message: "Already active" };
     }
+    if (current) {
+        await archiveCurrentForm(undefined, undefined, ssid);
+    } else {
+        await clearFormSheet(ssid);
+    }
+
+    const data = await readArchive(ssid);
+    const jobRows = rowNumbersOf(data, docNum).map((r) => data[r - 1]);
+    if (jobRows.length === 0) {
+        throw new Error(`Job ${docNum} not found in Archive`);
+    }
+    if (jobRows.length > FORM_MAX_ROWS) {
+        console.warn(`[Restore] ${docNum} has ${jobRows.length} items; form holds ${FORM_MAX_ROWS}`);
+    }
+
+    const header = jobRows[0];
+    const custName = header[1] || "";
+    const dateStr = header[8] || getThaiDateString();
+    const status = String(header[6] || "").trim();
+    const link = String(header[7] || "").trim();
+
+    // จัดรูปแบบเหมือนตอน process: เลขลำดับ/เลข order แสดงเฉพาะแถวแรกของแต่ละ order
+    const seqs: any[][] = [], orders: any[][] = [], items: any[][] = [], qtys: any[][] = [];
+    let lastOrder: string | null = null;
+    let groupSeq = 0;
+    for (const row of jobRows.slice(0, FORM_MAX_ROWS)) {
+        const orderNo = String(row[3] || "").trim();
+        const isNewGroup = orderNo !== "" && orderNo !== lastOrder;
+        if (isNewGroup) { lastOrder = orderNo; groupSeq++; }
+        seqs.push([isNewGroup ? groupSeq : ""]);
+        orders.push([isNewGroup ? orderNo : ""]);
+        items.push([row[4] || ""]);
+        qtys.push([row[5] ?? ""]);
+    }
+    const endRow = FORM_FIRST_ROW + seqs.length - 1;
+
+    const updates = [
+        { range: `${FORM_SHEET}!G3`, values: [[docNum]] },
+        { range: `${FORM_SHEET}!F4`, values: [[dateStr]] },
+        { range: `${FORM_SHEET}!F5`, values: [[getThaiDateString()]] },
+        { range: `${FORM_SHEET}!F6`, values: [[custName]] },
+        { range: `${FORM_SHEET}!B${FORM_FIRST_ROW}:B${endRow}`, values: seqs },
+        { range: `${FORM_SHEET}!C${FORM_FIRST_ROW}:C${endRow}`, values: orders },
+        { range: `${FORM_SHEET}!D${FORM_FIRST_ROW}:D${endRow}`, values: items },
+        { range: `${FORM_SHEET}!G${FORM_FIRST_ROW}:G${endRow}`, values: qtys },
+    ];
+    // ลายเซ็นที่เก็บไว้ (ยังไม่ปิดงาน) — H33 เก็บ URL ดิบให้ status API อ่าน, G33 แสดงรูป
+    if (link.startsWith('http') && status !== STATUS_DONE) {
+        updates.push({ range: `${FORM_SHEET}!H33`, values: [[link]] });
+        updates.push({ range: `${FORM_SHEET}!G33`, values: [['=IMAGE(H33)']] });
+    }
+    await batchUpdateSheetData(ssid, updates);
+
+    console.log(`[Restore] Restored ${docNum} to Form (status kept: ${status || '-'})`);
+    return { success: true };
+}
+
+/** ตอบ error ของ route แบบเดียวกัน — FormBusyError = 409 */
+export function lockErrorStatus(error: any): number {
+    return error instanceof FormBusyError ? 409 : 500;
 }

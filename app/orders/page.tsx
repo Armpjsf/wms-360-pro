@@ -33,8 +33,14 @@ interface ActiveForm {
   customer: string;
   refDate: string;
   status: string;
-  items?: { itemCode: string; orderNo: string; qty: number }[];
+  items?: JobItem[];
   signature?: string | null;
+}
+
+interface JobItem {
+  itemCode: string;
+  orderNo: string;
+  qty: number | string;
 }
 
 interface WaitingJob {
@@ -42,6 +48,33 @@ interface WaitingJob {
   customer: string;
   date: string;
   orderNo?: string;
+  orderNos?: string[];
+  status?: string; // "รอลูกค้า" = จัดสินค้าเสร็จแล้ว, "กำลังดำเนินการ" = ยังจัดอยู่
+  items?: JobItem[];
+}
+
+// ข้อความ LINE แจ้งลูกค้าว่าจัดสินค้าเสร็จ (รูปแบบเดิมจากระบบ Python)
+function formatItemCode(itemStr: string) {
+  if (!itemStr) return "";
+  const originalItem = String(itemStr).trim();
+  const suffix = originalItem.toUpperCase().endsWith('I') ? " I" : "";
+  if (originalItem.length >= 8) {
+    return `${originalItem.slice(2, 6)} ${originalItem.slice(6, 8)}${suffix}`;
+  }
+  return `${originalItem}${suffix}`;
+}
+
+function buildLineMessage(customer: string, items: JobItem[], fallbackRef: string) {
+  const orderNumbers = [...new Set(items.map((i) => String(i.orderNo || '').trim()).filter(Boolean))];
+  let message = 'จัดสินค้าเรียบร้อย\n';
+  message += `เลขออเดอร์ ที่ : ${orderNumbers.length > 0 ? orderNumbers.join(', ') : fallbackRef}\n`;
+  message += `ชื่อร้านค้า : ${customer}\n`;
+  if (items.length === 0) message += '(ไม่พบรายการสินค้า)\n';
+  items.forEach((item) => {
+    if (item.itemCode) message += `${formatItemCode(item.itemCode)} = ${item.qty || 0}\n`;
+  });
+  message += '\nโปรดแจ้งเลขออเดอร์ทุกครั้ง เมื่อมารับสินค้าที่คลังสินค้า\nขอบคุณครับ';
+  return message;
 }
 
 interface CompletedJob {
@@ -215,65 +248,14 @@ function OrderManagement() {
     }
   };
 
-  const handleCopyLineMsg = async () => {
+  const handleCopyLineMsg = () => {
     if (!status.activeForm) return;
-    
-    // Helper: Format Item Code (Legacy Parity)
-    const formatItemCode = (itemStr: string) => {
-        if (!itemStr) return "";
-        const originalItem = String(itemStr).trim();
-        let suffix = "";
-        
-        if (originalItem.toUpperCase().endsWith('I')) {
-            suffix = " I";
-        }
-        
-        if (originalItem.length >= 8) {
-            const part1 = originalItem.slice(2, 6);
-            const part2 = originalItem.slice(6, 8);
-            return `${part1} ${part2}${suffix}`;
-        } else {
-            return `${originalItem}${suffix}`;
-        }
-    };
+    setPreviewMessage(buildLineMessage(status.activeForm.customer, status.activeForm.items || [], status.activeForm.docNum));
+  };
 
-    try {
-      // Fetch full form data to get all items
-      const res = await fetch(getApiUrl(`/api/orders/status?t=${Date.now()}`));
-      const data = await res.json();
-      
-      let message = '';
-
-      if (!data.activeForm || !data.activeForm.items) {
-        // Fallback
-        message = `จัดสินค้าเรียบร้อย\nเลขออเดอร์ ที่ : ${status.activeForm.docNum}\nชื่อร้านค้า : ${status.activeForm.customer}\n(ไม่พบรายการสินค้า)\n\nโปรดแจ้งเลขออเดอร์ทุกครั้ง เมื่อมารับสินค้าที่คลังสินค้า\nขอบคุณครับ`;
-      } else {
-          // Build message
-          message = 'จัดสินค้าเรียบร้อย\n';
-          
-          const items = data.activeForm.items || [];
-          const orderNumbers = [...new Set(items.map((item: any) => item.orderNo).filter((o: any) => o))];
-          const orderNumText = orderNumbers.length > 0 ? orderNumbers.join(', ') : '-';
-          
-          message += `เลขออเดอร์ ที่ : ${orderNumText}\n`;
-          message += `ชื่อร้านค้า : ${data.activeForm.customer}\n`;
-          
-          items.forEach((item: any) => {
-            if (item.itemCode) {
-              const formattedCode = formatItemCode(item.itemCode);
-              message += `${formattedCode} = ${item.qty || 0}\n`;
-            }
-          });
-          
-          message += '\nโปรดแจ้งเลขออเดอร์ทุกครั้ง เมื่อมารับสินค้าที่คลังสินค้า\nขอบคุณครับ';
-      }
-      
-      setPreviewMessage(message);
-
-    } catch (error) {
-      console.error('Error preparing LINE message:', error);
-      alert('Error preparing message');
-    }
+  // คัดลอกข้อความของงานในคิวได้เลย ไม่ต้องเรียกกลับขึ้นฟอร์มก่อน
+  const handleCopyLineForJob = (job: WaitingJob) => {
+    setPreviewMessage(buildLineMessage(job.customer, job.items || [], job.orderNo || job.docNum));
   };
 
 
@@ -318,7 +300,7 @@ function OrderManagement() {
       const res = await fetch(getApiUrl('/api/orders/archive'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branchId })
+        body: JSON.stringify({ branchId, docNum: status.activeForm.docNum })
       });
 
       if (res.ok) {
@@ -374,6 +356,7 @@ function OrderManagement() {
       <WaitingJobsCard
         jobs={status.waiting}
         onRecall={handleRecall}
+        onCopyLine={handleCopyLineForJob}
       />
 
       {/* Completed Jobs */}
@@ -723,10 +706,12 @@ function ActiveJobCard({
 
 function WaitingJobsCard({
   jobs,
-  onRecall
+  onRecall,
+  onCopyLine
 }: {
   jobs: WaitingJob[];
   onRecall: (docNum: string) => void;
+  onCopyLine: (job: WaitingJob) => void;
 }) {
   const { t } = useLanguage();
   return (
@@ -755,13 +740,31 @@ function WaitingJobsCard({
                 <p className="text-slate-500 text-sm">{job.date}</p>
               </div>
               <p className="text-slate-400 text-[10px] font-mono mb-2">{t('doc_no')}: {job.docNum}</p>
-              <p className="text-slate-600 text-sm mb-3">{job.customer}</p>
-              <button
-                onClick={() => onRecall(job.docNum)}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm"
-              >
-                {t('recall_btn')}
-              </button>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <p className="text-slate-600 text-sm truncate">{job.customer}</p>
+                {job.status === 'รอลูกค้า' ? (
+                  <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">จัดเสร็จแล้ว</span>
+                ) : (
+                  <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">กำลังจัด</span>
+                )}
+              </div>
+              {job.items && job.items.length > 0 && (
+                <p className="text-slate-400 text-xs mb-3">{job.items.length} รายการ</p>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => onCopyLine(job)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-sm font-bold"
+                >
+                  {t('copy_line')}
+                </button>
+                <button
+                  onClick={() => onRecall(job.docNum)}
+                  className="bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm"
+                >
+                  {t('recall_btn')}
+                </button>
+              </div>
             </div>
           ))}
         </div>

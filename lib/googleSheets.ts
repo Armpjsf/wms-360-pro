@@ -572,6 +572,9 @@ export async function appendSheetData(
   spreadsheetId: string,
   range: string,
   values: any[][],
+  // 'INSERT_ROWS' = แทรกแถวใหม่เสมอ ไม่เขียนทับ (ค่า default ของ Google คือ OVERWRITE
+  // ซึ่งถ้าชีตมีแถวว่างคั่น จะเขียนลงช่องว่างแล้วทับแถวข้อมูลที่อยู่ถัดไป)
+  insertDataOption?: "INSERT_ROWS" | "OVERWRITE",
 ) {
   const { googleSheets, auth } = await getGoogleSheets();
   try {
@@ -580,6 +583,7 @@ export async function appendSheetData(
       spreadsheetId,
       range,
       valueInputOption: "USER_ENTERED",
+      ...(insertDataOption ? { insertDataOption } : {}),
       requestBody: {
         values: values,
       },
@@ -595,6 +599,38 @@ export async function appendSheetData(
     console.error(`Error appending batch to sheet ${range}:`, error);
     throw error;
   }
+}
+
+// ลบแถวทิ้งจริง (ไม่ใช่แค่ล้างค่า) เพื่อไม่ให้เกิดแถวว่างคั่นในชีต
+// rowNumbers เป็นเลขแถวแบบ 1-based ลบจากล่างขึ้นบนเพื่อไม่ให้เลขแถวเลื่อน
+export async function deleteSheetRows(
+  spreadsheetId: string,
+  sheetName: string,
+  rowNumbers: number[],
+) {
+  if (rowNumbers.length === 0) return;
+  const { googleSheets, auth } = await getGoogleSheets();
+  const meta = await googleSheets.spreadsheets.get({
+    auth: auth as any,
+    spreadsheetId,
+    fields: "sheets(properties(sheetId,title))",
+  });
+  const sheetId = meta.data.sheets?.find((s) => s.properties?.title === sheetName)?.properties?.sheetId;
+  if (sheetId === undefined || sheetId === null) {
+    throw new Error(`Sheet not found: ${sheetName}`);
+  }
+  const sorted = Array.from(new Set(rowNumbers)).sort((a, b) => b - a);
+  await googleSheets.spreadsheets.batchUpdate({
+    auth: auth as any,
+    spreadsheetId,
+    requestBody: {
+      requests: sorted.map((r) => ({
+        deleteDimension: {
+          range: { sheetId, dimension: "ROWS", startIndex: r - 1, endIndex: r },
+        },
+      })),
+    },
+  });
 }
 
 // Helper to clear values in a range
