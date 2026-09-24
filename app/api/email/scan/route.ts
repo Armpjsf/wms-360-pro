@@ -2,30 +2,14 @@ import { NextResponse } from 'next/server';
 import { getGmailClient } from '@/lib/gmailClient';
 // force-rebuild
 import { extractRollTagData } from '@/lib/emailParser';
-import { writeRollTagData, PO_SPREADSHEET_ID, cleanupTempRollTagSheets, clearRollTagForm, ensureRollTagSheet, getSheetData } from '@/lib/googleSheets';
+import { PO_SPREADSHEET_ID, getSheetData, appendSheetData } from '@/lib/googleSheets';
+import { getThaiDateString } from '@/lib/dateUtils';
+import { STATUS_PENDING_ROLLTAG } from '@/lib/orderUtils';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
-    // 0.1 Clean up temporary sheets from previous runs and clear Roll Tag 1 & 2
-    // Only clear if Roll Tag has no pending data — avoids wiping data a user or prior step left behind
-    try {
-        console.log("Starting Roll Tag sheets cleanup...");
-        await cleanupTempRollTagSheets(PO_SPREADSHEET_ID);
-        for (const sheetName of ["Roll Tag1", "Roll Tag2"]) {
-            const check = await getSheetData(PO_SPREADSHEET_ID, `'${sheetName}'!B4`);
-            const hasData = check?.[0]?.[0];
-            if (hasData) {
-                console.log(`[Scan] Skipping clear for ${sheetName} — has pending data: "${hasData}"`);
-            } else {
-                await clearRollTagForm(PO_SPREADSHEET_ID, sheetName);
-            }
-        }
-    } catch (cleanupErr) {
-        console.error("Failed to run Roll Tag cleanup:", cleanupErr);
-    }
-
     const gmail = await getGmailClient();
     
     if (!gmail) {
@@ -37,6 +21,33 @@ export async function POST() {
     const profile = await gmail.users.getProfile({ userId: 'me' });
     const connectedEmail = profile.data.emailAddress;
     console.log(`Connected as: ${connectedEmail}`);
+
+    // Query existing pending Roll Tags in คลังข้อมูล to determine next available RT numbers
+    const archiveData = await getSheetData(PO_SPREADSHEET_ID, "'คลังข้อมูล'!A:I").catch(() => []);
+    const usedRtNums = new Set<number>();
+    if (archiveData && archiveData.length > 1) {
+        for (let r = 1; r < archiveData.length; r++) {
+            const row = archiveData[r];
+            const docNum = String(row?.[0] || '').trim();
+            const status = String(row?.[6] || '').trim();
+            if (status === STATUS_PENDING_ROLLTAG) {
+                const match = docNum.match(/^RT(\d+)$/i);
+                if (match) {
+                    usedRtNums.add(parseInt(match[1], 10));
+                }
+            }
+        }
+    }
+
+    let nextRtCounter = 1;
+    const allocateNextRtId = (): string => {
+        while (usedRtNums.has(nextRtCounter)) {
+            nextRtCounter++;
+        }
+        const id = `RT${nextRtCounter}`;
+        usedRtNums.add(nextRtCounter);
+        return id;
+    };
 
     // 1. List Emails (Detailed Search: Unread + Sender)
     // Legacy: is:unread from:formica.com has:attachment
@@ -72,8 +83,6 @@ export async function POST() {
         }
         return attachments;
     };
-
-    let currentRollTagIndex = 1;
 
     for (const msg of messages) {
         if (!msg.id) continue;
@@ -119,28 +128,36 @@ export async function POST() {
                         console.log(`[Scan] extractedCustomers: ${extractedCustomers.length} from "${fileName}"`);
                         if (extractedCustomers.length > 0) {
                             for (const customerData of extractedCustomers) {
-                                if (currentRollTagIndex > 10) {
-                                    results.push({ msgId: msg.id, status: "skipped_full", customer: customerData.customerId });
-                                    continue;
-                                }
+                                const targetTagId = allocateNextRtId();
+                                const today = getThaiDateString();
 
-                                const targetSheet = `Roll Tag${currentRollTagIndex}`;
-                                // Automatically ensure/duplicate sheet if it is a new temporary sheet
-                                await ensureRollTagSheet(PO_SPREADSHEET_ID, targetSheet);
-                                
-                                await writeRollTagData(PO_SPREADSHEET_ID, targetSheet, customerData);
+                                // Save directly into คลังข้อมูล (Single Source of Truth)
+                                // Col schema: [DocNum, CustName, Seq, OrderNo, ItemCode, Qty, Status, Link, Date]
+                                const rowsToAppend = customerData.items.map((item, idx) => [
+                                    targetTagId,
+                                    customerData.customerId,
+                                    idx + 1,
+                                    item.orderNo || "",
+                                    item.itemCode || "",
+                                    item.quantity ?? "",
+                                    STATUS_PENDING_ROLLTAG,
+                                    "",
+                                    today
+                                ]);
+
+                                await appendSheetData(PO_SPREADSHEET_ID, "'คลังข้อมูล'!A:I", rowsToAppend, 'INSERT_ROWS');
                                 
                                 const successMsg = { 
                                     msgId: msg.id, 
                                     file: fileName, 
                                     customer: customerData.customerId,
-                                    sheet: targetSheet,
+                                    sheet: targetTagId,
+                                    tagId: targetTagId,
+                                    itemCount: customerData.items.length,
                                     status: "success" 
                                 };
                                 results.push(successMsg);
-                                debugLogs.push(`✅ Success: ${fileName} -> ${targetSheet}`);
-                                
-                                currentRollTagIndex++;
+                                debugLogs.push(`✅ Success: ${fileName} -> ${targetTagId} (${customerData.customerId}, ${customerData.items.length} รายการ)`);
                                 emailProcessed = true;
                             }
                         } else {

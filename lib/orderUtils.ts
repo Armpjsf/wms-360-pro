@@ -16,6 +16,7 @@ const FORM_FIRST_ROW = 10;
 const FORM_MAX_ROWS = 16; // B10:G25
 
 // สถานะในคอลัมน์ G ของ คลังข้อมูล
+export const STATUS_PENDING_ROLLTAG = "รอจัด RollTag"; // สแกนจากอีเมล/นำเข้า รอแอดมินหรือพนักงานเปิดงาน
 export const STATUS_IN_PROGRESS = "กำลังดำเนินการ"; // แอดมินกดจัดการงานแล้ว รอพนักงานหยิบ
 export const STATUS_PREPARED = "รอลูกค้า";          // พนักงานจัดสินค้าเสร็จ รอลูกค้ามารับ/เซ็น
 export const STATUS_DONE = "เสร็จสิ้น";              // เซ็นรับแล้ว มี PDF
@@ -208,16 +209,20 @@ export async function archiveCurrentForm(customStatus?: string, signatureLink?: 
 }
 
 export async function clearFormSheet(spreadsheetId?: string) {
-    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
-    await batchClearSheetRanges(ssid, [
-        `${FORM_SHEET}!G3`,
-        `${FORM_SHEET}!F4:F5`,
-        `${FORM_SHEET}!D6`,
-        `${FORM_SHEET}!F6`,
-        `${FORM_SHEET}!B10:D25`,
-        `${FORM_SHEET}!G10:G25`,
-        `${FORM_SHEET}!G33:H33`, // ลายเซ็นของงานก่อนหน้า ต้องไม่ติดไปงานถัดไป
-    ]);
+    try {
+        const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+        await batchClearSheetRanges(ssid, [
+            `${FORM_SHEET}!G3`,
+            `${FORM_SHEET}!F4:F5`,
+            `${FORM_SHEET}!D6`,
+            `${FORM_SHEET}!F6`,
+            `${FORM_SHEET}!B10:D25`,
+            `${FORM_SHEET}!G10:G25`,
+            `${FORM_SHEET}!G33:H33`, // ลายเซ็นของงานก่อนหน้า ต้องไม่ติดไปงานถัดไป
+        ]);
+    } catch {
+        // FORM_SHEET might not exist; safe to ignore
+    }
     return { success: true };
 }
 
@@ -230,14 +235,18 @@ export async function restoreOrderToForm(docNum: string, spreadsheetId?: string)
     const ssid = spreadsheetId || PO_SPREADSHEET_ID;
     docNum = String(docNum).trim();
 
-    const current = String((await getSheetData(ssid, `${FORM_SHEET}!G3:G3`))?.[0]?.[0] || "").trim();
-    if (current === docNum) {
-        return { success: true, message: "Already active" };
-    }
-    if (current) {
-        await archiveCurrentForm(undefined, undefined, ssid);
-    } else {
-        await clearFormSheet(ssid);
+    try {
+        const current = String((await getSheetData(ssid, `${FORM_SHEET}!G3:G3`))?.[0]?.[0] || "").trim();
+        if (current === docNum) {
+            return { success: true, message: "Already active" };
+        }
+        if (current) {
+            await archiveCurrentForm(undefined, undefined, ssid);
+        } else {
+            await clearFormSheet(ssid);
+        }
+    } catch {
+        // FORM_SHEET might not exist
     }
 
     const data = await readArchive(ssid);
@@ -285,7 +294,11 @@ export async function restoreOrderToForm(docNum: string, spreadsheetId?: string)
         updates.push({ range: `${FORM_SHEET}!H33`, values: [[link]] });
         updates.push({ range: `${FORM_SHEET}!G33`, values: [['=IMAGE(H33)']] });
     }
-    await batchUpdateSheetData(ssid, updates);
+    try {
+        await batchUpdateSheetData(ssid, updates);
+    } catch {
+        console.log(`[Restore] Form sheet update skipped (FORM_SHEET may not exist).`);
+    }
 
     console.log(`[Restore] Restored ${docNum} to Form (status kept: ${status || '-'})`);
     return { success: true };

@@ -32,19 +32,69 @@ export async function POST(request: Request) {
 
     // 0. ฟอร์ม (G3) มีได้ทีละงาน — ใช้ lock กลางร่วมกับ recall/restore/archive/finalize
     return await withFormLock(ssId, async () => {
-    // 1. Determine Source Sheet dynamically
+    // 1. Check if tagId exists in คลังข้อมูล with status "รอจัด RollTag"
+    const archiveData = await getSheetData(ssId, `'${DATA_SHEET}'!A:I`).catch(() => []);
+    const matchingRowIndices: number[] = [];
+    const pendingArchiveRows: any[] = [];
+    let custName = "Unknown";
+    let custId = "";
+
+    if (archiveData && archiveData.length > 1) {
+        for (let i = 1; i < archiveData.length; i++) {
+            const row = archiveData[i];
+            const docNum = String(row[0] || '').trim();
+            const status = String(row[6] || '').trim();
+            if (docNum.toUpperCase() === tagId.toUpperCase() && (status === "รอจัด RollTag" || status === "RollTag")) {
+                matchingRowIndices.push(i + 1); // 1-based row index in Google Sheets
+                if (custName === "Unknown" && row[1]) {
+                    custName = String(row[1]).trim();
+                    custId = String(row[1]).trim();
+                }
+                pendingArchiveRows.push({
+                    orderNo: String(row[3] || '').trim(),
+                    itemCode: String(row[4] || '').trim(),
+                    qty: row[5] ?? ""
+                });
+            }
+        }
+    }
+
     const tagNum = tagId.replace("RT", "").trim();
     const sourceSheet = `Roll Tag${tagNum}`;
+    const isFromArchive = matchingRowIndices.length > 0;
 
-    // 1.5 Roll Tag ว่าง = ถูกจัดการไปแล้ว (เช่นกดซ้ำ/อีกเครื่องกดก่อน) — ห้ามสร้างเอกสารเปล่า
-    const rollTagData = await getSheetData(ssId, `${sourceSheet}!A4:E17`);
-    const hasItems = Array.from({ length: 9 }, (_, i) => rollTagData?.[i + 5]?.[1])
-        .some((code) => String(code || '').trim() !== '');
-    if (!hasItems) {
-        return NextResponse.json(
-            { error: `${sourceSheet} ไม่มีรายการแล้ว (อาจถูกจัดการไปแล้ว) กรุณารีเฟรช` },
-            { status: 409, headers: corsHeaders }
-        );
+    let ordersData: string[][] = [];
+    let itemsData: string[][] = [];
+    let qtyData: any[][] = [];
+
+    if (isFromArchive) {
+        ordersData = pendingArchiveRows.map(r => [r.orderNo]);
+        itemsData = pendingArchiveRows.map(r => [r.itemCode]);
+        qtyData = pendingArchiveRows.map(r => [r.qty]);
+        console.log(`[Process] Found ${pendingArchiveRows.length} items in คลังข้อมูล for ${tagId}`);
+    } else {
+        // Fallback: Read from legacy sheet if it exists
+        try {
+            const rollTagData = await getSheetData(ssId, `${sourceSheet}!A4:E17`);
+            const itemRows = Array.from({ length: 9 }, (_, index) => rollTagData?.[index + 5] || []);
+            const hasItems = itemRows.some(row => String(row[1] || '').trim() !== '');
+            if (!hasItems) {
+                return NextResponse.json(
+                    { error: `${tagId} ไม่มีรายการแล้ว (อาจถูกจัดการไปแล้ว) กรุณารีเฟรช` },
+                    { status: 409, headers: corsHeaders }
+                );
+            }
+            custId = rollTagData?.[0]?.[1] || "";
+            custName = rollTagData?.[1]?.[1] || custId || "Unknown";
+            ordersData = itemRows.map(row => [row[0] || ""]);
+            itemsData = itemRows.map(row => [row[1] || ""]);
+            qtyData = itemRows.map(row => [row[4] || ""]);
+        } catch {
+            return NextResponse.json(
+                { error: `${tagId} ไม่มีรายการแล้ว (อาจถูกจัดการไปแล้ว) กรุณารีเฟรช` },
+                { status: 409, headers: corsHeaders }
+            );
+        }
     }
 
     // 2. Check "Form" Availability First (Safe if FORM_SHEET is deleted)
@@ -60,45 +110,29 @@ export async function POST(request: Request) {
         // FORM_SHEET does not exist, completely fine!
     }
 
-    // 3. Read Roll Tag Data (อ่านไว้แล้วด้านบน)
-    const custIdData = [[rollTagData?.[0]?.[1] || ""]];
-    const custNameData = [[rollTagData?.[1]?.[1] || ""]];
-    const itemRows = Array.from({ length: 9 }, (_, index) => rollTagData?.[index + 5] || []);
-    const ordersData = itemRows.map(row => [row[0] || ""]);
-    const itemsData = itemRows.map(row => [row[1] || ""]);
-    const qtyData = itemRows.map(row => [row[4] || ""]);
-
-    const custName = custNameData?.[0]?.[0] || "Unknown";
-    const custId = custIdData?.[0]?.[0] || "";
-    console.log(`[Process] Read Data - Cust: ${custName}, Items: ${itemsData?.length || 0}`);
-
-    // 4. Generate Doc Number
+    // 3. Generate Doc Number
     const newDocId = await generateNewDocNumber(ssId);
-    console.log(`[Process] Generated DocId: ${newDocId}`);
+    console.log(`[Process] Generated DocId: ${newDocId} for Tag: ${tagId} (Customer: ${custName})`);
 
-    // 5. Prepare Data
-    const today = getThaiDateString(); // Thai-timezone date for Sheets
+    // 4. Prepare Data
+    const today = getThaiDateString();
 
-    // Prepare Archive Data
-    const dataToArchive = [];
-    
-    // Prepare Form Data Arrays
+    const dataToArchive: any[] = [];
     const formSequences: any[] = [];
     const formOrders: any[] = [];
     const formItems: any[] = [];
     const formQty: any[] = [];
-    
+
     let currentSequence = 1;
     let orderGroupSequence = 0;
     let lastValidOrderNo = "";
 
-    // Loop 9 rows (Legacy Max)
-    for (let i = 0; i < 9; i++) {
+    const maxItems = Math.max(ordersData.length, 9);
+    for (let i = 0; i < maxItems; i++) {
         const orderNo = ordersData?.[i]?.[0]?.trim() || "";
         const itemCode = itemsData?.[i]?.[0]?.trim() || "";
-        const qtyVal = qtyData?.[i]?.[0] || ""; // Keep as string or number
+        const qtyVal = qtyData?.[i]?.[0] || "";
 
-        // Logic from legacy for grouping
         let isNewOrderGroup = false;
         if (orderNo !== "") {
             lastValidOrderNo = orderNo;
@@ -108,20 +142,18 @@ export async function POST(request: Request) {
 
         if (itemCode !== "") {
             dataToArchive.push([
-                newDocId, custName, currentSequence, 
-                lastValidOrderNo, itemCode, qtyVal, 
+                newDocId, custName, currentSequence,
+                lastValidOrderNo, itemCode, qtyVal,
                 STATUS_IN_PROGRESS, "", today
             ]);
-            
-            // Form Data
+
             formSequences.push([isNewOrderGroup ? orderGroupSequence : ""]);
             formOrders.push([isNewOrderGroup ? lastValidOrderNo : ""]);
             formItems.push([itemCode]);
             formQty.push([qtyVal]);
-            
+
             currentSequence += 1;
         } else {
-            // Empty rows for Form
             formSequences.push([""]);
             formOrders.push([""]);
             formItems.push([""]);
@@ -129,22 +161,37 @@ export async function POST(request: Request) {
         }
     }
 
-    // 6. Write to "Archive" (Data Sheet)
-    console.log(`[Process] Prepared ${dataToArchive.length} rows for Archive. Writing to ${DATA_SHEET}...`);
-    if (dataToArchive.length > 0) {
-        try {
-            const cleanRows = dataToArchive.map(row =>
-                row.map(d => (d === undefined || d === null) ? "" : d)
-            );
-            await appendSheetData(ssId, `'${DATA_SHEET}'!A:I`, cleanRows, 'INSERT_ROWS');
-            console.log(`[Process] ✅ Successfully wrote ${dataToArchive.length} rows to คลังข้อมูล`);
-        } catch (err) {
-            console.error(`[Process] ❌ Failed to write to คลังข้อมูล:`, err);
-            // CRITICAL: Throw validation error so User sees it!
-            throw new Error(`Failed to write to Archive (คลังข้อมูล): ${err instanceof Error ? err.message : String(err)}`);
+    // 5. Update or Write to "Archive" (คลังข้อมูล)
+    if (isFromArchive) {
+        console.log(`[Process] Updating ${matchingRowIndices.length} rows in คลังข้อมูล in-place...`);
+        const updateRanges: { range: string; values: any[][] }[] = [];
+        matchingRowIndices.forEach((rowIdx, idx) => {
+            const rowData = dataToArchive[idx];
+            if (rowData) {
+                updateRanges.push({
+                    range: `'${DATA_SHEET}'!A${rowIdx}:I${rowIdx}`,
+                    values: [rowData]
+                });
+            }
+        });
+        if (updateRanges.length > 0) {
+            await batchUpdateSheetData(ssId, updateRanges);
+            console.log(`[Process] ✅ Updated ${updateRanges.length} rows in คลังข้อมูล in-place`);
         }
     } else {
-        console.warn(`[Process] ⚠️ No data to write to คลังข้อมูล (Items empty?)`);
+        console.log(`[Process] Prepared ${dataToArchive.length} rows for Archive. Writing to ${DATA_SHEET}...`);
+        if (dataToArchive.length > 0) {
+            try {
+                const cleanRows = dataToArchive.map(row =>
+                    row.map((d: any) => (d === undefined || d === null) ? "" : d)
+                );
+                await appendSheetData(ssId, `'${DATA_SHEET}'!A:I`, cleanRows, 'INSERT_ROWS');
+                console.log(`[Process] ✅ Successfully wrote ${dataToArchive.length} rows to คลังข้อมูล`);
+            } catch (err) {
+                console.error(`[Process] ❌ Failed to write to คลังข้อมูล:`, err);
+                throw new Error(`Failed to write to Archive (คลังข้อมูล): ${err instanceof Error ? err.message : String(err)}`);
+            }
+        }
     }
 
     // 7. Update "Form" Header (Optional - safe if FORM_SHEET is deleted)

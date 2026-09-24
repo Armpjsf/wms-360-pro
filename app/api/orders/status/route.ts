@@ -103,8 +103,8 @@ export async function GET(req: Request) {
         return aNum - bNum;
       });
 
-    // If for some reason metadata API failed and returned 0 sheets, fall back to default Roll Tag1 and Roll Tag2
-    const sheetsToQuery = rollTagSheets.length > 0 ? rollTagSheets : ['Roll Tag1', 'Roll Tag2'];
+    // Only query sheets if they actually exist in userSheetTitles
+    const sheetsToQuery = rollTagSheets;
 
     const fetchPromises = sheetsToQuery.map(sheetName => {
         const match = sheetName.match(/^Roll\s*Tag\s*(\d+)$/i);
@@ -177,7 +177,7 @@ export async function GET(req: Request) {
         };
     };
 
-    const pendingTasks = [];
+    let pendingTasks: any[] = [];
     for (let i = 0; i < sheetsToQuery.length; i++) {
         const sheetName = sheetsToQuery[i];
         const match = sheetName.match(/^Roll\s*Tag\s*(\d+)$/i);
@@ -266,6 +266,7 @@ export async function GET(req: Request) {
             const waitingMap = new Map<string, any>();
             const completedMap = new Map();
             const recentMap = new Map();
+            const pendingArchiveMap = new Map<string, any>();
             
             // Scan backwards to get latest first
             for (let i = dataSheetRaw.length - 1; i >= 1; i--) {
@@ -274,13 +275,36 @@ export async function GET(req: Request) {
                 
                 const docNum = String(row[0] || "").trim();
                 const customer = row[1];
-                const status = row[6];
+                const status = String(row[6] || "").trim();
                 const link = row[7]; // Col H (PDF Link)
                 const dateStr = row[8] || "";
                 
+                // Pending Roll Tag จากอีเมล/นำเข้า (อยู่ในคลังข้อมูลโดยตรง ไม่ต้องมีแท็บชีต)
+                if ((status === "รอจัด RollTag" || status === "RollTag") && docNum) {
+                    let task = pendingArchiveMap.get(docNum);
+                    if (!task) {
+                        const num = docNum.replace(/^RT/i, "");
+                        task = {
+                            id: docNum,
+                            name: `Roll Tag ${num}`,
+                            customer: customer || docNum,
+                            itemCount: 0,
+                            date: dateStr || getThaiDateString(),
+                            items: [] as any[],
+                        };
+                        pendingArchiveMap.set(docNum, task);
+                    }
+                    task.itemCount++;
+                    task.items.push({
+                        seq: Number(row[2]) || 0,
+                        orderNo: row[3] || "",
+                        itemCode: row[4] || "",
+                        qty: row[5] ?? ""
+                    });
+                }
                 // งานที่ยังไม่ปิด: กำลังดำเนินการ / รอลูกค้า / กำลังแก้ไข (สถานะเก่าจาก recall —
                 // เดิมไม่แสดงที่ไหนเลย งานจึง "หาย" จากทั้งแอดมินและพนักงาน)
-                if ((status === "กำลังดำเนินการ" || status === "รอลูกค้า" || status === "กำลังแก้ไข") && docNum) {
+                else if ((status === "กำลังดำเนินการ" || status === "รอลูกค้า" || status === "กำลังแก้ไข") && docNum) {
                     let job = waitingMap.get(docNum);
                     if (!job) {
                         job = {
@@ -329,6 +353,15 @@ export async function GET(req: Request) {
                 }
             }
             
+            // Merge Pending Tasks: รวมงานจาก คลังข้อมูล และ Legacy Sheets
+            const archivePending = Array.from(pendingArchiveMap.values());
+            const legacyPending = pendingTasks.filter(pt => !pendingArchiveMap.has(pt.id));
+            pendingTasks = [...archivePending, ...legacyPending].sort((a, b) => {
+                const aNum = parseInt(a.id.replace(/^RT/i, "") || "0", 10);
+                const bNum = parseInt(b.id.replace(/^RT/i, "") || "0", 10);
+                return aNum - bNum;
+            });
+
             // Fallback: If no activeForm from sheet (e.g. ส่งสินค้า is empty or deleted),
             // promote the first open job from คลังข้อมูล to be activeForm
             if (!activeForm && waitingMap.size > 0) {
