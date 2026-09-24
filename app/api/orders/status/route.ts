@@ -329,6 +329,24 @@ export async function GET(req: Request) {
                 }
             }
             
+            // Fallback: If no activeForm from sheet (e.g. ส่งสินค้า is empty or deleted),
+            // promote the first open job from คลังข้อมูล to be activeForm
+            if (!activeForm && waitingMap.size > 0) {
+                const firstJob = Array.from(waitingMap.values())[0];
+                activeForm = {
+                    docNum: firstJob.docNum,
+                    customer: firstJob.customer,
+                    refDate: firstJob.date || getThaiDateString(),
+                    status: firstJob.status,
+                    items: firstJob.items.map((it: any) => ({
+                        orderNo: it.orderNo,
+                        itemCode: it.itemCode,
+                        qty: it.qty
+                    })),
+                    signature: null
+                };
+            }
+
             const activeDoc = activeForm ? String(activeForm.docNum).trim() : "";
             for (const job of waitingMap.values()) {
                 job.items.sort((a: any, b: any) => a.seq - b.seq);

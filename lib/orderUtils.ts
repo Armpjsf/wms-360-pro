@@ -50,7 +50,13 @@ export class FormBusyError extends Error {
 export async function withFormLock<T>(ssid: string, fn: () => Promise<T>, waitMs = 15000): Promise<T> {
     const token = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const deadline = Date.now() + waitMs;
-    const readLock = async () => String((await getSheetData(ssid, LOCK_CELL))?.[0]?.[0] || "");
+    const readLock = async () => {
+        try {
+            return String((await getSheetData(ssid, LOCK_CELL))?.[0]?.[0] || "");
+        } catch {
+            return "";
+        }
+    };
 
     while (true) {
         const held = await readLock();

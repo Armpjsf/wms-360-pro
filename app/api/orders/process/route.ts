@@ -47,17 +47,17 @@ export async function POST(request: Request) {
         );
     }
 
-    // 2. Check "Form" Availability First
-    const formCheck = await getSheetData(ssId, `${FORM_SHEET}!G3:G3`);
-    if (formCheck && formCheck[0] && formCheck[0][0]) {
-        console.log(`[Process] Form Busy (Doc: ${formCheck[0][0]}). Auto-Archiving...`);
-        // เก็บงานเดิมกลับคลังข้อมูลโดย "คงสถานะเดิม" (ยังไม่ได้หยิบ = กำลังดำเนินการ)
-        const archiveRes = await archiveCurrentForm(undefined, undefined, ssId);
-        if (!archiveRes.success) {
-             throw new Error("Failed to auto-archive current job: " + archiveRes.error);
+    // 2. Check "Form" Availability First (Safe if FORM_SHEET is deleted)
+    try {
+        const formCheck = await getSheetData(ssId, `${FORM_SHEET}!G3:G3`);
+        if (formCheck && formCheck[0] && formCheck[0][0]) {
+            console.log(`[Process] Form Busy (Doc: ${formCheck[0][0]}). Auto-Archiving...`);
+            await archiveCurrentForm(undefined, undefined, ssId);
+        } else {
+            await clearFormSheet(ssId);
         }
-    } else {
-        await clearFormSheet(ssId); // กันเศษข้อมูลค้างในแถว 19-25 / ลายเซ็นเก่า
+    } catch {
+        // FORM_SHEET does not exist, completely fine!
     }
 
     // 3. Read Roll Tag Data (อ่านไว้แล้วด้านบน)
@@ -147,21 +147,24 @@ export async function POST(request: Request) {
         console.warn(`[Process] ⚠️ No data to write to คลังข้อมูล (Items empty?)`);
     }
 
-    // 7. Update "Form" Header
-    console.log(`[Process] Updating Form Header & Body...`);
-    await batchUpdateSheetData(ssId, [
-        { range: `${FORM_SHEET}!G3`, values: [[newDocId]] },
-        { range: `${FORM_SHEET}!F4`, values: [[today]] },
-        { range: `${FORM_SHEET}!F5`, values: [[today]] },
-        { range: `${FORM_SHEET}!D6`, values: [[custId]] },
-        { range: `${FORM_SHEET}!F6`, values: [[custName]] },
-        { range: `${FORM_SHEET}!B10:B18`, values: formSequences },
-        { range: `${FORM_SHEET}!C10:C18`, values: formOrders },
-        { range: `${FORM_SHEET}!D10:D18`, values: formItems },
-        { range: `${FORM_SHEET}!G10:G18`, values: formQty },
-    ]);
-    
-    console.log(`[Process] Form Updated.`);
+    // 7. Update "Form" Header (Optional - safe if FORM_SHEET is deleted)
+    try {
+        console.log(`[Process] Updating Form Header & Body...`);
+        await batchUpdateSheetData(ssId, [
+            { range: `${FORM_SHEET}!G3`, values: [[newDocId]] },
+            { range: `${FORM_SHEET}!F4`, values: [[today]] },
+            { range: `${FORM_SHEET}!F5`, values: [[today]] },
+            { range: `${FORM_SHEET}!D6`, values: [[custId]] },
+            { range: `${FORM_SHEET}!F6`, values: [[custName]] },
+            { range: `${FORM_SHEET}!B10:B18`, values: formSequences },
+            { range: `${FORM_SHEET}!C10:C18`, values: formOrders },
+            { range: `${FORM_SHEET}!D10:D18`, values: formItems },
+            { range: `${FORM_SHEET}!G10:G18`, values: formQty },
+        ]);
+        console.log(`[Process] Form Updated.`);
+    } catch {
+        console.log(`[Process] Form sheet update skipped (sheet may not exist).`);
+    }
 
     // 9. Write to Transaction Sheet before clearing the source Roll Tag.
     try {
@@ -210,15 +213,19 @@ export async function POST(request: Request) {
         throw new Error(`Archive success, but Transaction failed: ${txErr instanceof Error ? txErr.message : String(txErr)}`);
     }
 
-    // 10. Clear Roll Tag only after all required writes succeed.
-    await batchClearSheetRanges(ssId, [
-        `${sourceSheet}!B4`,
-        `${sourceSheet}!B6`,
-        `${sourceSheet}!A9:A17`,
-        `${sourceSheet}!B9:B17`,
-        `${sourceSheet}!D9:D17`,
-        `${sourceSheet}!E9:E17`,
-    ]);
+    // 10. Clear Roll Tag only after all required writes succeed (safe if sheet deleted)
+    try {
+        await batchClearSheetRanges(ssId, [
+            `${sourceSheet}!B4`,
+            `${sourceSheet}!B6`,
+            `${sourceSheet}!A9:A17`,
+            `${sourceSheet}!B9:B17`,
+            `${sourceSheet}!D9:D17`,
+            `${sourceSheet}!E9:E17`,
+        ]);
+    } catch {
+        console.log(`[Process] Source Roll Tag sheet clear skipped (sheet may not exist).`);
+    }
 
     // 11. Notification (Push to APK)
     try {
