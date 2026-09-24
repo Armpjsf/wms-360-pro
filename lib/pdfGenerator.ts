@@ -110,14 +110,11 @@ export async function generateRollTagPdf(data: RollTagData): Promise<Uint8Array>
     page.drawText(String(data.note), { x: 160, y: 401, size: 10, font: fontReg, color: black });
   }
 
-  // 2. Dates
+  // 2. Dates - Written directly without rectangle overlays
   if (data.pickingDate) {
-    // Cover formula date if custom date passed
-    page.drawRectangle({ x: 655, y: 415, width: 85, height: 16, color: rgb(1, 1, 1) });
     page.drawText(data.pickingDate, { x: 660, y: 420, size: 10, font: fontBold, color: black });
   }
   if (data.shippingDate) {
-    page.drawRectangle({ x: 655, y: 397, width: 85, height: 16, color: rgb(1, 1, 1) });
     page.drawText(data.shippingDate, { x: 660, y: 402, size: 10, font: fontBold, color: black });
   }
 
@@ -148,9 +145,7 @@ export async function generateRollTagPdf(data: RollTagData): Promise<Uint8Array>
     }
   }
 
-  // 4. Total Quantity
-  // Cover template "-  .00"
-  page.drawRectangle({ x: 660, y: 198, width: 85, height: 16, color: rgb(1, 1, 1) });
+  // 4. Total Quantity - Written directly without rectangle overlays
   const totalStr = totalQty > 0 ? `${totalQty.toLocaleString()}.00 ` : "-  .00 ";
   const totalW = fontBold.widthOfTextAtSize(totalStr, 11);
   page.drawText(totalStr, { x: 740 - totalW, y: 202, size: 11, font: fontBold, color: black });

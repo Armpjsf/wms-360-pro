@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, getSheetFormula, PO_SPREADSHEET_ID, SPREADSHEET_ID, getGoogleSheets } from '@/lib/googleSheets';
+import { getSheetData, getSheetFormula, PO_SPREADSHEET_ID, SPREADSHEET_ID, getGoogleSheets, lookupCustomerName } from '@/lib/googleSheets';
 import { getThaiDateString } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
@@ -355,6 +355,12 @@ export async function GET(req: Request) {
             
             // Merge Pending Tasks: รวมงานจาก คลังข้อมูล และ Legacy Sheets
             const archivePending = Array.from(pendingArchiveMap.values());
+            for (const task of archivePending) {
+                const lookedUp = await lookupCustomerName(ssid, task.customer);
+                if (lookedUp) {
+                    task.customer = lookedUp;
+                }
+            }
             const legacyPending = pendingTasks.filter(pt => !pendingArchiveMap.has(pt.id));
             pendingTasks = [...archivePending, ...legacyPending].sort((a, b) => {
                 const aNum = parseInt(a.id.replace(/^RT/i, "") || "0", 10);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData } from '@/lib/googleSheets';
+import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData, lookupCustomerName } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
 import { getThaiDateString } from '@/lib/dateUtils';
 import { withFormLock, archiveCurrentForm, clearFormSheet, lockErrorStatus, STATUS_IN_PROGRESS } from '@/lib/orderUtils';
@@ -71,7 +71,11 @@ export async function POST(request: Request) {
         ordersData = pendingArchiveRows.map(r => [r.orderNo]);
         itemsData = pendingArchiveRows.map(r => [r.itemCode]);
         qtyData = pendingArchiveRows.map(r => [r.qty]);
-        console.log(`[Process] Found ${pendingArchiveRows.length} items in คลังข้อมูล for ${tagId}`);
+        const lookedUp = await lookupCustomerName(ssId, custName);
+        if (lookedUp) {
+            custName = lookedUp;
+        }
+        console.log(`[Process] Found ${pendingArchiveRows.length} items in คลังข้อมูล for ${tagId} (Customer: ${custName})`);
     } else {
         // Fallback: Read from legacy sheet if it exists
         try {

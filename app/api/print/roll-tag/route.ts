@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveSpreadsheetId, findSheetTitle, getSheetData } from '@/lib/googleSheets';
+import { resolveSpreadsheetId, findSheetTitle, getSheetData, lookupCustomerName } from '@/lib/googleSheets';
 import { generateRollTagPdf, RollTagItem } from '@/lib/pdfGenerator';
 import { getThaiDateString } from '@/lib/dateUtils';
 
@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
         const items: RollTagItem[] = [];
 
         if (matchingRows.length > 0) {
-            customerId = matchingRows[0][1] || '';
-            customerName = customerId;
+            customerId = String(matchingRows[0][1] || '').trim();
+            const lookedUp = await lookupCustomerName(ssid, customerId);
+            customerName = lookedUp || customerId;
             pickingDate = matchingRows[0][8] || getThaiDateString();
             shippingDate = pickingDate;
 
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
 
             const rawData = await getSheetData(ssid, `${sheetName}!A4:E18`);
             customerId = rawData?.[0]?.[1] || '';
-            customerName = rawData?.[1]?.[1] || '';
+            const lookedUpLegacy = await lookupCustomerName(ssid, customerId);
+            customerName = rawData?.[1]?.[1] || lookedUpLegacy || customerId;
             note = rawData?.[2]?.[1] || '';
             pickingDate = rawData?.[1]?.[4] || getThaiDateString();
             shippingDate = rawData?.[2]?.[4] || pickingDate;

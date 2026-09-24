@@ -2960,3 +2960,36 @@ export async function ensureRollTagSheet(spreadsheetId: string, sheetName: strin
   // Deprecated: No-op. Roll Tag sheets are no longer duplicated or created.
   return null;
 }
+
+const customerNameCache = new Map<string, { map: Map<string, string>; timestamp: number }>();
+
+export async function lookupCustomerName(spreadsheetId: string, customerId: string | number): Promise<string> {
+  const code = String(customerId || '').trim();
+  if (!code) return '';
+
+  const cacheKey = spreadsheetId;
+  const cached = customerNameCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && now - cached.timestamp < 10 * 60 * 1000) {
+    return cached.map.get(code) || '';
+  }
+
+  try {
+    const raw = await getSheetData(spreadsheetId, "'Customer'!A1:B").catch(() => []);
+    const map = new Map<string, string>();
+    if (raw && raw.length > 0) {
+      for (const row of raw) {
+        if (row && row[0]) {
+          map.set(String(row[0]).trim(), String(row[1] || '').trim());
+        }
+      }
+    }
+    customerNameCache.set(cacheKey, { map, timestamp: now });
+    return map.get(code) || '';
+  } catch (err) {
+    console.warn(`[lookupCustomerName] Failed to lookup customer ${code}:`, err);
+    return '';
+  }
+}
+
