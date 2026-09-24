@@ -44,16 +44,6 @@ export interface DeliveryNoteData {
 
 function getFontBytes(): { regular: Buffer; bold: Buffer } {
   const fontDir = path.join(process.cwd(), 'assets', 'fonts');
-  const sarabunReg = path.join(fontDir, 'Sarabun-Regular.ttf');
-  const sarabunBold = path.join(fontDir, 'Sarabun-Bold.ttf');
-
-  if (fs.existsSync(sarabunReg) && fs.existsSync(sarabunBold)) {
-    return {
-      regular: fs.readFileSync(sarabunReg),
-      bold: fs.readFileSync(sarabunBold)
-    };
-  }
-
   const regPath = path.join(fontDir, 'tahoma.ttf');
   const boldPath = path.join(fontDir, 'tahomabd.ttf');
 
@@ -61,6 +51,15 @@ function getFontBytes(): { regular: Buffer; bold: Buffer } {
     return {
       regular: fs.readFileSync(regPath),
       bold: fs.readFileSync(boldPath)
+    };
+  }
+
+  const sarabunReg = path.join(fontDir, 'Sarabun-Regular.ttf');
+  const sarabunBold = path.join(fontDir, 'Sarabun-Bold.ttf');
+  if (fs.existsSync(sarabunReg) && fs.existsSync(sarabunBold)) {
+    return {
+      regular: fs.readFileSync(sarabunReg),
+      bold: fs.readFileSync(sarabunBold)
     };
   }
 
@@ -176,15 +175,6 @@ export async function generateDeliveryNotePdf(data: DeliveryNoteData): Promise<U
   const page = doc.getPages()[0];
   const black = rgb(0, 0, 0);
 
-  // Cover old leftover signature from original sheet
-  page.drawRectangle({
-    x: 60,
-    y: 110,
-    width: 150,
-    height: 70,
-    color: rgb(1, 1, 1),
-  });
-
   // 1. Top Order Info
   if (data.docNum) {
     page.drawText(data.docNum, { x: 395, y: 739, size: 10, font: fontBold, color: black });
@@ -202,10 +192,11 @@ export async function generateDeliveryNotePdf(data: DeliveryNoteData): Promise<U
     page.drawText(data.forwardTo, { x: 348, y: 671, size: 10, font: fontReg, color: black });
   }
 
-  if (data.company) {
+  // Only draw company/sender if different from the template's baked-in text ("FORMICA" / "DD Service And Transport")
+  if (data.company && data.company !== 'FORMICA') {
     page.drawText(data.company, { x: 105, y: 722, size: 10, font: fontReg, color: black });
   }
-  if (data.senderName) {
+  if (data.senderName && data.senderName !== 'DD Service And Transport') {
     page.drawText(data.senderName, { x: 105, y: 705, size: 10, font: fontReg, color: black });
   }
   if (data.vehiclePlate) {
@@ -238,7 +229,7 @@ export async function generateDeliveryNotePdf(data: DeliveryNoteData): Promise<U
     }
   }
 
-  // 3. Signature Image Overlay
+  // 3. Signature Image Overlay (Customer Signature)
   if (data.signature) {
     try {
       let imageBytes: ArrayBuffer;
@@ -257,16 +248,17 @@ export async function generateDeliveryNotePdf(data: DeliveryNoteData): Promise<U
         ? await doc.embedPng(imageBytes)
         : await doc.embedJpg(imageBytes);
 
-      // Box is 100 x 50
-      const boxW = 100;
-      const boxH = 50;
+      // Box is 85 x 40, positioned strictly ABOVE the "ผู้รับสินค้า (Customer)" box (which is at y ~129..170)
+      const boxW = 85;
+      const boxH = 40;
       const scale = Math.min(boxW / sigImage.width, boxH / sigImage.height);
       const finalW = sigImage.width * scale;
       const finalH = sigImage.height * scale;
 
       // Position in the 3rd column: ผู้รับสินค้า (Customer)
-      const sigX = 415 + (110 - finalW) / 2;
-      const sigY = 125;
+      // Centered at x ~458, aligned with warehouse signature above line (y ~ 174..214)
+      const sigX = 458 - finalW / 2;
+      const sigY = 174 + (boxH - finalH) / 2;
 
       page.drawImage(sigImage, {
         x: sigX,
