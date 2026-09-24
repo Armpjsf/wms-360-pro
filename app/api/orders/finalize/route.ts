@@ -13,6 +13,7 @@ import {
 } from '@/lib/googleSheets';
 import { PDFDocument } from 'pdf-lib';
 import { withFormLock, restoreOrderToForm, archiveCurrentForm, lockErrorStatus } from '@/lib/orderUtils';
+import { generateDeliveryNotePdf, DeliveryItem } from '@/lib/pdfGenerator';
 
 const FORM_SHEET = "ส่งสินค้า";
 const DATA_SHEET = "คลังข้อมูล";
@@ -266,72 +267,35 @@ export async function POST(req: Request) {
     console.log('[Finalize] Updating Delivery Date (F5) to today...');
     await updateSheetData(ssid, `'${FORM_SHEET}'!F5`, [[getThaiDate()]]);
 
-    // 1. Generate Raw PDF (Without waiting for Sheets signature)
-    console.log('[Finalize] Generating base PDF...');
-    const gid = 1427637725; // ส่งสินค้า form sheet with signature (Updated 2026-02-06)
-    const rawPdfBuffer = await getSheetPdfBlob(ssid, gid, 'B1:H36', false);
-    
-    // 2. Post-Process PDF if Signature exists
-    let finalPdfBytes: Uint8Array;
-    
-    if (signature) {
-        console.log('[Finalize] Overlaying signature with pdf-lib...');
-        try {
-            // Load the PDF
-            const existingPdfBytes = new Uint8Array(rawPdfBuffer);
-            const pdfDoc = await PDFDocument.load(existingPdfBytes);
-            
-            // Embed the signature image (supports data URI for both PNG and JPEG)
-            let imageBytes: ArrayBuffer;
-            let isPng = true;
-            if (signature.startsWith('data:')) {
-                const mime = signature.match(/data:([^;]+);/)?.[1] || 'image/png';
-                isPng = mime === 'image/png';
-                const base64 = signature.split(',')[1];
-                imageBytes = Buffer.from(base64, 'base64').buffer;
-            } else {
-                isPng = !signature.toLowerCase().endsWith('.jpg') && !signature.toLowerCase().endsWith('.jpeg');
-                imageBytes = await fetch(signature).then((res) => res.arrayBuffer());
+    // 1. Prepare items for Delivery Note
+    const deliveryItems: DeliveryItem[] = [];
+    if (itemsData && itemsData.length > 0) {
+        for (let i = 0; i < itemsData.length; i++) {
+            const sku = itemsData[i]?.[0]?.trim();
+            if (sku) {
+                deliveryItems.push({
+                    seq: i + 1,
+                    orderNo: ordersData?.[i]?.[0]?.trim() || '',
+                    itemCode: sku,
+                    quantity: qtyData?.[i]?.[0] || ''
+                });
             }
-            const pngImage = isPng 
-                ? await pdfDoc.embedPng(imageBytes)
-                : await pdfDoc.embedJpg(imageBytes);
-            
-            const pages = pdfDoc.getPages();
-            const firstPage = pages[0];
-            const { width, height } = firstPage.getSize();
-
-            // User feedback: Y=140 overlaps text. Move UP to Y=160.
-            // X=405 seems correct.
-            // User feedback: Adjust signature to be smaller (Original: 160x70)
-            const boxWidth = 100; 
-            const boxHeight = 50;
-            
-            // Scale to fit within box (preserve aspect ratio)
-            const scale = Math.min(boxWidth / pngImage.width, boxHeight / pngImage.height);
-            const finalWidth = pngImage.width * scale;
-            const finalHeight = pngImage.height * scale;
-
-            // Center horizontally within the original 160px space
-            // Original Space Center: 405 + (160/2) = 485
-            // New Image Center: x + (finalWidth/2) = 485 => x = 485 - (finalWidth/2)
-            const xPosition = 485 - (finalWidth / 2);
-
-            firstPage.drawImage(pngImage, {
-                x: xPosition,
-                y: 170,  // Move UP slightly more? Original 160. Let's try 170 to be safe.
-                width: finalWidth,
-                height: finalHeight,
-            });
-            
-            finalPdfBytes = await pdfDoc.save();
-        } catch (e) {
-            console.error("PDF Modification Error:", e);
-            finalPdfBytes = new Uint8Array(rawPdfBuffer);
         }
-    } else {
-        finalPdfBytes = new Uint8Array(rawPdfBuffer);
     }
+
+    // 2. Generate Delivery Note PDF directly (no Google Sheets PDF export needed)
+    console.log(`[Finalize Fast] Generating delivery note PDF directly (${deliveryItems.length} items)...`);
+    const finalPdfBytes = await generateDeliveryNotePdf({
+        docNum: docNum!,
+        company: 'FORMICA',
+        senderName: 'DD Service And Transport',
+        vehiclePlate: location || '',
+        loadDate: getThaiDate(),
+        deliveryDate: getThaiDate(),
+        customerName: customerName || 'Unknown',
+        items: deliveryItems,
+        signature: signature
+    });
 
     // 2.5 Construct Filename (Match Legacy Python: "ใบส่งสินค้า {OrderNos}.pdf")
     // Reuse already pre-fetched ordersData instead of calling getSheetData again

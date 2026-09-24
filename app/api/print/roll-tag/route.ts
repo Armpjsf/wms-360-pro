@@ -1,43 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSheetId, getSheetPdfBlob, resolveSpreadsheetId, findSheetTitle } from '@/lib/googleSheets';
+import { resolveSpreadsheetId, findSheetTitle, getSheetData } from '@/lib/googleSheets';
+import { generateRollTagPdf, RollTagItem } from '@/lib/pdfGenerator';
+import { getThaiDateString } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
-    // Get params from query
     const searchParams = request.nextUrl.searchParams;
     const tagId = searchParams.get('tagId') || 'RT1';
     const branchId = searchParams.get('branchId');
 
     try {
-        // 1. Resolve Spreadsheet for the branch
         const ssid = await resolveSpreadsheetId(branchId, 'doc');
-        console.log(`[Print RollTag] Branch: ${branchId || 'HQ'}, SSID: ${ssid}, Tag: ${tagId}`);
+        console.log(`[Print RollTag Fast] Branch: ${branchId || 'HQ'}, SSID: ${ssid}, Tag: ${tagId}`);
 
-        // 2. Map tagId to keywords and default name dynamically
         const tagNum = tagId.replace("RT", "").trim();
         const keywords = ['Roll Tag', tagNum];
         const defaultName = `Roll Tag${tagNum}`;
-
-        // 3. Find the actual sheet title (robustly)
         const sheetName = await findSheetTitle(ssid, keywords, defaultName);
-        console.log(`[Print RollTag] Resolved Sheet Name: "${sheetName}"`);
 
-        // 4. Get GID
-        const gid = await getSheetId(ssid, sheetName);
-        if (gid === null) {
-            return NextResponse.json({ 
-                error: `Sheet "${sheetName}" not found in spreadsheet. Please check the sheet name in Google Sheets.` 
-            }, { status: 404 });
+        // Read data from the sheet range A4:E17
+        const rawData = await getSheetData(ssid, `${sheetName}!A4:E18`);
+
+        const customerId = rawData?.[0]?.[1] || '';
+        const customerName = rawData?.[1]?.[1] || '';
+        const note = rawData?.[2]?.[1] || '';
+        const pickingDate = rawData?.[1]?.[4] || getThaiDateString();
+        const shippingDate = rawData?.[2]?.[4] || pickingDate;
+
+        const items: RollTagItem[] = [];
+        // Scan item rows (starting from row index 5 which corresponds to row 9)
+        for (let i = 5; i < 14; i++) {
+            const row = rawData?.[i];
+            if (row && (row[0] || row[1] || row[4])) {
+                const orderNo = String(row[0] || '').trim();
+                const itemCode = String(row[1] || '').trim();
+                const description = String(row[2] || '').trim();
+                const qty = row[4];
+                if (itemCode || orderNo) {
+                    items.push({
+                        orderNo,
+                        itemCode,
+                        description: description || itemCode,
+                        quantity: qty
+                    });
+                }
+            }
         }
 
-        // 5. Fetch PDF (A1:E18 range to perfectly fit the table columns A-E and rows 1-18)
-        // We explicitly pass scale=1, margin=1.0, align='c', valign='m' to match Ctrl+P settings only for Roll Tags.
-        const pdfBuffer = await getSheetPdfBlob(ssid, gid, 'A1:E18', true, 1, 1.0, 'c', 'm');
+        // Generate instant vector PDF with exact visual appearance
+        const pdfBytes = await generateRollTagPdf({
+            tagId,
+            customerId,
+            customerName: customerName || customerId,
+            note,
+            pickingDate,
+            shippingDate,
+            items
+        });
 
-        // 6. Return as PDF Stream
-        return new NextResponse(pdfBuffer, {
+        return new NextResponse(Buffer.from(pdfBytes), {
             headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': `inline; filename="${sheetName}.pdf"`
@@ -45,7 +68,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error('Print Error:', error);
+        console.error('[Print RollTag] Error:', error);
         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

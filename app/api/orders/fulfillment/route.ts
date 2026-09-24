@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, updateSheetData, getGoogleSheets, exportSheetToPdf } from '@/lib/googleSheets';
+import { getSheetData, updateSheetData, getGoogleSheets, uploadPdfToDrive } from '@/lib/googleSheets';
 import { getThaiDateString } from '@/lib/dateUtils';
+import { generateDeliveryNotePdf, DeliveryItem } from '@/lib/pdfGenerator';
 
 export const dynamic = 'force-static';
 
@@ -136,17 +137,30 @@ export async function POST(request: Request) {
         }
 
         if (action === 'generate_pdf') {
-             // 1. Get GID of Form Sheet
-             const { googleSheets, auth } = await getGoogleSheets();
-             const sh = await googleSheets.spreadsheets.get({ spreadsheetId: SHEET_ID, auth: auth as any });
-             const formSheet = sh.data.sheets?.find(s => s.properties?.title === SHEET_FORM);
-             
-             if (!formSheet?.properties?.sheetId) throw new Error("Form Sheet not found");
+             // 1. Fetch data from Sheet Form or Archive
+             const [orderData, itemData, qtyData, custData] = await Promise.all([
+                 getSheetData(SHEET_ID, `'${SHEET_FORM}'!C10:C25`),
+                 getSheetData(SHEET_ID, `'${SHEET_FORM}'!D10:D25`),
+                 getSheetData(SHEET_ID, `'${SHEET_FORM}'!G10:G25`),
+                 getSheetData(SHEET_ID, `'${SHEET_FORM}'!F6`)
+             ]);
 
-             // 2. Export
-             // 2. Export
-             // Fetch Order Numbers from C10:C25 (to match legacy logic)
-             const orderData = await getSheetData(SHEET_ID, `'${SHEET_FORM}'!C10:C25`);
+             const customerName = custData?.[0]?.[0] || 'Unknown';
+             const deliveryItems: DeliveryItem[] = [];
+             if (itemData && itemData.length > 0) {
+                 for (let i = 0; i < itemData.length; i++) {
+                     const sku = itemData[i]?.[0]?.trim();
+                     if (sku) {
+                         deliveryItems.push({
+                             seq: i + 1,
+                             orderNo: orderData?.[i]?.[0]?.trim() || '',
+                             itemCode: sku,
+                             quantity: qtyData?.[i]?.[0] || ''
+                         });
+                     }
+                 }
+             }
+
              const uniqueOrders = Array.from(new Set(
                 orderData?.map((r: any) => r[0]?.toString().trim()).filter((x: any) => x) || []
              ));
@@ -154,15 +168,25 @@ export async function POST(request: Request) {
              const pdfName = uniqueOrders.length > 0
                 ? `ใบส่งสินค้า ${uniqueOrders.join(',')}.pdf`
                 : `ใบส่งสินค้า ${docNum}.pdf`;
-             const result = await exportSheetToPdf(
-                 SHEET_ID, 
-                 formSheet.properties.sheetId, 
-                 pdfName, 
-                 FOLDER_ID,
-                 "B1:H36"
-             );
 
-             return NextResponse.json(result);
+             const today = getThaiDateString();
+             const pdfBytes = await generateDeliveryNotePdf({
+                 docNum: docNum || 'DRAFT',
+                 company: 'FORMICA',
+                 senderName: 'DD Service And Transport',
+                 loadDate: today,
+                 deliveryDate: today,
+                 customerName: customerName,
+                 items: deliveryItems
+             });
+
+             const uploadRes = await uploadPdfToDrive(Buffer.from(pdfBytes), pdfName, FOLDER_ID);
+             return NextResponse.json({
+                 success: true,
+                 id: uploadRes.id,
+                 viewLink: uploadRes.webViewLink,
+                 downloadLink: uploadRes.webContentLink
+             });
         }
 
         return NextResponse.json({ error: "Invalid Action" }, { status: 400 });
