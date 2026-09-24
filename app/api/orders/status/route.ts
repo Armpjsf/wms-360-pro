@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSheetData, getSheetFormula, PO_SPREADSHEET_ID, SPREADSHEET_ID, getGoogleSheets, lookupCustomerName } from '@/lib/googleSheets';
 import { getThaiDateString } from '@/lib/dateUtils';
+import { getActiveJobDocNum } from '@/lib/orderUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,7 +14,6 @@ const corsHeaders = {
 
 const ROLL_TAG_1 = "Roll Tag1";
 const ROLL_TAG_2 = "Roll Tag2";
-const FORM_SHEET = "ส่งสินค้า";
 
 // Short in-memory cache (per spreadsheet/branch) for rapid double-clicks / page transitions.
 // ห้ามใช้ตัวแปรเดียวรวมทุกสาขา และห้ามคืนข้อมูลเก่าแทนผลว่าง — ทำให้หน้าจอค้างงานที่ปิดไปแล้ว
@@ -112,9 +112,9 @@ export async function GET(req: Request) {
         return fetchDynamic(['Roll Tag', num], 'A4:F17', sheetName);
     });
 
-    const [rollTagDataList, formCheck] = await Promise.all([
+    const [rollTagDataList, activeDocId] = await Promise.all([
         Promise.all(fetchPromises),
-        fetchDynamic(['ส่งสินค้า'], 'G3:G3', 'ส่งสินค้า')
+        getActiveJobDocNum(ssid)
     ]);
 
     const parseRollTag = (id: string, name: string, data: any[]) => {
@@ -190,71 +190,8 @@ export async function GET(req: Request) {
         }
     }
 
-    // 2. Check Active Form (ส่งสินค้า sheet)
+    // 2. Get Waiting, Active & Completed Jobs from คลังข้อมูล
     let activeForm: any = null;
-    const docNumRaw = formCheck && formCheck[0] ? formCheck[0][0] : null;
-    
-    if (docNumRaw && docNumRaw.trim() !== "") {
-        // Fetch full form data (Extended to H35 to include G33 Signature)
-        const formFullData = await getSheetData(ssid, `${FORM_SHEET}!A1:H35`);
-        
-        const docNum = docNumRaw;
-        const custName = (formFullData && formFullData[5]) ? formFullData[5][5] : ""; // F6
-        const refDate = (formFullData && formFullData[3]) ? formFullData[3][5] : ""; // F4
-        const shippingDate = (formFullData && formFullData[4]) ? formFullData[4][5] : ""; // F5
-
-        // Extract Items from Rows 10-25 (Indices 9-24)
-        const items = [];
-        // Scan rows 9 to 24 (total 16 rows)
-        if (formFullData) {
-            for (let i = 9; i < 25; i++) {
-                const row = formFullData[i];
-                if (row) {
-                    const itemCode = row[3]; // Col D
-                    if (itemCode && itemCode.trim() !== "") {
-                        items.push({
-                            orderNo: row[2] || "", // Col C
-                            itemCode: itemCode,
-                            qty: row[6] || 0 // Col G
-                        });
-                    }
-                }
-            }
-        }
-        
-        // Check for Signature in H33 (Col H = Index 7, Row 33 = Index 32)
-        // We store the RAW URL in H33 because reading G33 (IMAGE formula) returns empty value.
-        let signatureVal = (formFullData && formFullData[32]) ? formFullData[32][7] : null;
-
-        // Fallback: If H33 is empty, check if G33 has an IMAGE formula (Old logic or partial write)
-        if (!signatureVal) {
-             try {
-                 const g33Formula = await getSheetFormula(ssid, `${FORM_SHEET}!G33`);
-                 if (g33Formula && g33Formula[0] && g33Formula[0][0]) {
-                     const formula = g33Formula[0][0].toString();
-                     // Parse =IMAGE("https://...")
-                     const match = formula.match(/=IMAGE\("([^"]+)"\)/);
-                     if (match && match[1]) {
-                         signatureVal = match[1];
-                         console.log('[Status] Recovered signature from G33 Formula:', signatureVal);
-                     }
-                 }
-             } catch (err) {
-                 console.error('Error recovering signature formula:', err);
-             }
-        }
-
-        activeForm = {
-            docNum,
-            customer: custName,
-            refDate: refDate || shippingDate || getThaiDateString(),
-            status: "รอลูกค้า",
-            items: items,
-            signature: signatureVal // Include signature URL in response
-        };
-    }
-
-    // 3. Get Waiting & Completed Jobs from คลังข้อมูล
     let waitingJobs: any[] = [];
     let completedJobs: any[] = []; 
     let recentPendingPdf: any[] = [];
@@ -276,7 +213,7 @@ export async function GET(req: Request) {
                 const docNum = String(row[0] || "").trim();
                 const customer = row[1];
                 const status = String(row[6] || "").trim();
-                const link = row[7]; // Col H (PDF Link)
+                const link = row[7]; // Col H (PDF Link or Signature Link)
                 const dateStr = row[8] || "";
                 
                 // Pending Roll Tag จากอีเมล/นำเข้า (อยู่ในคลังข้อมูลโดยตรง ไม่ต้องมีแท็บชีต)
@@ -302,8 +239,7 @@ export async function GET(req: Request) {
                         qty: row[5] ?? ""
                     });
                 }
-                // งานที่ยังไม่ปิด: กำลังดำเนินการ / รอลูกค้า / กำลังแก้ไข (สถานะเก่าจาก recall —
-                // เดิมไม่แสดงที่ไหนเลย งานจึง "หาย" จากทั้งแอดมินและพนักงาน)
+                // งานที่ยังไม่ปิด: กำลังดำเนินการ / รอลูกค้า / กำลังแก้ไข (สถานะเก่าจาก recall)
                 else if ((status === "กำลังดำเนินการ" || status === "รอลูกค้า" || status === "กำลังแก้ไข") && docNum) {
                     let job = waitingMap.get(docNum);
                     if (!job) {
@@ -315,9 +251,12 @@ export async function GET(req: Request) {
                             orderNos: [] as string[],
                             // "รอลูกค้า" = จัดสินค้าเสร็จแล้ว, อื่นๆ = ยังจัดอยู่
                             status: status === "รอลูกค้า" ? "รอลูกค้า" : "กำลังดำเนินการ",
+                            signature: (link && String(link).startsWith('http')) ? link : null,
                             items: [] as any[],
                         };
                         waitingMap.set(docNum, job);
+                    } else if (!job.signature && link && String(link).startsWith('http')) {
+                        job.signature = link;
                     }
                     job.items.push({ seq: Number(row[2]) || 0, orderNo: row[3] || "", itemCode: row[4] || "", qty: row[5] ?? "" });
                 }
@@ -368,21 +307,25 @@ export async function GET(req: Request) {
                 return aNum - bNum;
             });
 
-            // Fallback: If no activeForm from sheet (e.g. ส่งสินค้า is empty or deleted),
-            // promote the first open job from คลังข้อมูล to be activeForm
-            if (!activeForm && waitingMap.size > 0) {
-                const firstJob = Array.from(waitingMap.values())[0];
+            // Determine Active Form from activeDocId or first waiting job
+            let activeJob = (activeDocId && waitingMap.has(activeDocId)) ? waitingMap.get(activeDocId) : null;
+            if (!activeJob && waitingMap.size > 0) {
+                activeJob = Array.from(waitingMap.values())[0];
+            }
+            if (activeJob) {
+                activeJob.items.sort((a: any, b: any) => a.seq - b.seq);
                 activeForm = {
-                    docNum: firstJob.docNum,
-                    customer: firstJob.customer,
-                    refDate: firstJob.date || getThaiDateString(),
-                    status: firstJob.status,
-                    items: firstJob.items.map((it: any) => ({
+                    docNum: activeJob.docNum,
+                    customer: activeJob.customer,
+                    refDate: activeJob.date || getThaiDateString(),
+                    status: activeJob.status,
+                    archiveStatus: activeJob.status,
+                    items: activeJob.items.map((it: any) => ({
                         orderNo: it.orderNo,
                         itemCode: it.itemCode,
                         qty: it.qty
                     })),
-                    signature: null
+                    signature: activeJob.signature || null
                 };
             }
 

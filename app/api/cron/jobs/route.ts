@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSheetData, updateSheetData, PO_SPREADSHEET_ID } from '@/lib/googleSheets';
 import { messaging } from '@/lib/firebaseAdmin';
 import { TRANSACTION_SPREADSHEET_ID } from '@/lib/transactionUtils';
+import { getActiveJobDocNum, readArchive, rowNumbersOf } from '@/lib/orderUtils';
 
 // This endpoint is designed to be called by a Scheduler (Cron Job)
 // e.g., every 5 minutes.
@@ -20,19 +21,14 @@ export async function GET(req: Request) {
     try {
         console.log('[Cron:Jobs] Checking for New Active Jobs...');
 
-        // 1. Fetch Active Form from 'ส่งสินค้า' (Delivery Sheet)
-        // Similar logic to 'api/orders/status'
-        const FORM_SHEET = "ส่งสินค้า";
-        // Check cell A1 for DocNum
-        const formCheck = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!G3:G3`);
-        const docNumRaw = formCheck && formCheck[0] ? formCheck[0][0] : null;
+        // 1. Fetch Active Job from คลังข้อมูล
+        const currentActiveJob = await getActiveJobDocNum(PO_SPREADSHEET_ID);
 
-        if (!docNumRaw || docNumRaw.trim() === "") {
-            console.log('[Cron:Jobs] No active job found (A1 empty).');
+        if (!currentActiveJob) {
+            console.log('[Cron:Jobs] No active job found.');
             return NextResponse.json({ message: "No active job." });
         }
 
-        const currentActiveJob = docNumRaw.trim();
         console.log(`[Cron:Jobs] Current Active Job: ${currentActiveJob}`);
 
         // 2. Fetch Last Notified Job from State Storage ('Devices' sheet, Cell Z1)
@@ -51,10 +47,17 @@ export async function GET(req: Request) {
             return NextResponse.json({ message: "Job already notified." });
         }
 
-        // 4. Fetch Details for Notification
-        // Get Customer Name from F6 (Index 5, 5)
-        const formMeta = await getSheetData(PO_SPREADSHEET_ID, `'${FORM_SHEET}'!F6:F6`);
-        const customerName = formMeta && formMeta[0] ? formMeta[0][0] : "Unknown Customer";
+        // 4. Fetch Details for Notification from คลังข้อมูล
+        let customerName = "Unknown Customer";
+        try {
+            const archiveData = await readArchive(PO_SPREADSHEET_ID);
+            const rows = rowNumbersOf(archiveData, currentActiveJob).map(r => archiveData[r - 1]);
+            if (rows.length > 0 && rows[0][1]) {
+                customerName = rows[0][1];
+            }
+        } catch (e) {
+            console.warn('[Cron:Jobs] Failed to read customer name from archive:', e);
+        }
 
         console.log(`[Cron:Jobs] New Job Detected! Sending Notification...`);
 

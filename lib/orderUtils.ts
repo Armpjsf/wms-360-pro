@@ -37,9 +37,29 @@ export function normalizeOpenStatus(status: any): string {
 // ต้องผ่าน lock นี้ ไม่งั้นคอมกับมือถือกดพร้อมกันแล้วข้อมูลในฟอร์มปนกัน
 // ============================================================================
 
-const LOCK_CELL = `${FORM_SHEET}!Z1`;
+const LOCK_CELL = `'${DATA_SHEET}'!Z1`;
+export const ACTIVE_JOB_CELL = `'${DATA_SHEET}'!Z2`;
 const LOCK_TTL_MS = 60000; // lock ที่เก่ากว่านี้ถือว่า process ตายไปแล้ว
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export async function getActiveJobDocNum(spreadsheetId?: string): Promise<string> {
+    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+    try {
+        const val = await getSheetData(ssid, ACTIVE_JOB_CELL);
+        return String(val?.[0]?.[0] || "").trim();
+    } catch {
+        return "";
+    }
+}
+
+export async function setActiveJobDocNum(spreadsheetId: string | undefined, docNum: string): Promise<void> {
+    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+    try {
+        await updateSheetData(ssid, ACTIVE_JOB_CELL, [[docNum || ""]]);
+    } catch (e) {
+        console.warn(`[setActiveJobDocNum] Failed to update active job:`, e);
+    }
+}
 
 export class FormBusyError extends Error {
     status = 409;
@@ -156,151 +176,42 @@ async function writeDocRows(ssid: string, newRows: ArchiveRow[], existingRows: n
  */
 export async function archiveCurrentForm(customStatus?: string, signatureLink?: string, spreadsheetId?: string) {
     const ssid = spreadsheetId || PO_SPREADSHEET_ID;
-    const [dNum, cName, oData, iData, qData, sigData] = await Promise.all([
-        getSheetData(ssid, `${FORM_SHEET}!G3`),
-        getSheetData(ssid, `${FORM_SHEET}!F6`),
-        getSheetData(ssid, `${FORM_SHEET}!C10:C25`),
-        getSheetData(ssid, `${FORM_SHEET}!D10:D25`),
-        getSheetData(ssid, `${FORM_SHEET}!G10:G25`),
-        getSheetData(ssid, `${FORM_SHEET}!H33`)
-    ]);
-
-    const docNum = String(dNum?.[0]?.[0] || "").trim();
+    const docNum = await getActiveJobDocNum(ssid);
     if (!docNum) {
         return { success: false, error: 'No active job found' };
     }
 
-    const data = await readArchive(ssid);
-    const existingRows = rowNumbersOf(data, docNum);
-    const oldRow = existingRows.length > 0 ? data[existingRows[0] - 1] : null;
-
-    const custName = cName?.[0]?.[0] || oldRow?.[1] || "Unknown";
-    const status = customStatus || normalizeOpenStatus(oldRow?.[6]);
-    const link = signatureLink || sigData?.[0]?.[0] || oldRow?.[7] || "";
-    const date = oldRow?.[8] || getThaiDateString();
-
-    // ฟอร์มใส่เลข order เฉพาะแถวแรกของแต่ละกลุ่ม -> ต้องพาเลข order ต่อลงแถวถัดไปด้วย
-    // (เดิมไม่ได้พาต่อ ทำให้รายการที่ 2+ ของแต่ละ order หลุดเลข order ในคลังข้อมูล)
-    const newRows: ArchiveRow[] = [];
-    let lastOrderNo = "";
-    for (let i = 0; i < (iData?.length || 0); i++) {
-        const orderNo = String(oData?.[i]?.[0] || "").trim();
-        if (orderNo) lastOrderNo = orderNo;
-        const itemCode = String(iData?.[i]?.[0] || "").trim();
-        if (!itemCode) continue;
-        newRows.push([
-            docNum, custName, newRows.length + 1,
-            lastOrderNo, itemCode, qData?.[i]?.[0] ?? "",
-            status, link, date
-        ]);
-    }
-
-    if (newRows.length > 0) {
-        await writeDocRows(ssid, newRows, existingRows);
-    } else if (existingRows.length > 0 && customStatus) {
-        // ฟอร์มไม่มีรายการ แต่ยังต้องอัปเดตสถานะของงานเดิม
+    if (customStatus) {
         await setDocsStatus(ssid, [docNum], customStatus);
-    } else {
-        console.warn(`[Archive] No items found to save for ${docNum}. Keeping archive rows as-is.`);
     }
-
-    await clearFormSheet(ssid);
+    await setActiveJobDocNum(ssid, "");
     return { success: true, docNum };
 }
 
 export async function clearFormSheet(spreadsheetId?: string) {
-    try {
-        const ssid = spreadsheetId || PO_SPREADSHEET_ID;
-        await batchClearSheetRanges(ssid, [
-            `${FORM_SHEET}!G3`,
-            `${FORM_SHEET}!F4:F5`,
-            `${FORM_SHEET}!D6`,
-            `${FORM_SHEET}!F6`,
-            `${FORM_SHEET}!B10:D25`,
-            `${FORM_SHEET}!G10:G25`,
-            `${FORM_SHEET}!G33:H33`, // ลายเซ็นของงานก่อนหน้า ต้องไม่ติดไปงานถัดไป
-        ]);
-    } catch {
-        // FORM_SHEET might not exist; safe to ignore
-    }
+    const ssid = spreadsheetId || PO_SPREADSHEET_ID;
+    await setActiveJobDocNum(ssid, "");
     return { success: true };
 }
 
 /**
- * ดึงงานจากคลังข้อมูลขึ้นฟอร์ม (งานที่อยู่บนฟอร์มเดิมจะถูกเก็บกลับโดยคงสถานะไว้)
- * ไม่เปลี่ยนสถานะของงาน — เดิมตั้งเป็น "กำลังแก้ไข" ซึ่งไม่มีหน้าไหนแสดง ทำให้งานหาย
+ * ดึงงานจากคลังข้อมูลขึ้นเป็นงาน Active (จำลองงานที่กำลังทำ)
+ * ไม่จำเป็นต้องเขียนลงแท็บ ส่งสินค้า อีกต่อไป
  * ต้องเรียกภายใน withFormLock
  */
 export async function restoreOrderToForm(docNum: string, spreadsheetId?: string) {
     const ssid = spreadsheetId || PO_SPREADSHEET_ID;
     docNum = String(docNum).trim();
 
-    try {
-        const current = String((await getSheetData(ssid, `${FORM_SHEET}!G3:G3`))?.[0]?.[0] || "").trim();
-        if (current === docNum) {
-            return { success: true, message: "Already active" };
-        }
-        if (current) {
-            await archiveCurrentForm(undefined, undefined, ssid);
-        } else {
-            await clearFormSheet(ssid);
-        }
-    } catch {
-        // FORM_SHEET might not exist
-    }
-
     const data = await readArchive(ssid);
-    const jobRows = rowNumbersOf(data, docNum).map((r) => data[r - 1]);
+    const jobRows = rowNumbersOf(data, docNum);
     if (jobRows.length === 0) {
         throw new Error(`Job ${docNum} not found in Archive`);
     }
-    if (jobRows.length > FORM_MAX_ROWS) {
-        console.warn(`[Restore] ${docNum} has ${jobRows.length} items; form holds ${FORM_MAX_ROWS}`);
-    }
 
-    const header = jobRows[0];
-    const custName = header[1] || "";
-    const dateStr = header[8] || getThaiDateString();
-    const status = String(header[6] || "").trim();
-    const link = String(header[7] || "").trim();
-
-    // จัดรูปแบบเหมือนตอน process: เลขลำดับ/เลข order แสดงเฉพาะแถวแรกของแต่ละ order
-    const seqs: any[][] = [], orders: any[][] = [], items: any[][] = [], qtys: any[][] = [];
-    let lastOrder: string | null = null;
-    let groupSeq = 0;
-    for (const row of jobRows.slice(0, FORM_MAX_ROWS)) {
-        const orderNo = String(row[3] || "").trim();
-        const isNewGroup = orderNo !== "" && orderNo !== lastOrder;
-        if (isNewGroup) { lastOrder = orderNo; groupSeq++; }
-        seqs.push([isNewGroup ? groupSeq : ""]);
-        orders.push([isNewGroup ? orderNo : ""]);
-        items.push([row[4] || ""]);
-        qtys.push([row[5] ?? ""]);
-    }
-    const endRow = FORM_FIRST_ROW + seqs.length - 1;
-
-    const updates = [
-        { range: `${FORM_SHEET}!G3`, values: [[docNum]] },
-        { range: `${FORM_SHEET}!F4`, values: [[dateStr]] },
-        { range: `${FORM_SHEET}!F5`, values: [[getThaiDateString()]] },
-        { range: `${FORM_SHEET}!F6`, values: [[custName]] },
-        { range: `${FORM_SHEET}!B${FORM_FIRST_ROW}:B${endRow}`, values: seqs },
-        { range: `${FORM_SHEET}!C${FORM_FIRST_ROW}:C${endRow}`, values: orders },
-        { range: `${FORM_SHEET}!D${FORM_FIRST_ROW}:D${endRow}`, values: items },
-        { range: `${FORM_SHEET}!G${FORM_FIRST_ROW}:G${endRow}`, values: qtys },
-    ];
-    // ลายเซ็นที่เก็บไว้ (ยังไม่ปิดงาน) — H33 เก็บ URL ดิบให้ status API อ่าน, G33 แสดงรูป
-    if (link.startsWith('http') && status !== STATUS_DONE) {
-        updates.push({ range: `${FORM_SHEET}!H33`, values: [[link]] });
-        updates.push({ range: `${FORM_SHEET}!G33`, values: [['=IMAGE(H33)']] });
-    }
-    try {
-        await batchUpdateSheetData(ssid, updates);
-    } catch {
-        console.log(`[Restore] Form sheet update skipped (FORM_SHEET may not exist).`);
-    }
-
-    console.log(`[Restore] Restored ${docNum} to Form (status kept: ${status || '-'})`);
+    await setDocsStatus(ssid, [docNum], STATUS_IN_PROGRESS);
+    await setActiveJobDocNum(ssid, docNum);
+    console.log(`[Restore] Set active job ${docNum} in คลังข้อมูล (no sheet write needed)`);
     return { success: true };
 }
 

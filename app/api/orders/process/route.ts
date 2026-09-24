@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData, lookupCustomerName } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
 import { getThaiDateString } from '@/lib/dateUtils';
-import { withFormLock, archiveCurrentForm, clearFormSheet, lockErrorStatus, STATUS_IN_PROGRESS } from '@/lib/orderUtils';
+import { withFormLock, lockErrorStatus, STATUS_IN_PROGRESS, setActiveJobDocNum } from '@/lib/orderUtils';
 
 const ROLL_TAG_1 = "Roll Tag1";
 const ROLL_TAG_2 = "Roll Tag2";
-const FORM_SHEET = "ส่งสินค้า";
 const DATA_SHEET = "คลังข้อมูล";
 
 export const dynamic = 'force-dynamic';
@@ -101,22 +100,10 @@ export async function POST(request: Request) {
         }
     }
 
-    // 2. Check "Form" Availability First (Safe if FORM_SHEET is deleted)
-    try {
-        const formCheck = await getSheetData(ssId, `${FORM_SHEET}!G3:G3`);
-        if (formCheck && formCheck[0] && formCheck[0][0]) {
-            console.log(`[Process] Form Busy (Doc: ${formCheck[0][0]}). Auto-Archiving...`);
-            await archiveCurrentForm(undefined, undefined, ssId);
-        } else {
-            await clearFormSheet(ssId);
-        }
-    } catch {
-        // FORM_SHEET does not exist, completely fine!
-    }
-
-    // 3. Generate Doc Number
+    // 2. Generate Doc Number & Set Active Job in คลังข้อมูล (without touching ส่งสินค้า)
     const newDocId = await generateNewDocNumber(ssId);
     console.log(`[Process] Generated DocId: ${newDocId} for Tag: ${tagId} (Customer: ${custName})`);
+    await setActiveJobDocNum(ssId, newDocId);
 
     // 4. Prepare Data
     const today = getThaiDateString();
@@ -198,24 +185,7 @@ export async function POST(request: Request) {
         }
     }
 
-    // 7. Update "Form" Header (Optional - safe if FORM_SHEET is deleted)
-    try {
-        console.log(`[Process] Updating Form Header & Body...`);
-        await batchUpdateSheetData(ssId, [
-            { range: `${FORM_SHEET}!G3`, values: [[newDocId]] },
-            { range: `${FORM_SHEET}!F4`, values: [[today]] },
-            { range: `${FORM_SHEET}!F5`, values: [[today]] },
-            { range: `${FORM_SHEET}!D6`, values: [[custId]] },
-            { range: `${FORM_SHEET}!F6`, values: [[custName]] },
-            { range: `${FORM_SHEET}!B10:B18`, values: formSequences },
-            { range: `${FORM_SHEET}!C10:C18`, values: formOrders },
-            { range: `${FORM_SHEET}!D10:D18`, values: formItems },
-            { range: `${FORM_SHEET}!G10:G18`, values: formQty },
-        ]);
-        console.log(`[Process] Form Updated.`);
-    } catch {
-        console.log(`[Process] Form sheet update skipped (sheet may not exist).`);
-    }
+
 
     // 9. Write to Transaction Sheet before clearing the source Roll Tag.
     try {

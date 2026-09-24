@@ -36,17 +36,14 @@ export async function POST(req: Request) {
 
     console.log(`[FinishNoPDF] Signature uploaded: ${sigLink}`);
 
-    // 2. Update Signature in Active Form
-    const ACTIVE_FORM_SHEET = "ส่งสินค้า";
-    
-    // Write raw URL to H33 (for API to read) and IMAGE formula to G33 (for visual)
-    await Promise.all([
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!H33`, [[sigLink]]),
-        updateSheetData(PO_SPREADSHEET_ID, `${ACTIVE_FORM_SHEET}!G33`, [[`=IMAGE(H33)`]])
-    ]);
-
-    console.log(`[FinishNoPDF] Signature saved to H33/G33: ${sigLink}`);
-    // Do NOT archive. Do NOT clear. Form stays active for Finalize step.
+    // 2. Update Signature in คลังข้อมูล (Col H = Signature / PDF Link)
+    const { resolveSpreadsheetId, findAllRowIndices } = await import('@/lib/googleSheets');
+    const ssid = await resolveSpreadsheetId(undefined, 'doc');
+    const rowIndices = await findAllRowIndices(ssid, 'คลังข้อมูล', 0, docNum);
+    if (rowIndices.length > 0) {
+        await Promise.all(rowIndices.map(r => updateSheetData(ssid, `'คลังข้อมูล'!H${r}`, [[sigLink]])));
+        console.log(`[FinishNoPDF] Signature saved to คลังข้อมูล Col H (${rowIndices.length} rows): ${sigLink}`);
+    }
 
     return NextResponse.json({ success: true, sigLink }, { status: 200, headers: corsHeaders });
 
