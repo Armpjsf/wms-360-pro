@@ -83,28 +83,26 @@ export async function writeTransactionData(items: TransactionItem[], spreadsheet
 }
 
 /**
- * Lookup Cost Price from ชื่อสินค้า sheet
+ * Lookup Cost Price Map from ชื่อสินค้า sheet in a single read
  * Item Code is in Column B, Cost is in Column C
  */
-async function lookupItemCost(itemCode: string, spreadsheetId?: string): Promise<number> {
+async function lookupItemCostMap(spreadsheetId?: string): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
     try {
         const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
-        // Read columns B:C from ชื่อสินค้า sheet
         const data = await getSheetData(ssid, `${PRODUCT_SHEET_NAME}!B:C`);
-        
-        if (!data || data.length === 0) return 0;
+        if (!data || data.length === 0) return map;
 
         for (const row of data) {
-            if (row[0] === itemCode) {
-                // Return Cost from Column C (index 1)
-                const cost = parseFloat(row[1]?.replace(/,/g, ''));
-                return isNaN(cost) ? 0 : cost;
+            if (row[0]) {
+                const cost = parseFloat(String(row[1] || '0').replace(/,/g, ''));
+                map.set(String(row[0]).trim(), isNaN(cost) ? 0 : cost);
             }
         }
-        return 0;
+        return map;
     } catch (error) {
-        console.error('Error looking up cost:', error);
-        return 0;
+        console.error('Error looking up cost map:', error);
+        return map;
     }
 }
 
@@ -125,8 +123,10 @@ export async function writeInboundData(items: TransactionItem[], spreadsheetId?:
         const today = new Date();
         const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
 
-        // Prepare rows (No need to find nextRow, Append handles it)
-        
+        // Pre-fetch cost map once if any item lacks a price override
+        const needsCostLookup = items.some(it => it.price === undefined || it.price === null || it.price === 0);
+        const costMap = needsCostLookup ? await lookupItemCostMap(ssid) : new Map<string, number>();
+
         const rows = [];
         for (let i = 0; i < items.length; i++) {
              const item = items[i];
@@ -134,7 +134,7 @@ export async function writeInboundData(items: TransactionItem[], spreadsheetId?:
              // Lookup Cost
              let cost = item.price;
              if (cost === undefined || cost === null || cost === 0) {
-                 cost = await lookupItemCost(item.itemCode);
+                 cost = costMap.get(String(item.itemCode || '').trim()) || 0;
              }
 
              // Dynamic Formulas (ROW Agnostic)

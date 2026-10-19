@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetData, SPREADSHEET_ID, PRODUCT_SPREADSHEET_ID, DOC_SPREADSHEET_ID, getPOLogs, getGoogleSheets } from '@/lib/googleSheets';
+import { getSheetData, batchGetSheetData, SPREADSHEET_ID, PRODUCT_SPREADSHEET_ID, DOC_SPREADSHEET_ID, getPOLogs, getGoogleSheets } from '@/lib/googleSheets';
 import { calculateFIFOLayers } from '@/lib/fifo';
 
 // Cache configuration
@@ -32,8 +32,10 @@ export async function GET(req: Request) {
 
     // Resolve Spreadsheet IDs based on branch
     const { resolveSpreadsheetId } = await import('@/lib/googleSheets');
-    const invSSID = await resolveSpreadsheetId(branchId, 'inventory');
-    const docSSID = await resolveSpreadsheetId(branchId, 'doc');
+    const [invSSID, docSSID] = await Promise.all([
+        resolveSpreadsheetId(branchId, 'inventory'),
+        resolveSpreadsheetId(branchId, 'doc'),
+    ]);
     
     // ... (Filter helpers remain same)
     const filterByDate = (row: any[], dateIdx: number) => {
@@ -57,30 +59,29 @@ export async function GET(req: Request) {
         return d >= start && d <= end;
     };
 
-
-    const { googleSheets } = await getGoogleSheets();
-    
     console.log(`[Dashboard] Fetching Sheet Data (Branch: ${branchId || 'HQ'})...`);
     console.time('[Dashboard] Total Fetch Time');
     
-    // 1. Inventory (From Branch-specific Inventory Sheet)
-    const invRaw = await getSheetData(invSSID, "'📊 รายงานสินค้าคงเหลือ'!A:Z");
-    
-    // 2. Transactions (From Branch-specific Inventory Sheet)
-    const receiveRawFullData = await getSheetData(invSSID, "'💸 Transaction รับ'!A:J");
-    const issueRawFullData = await getSheetData(invSSID, "'💰 Transaction จ่าย'!A:M");
-    
-    // 3. Damage (From Branch-specific Inventory Sheet)
-    let damageRawFull = await getSheetData(invSSID, "'Damage'!A:F");
+    // Fetch core inventory tabs in a single batchGet call + Damage & PO Logs in parallel
+    const [
+        [invRaw, receiveRawFullData, issueRawFullData, productMasterRaw],
+        primaryDamageRaw,
+        poLogsFull,
+    ] = await Promise.all([
+        batchGetSheetData(invSSID, [
+            "'📊 รายงานสินค้าคงเหลือ'!A:Z",
+            "'💸 Transaction รับ'!A:J",
+            "'💰 Transaction จ่าย'!A:M",
+            "'ชื่อสินค้า'!A:E",
+        ]),
+        getSheetData(invSSID, "'Damage'!A:F").catch(() => []),
+        getPOLogs(docSSID),
+    ]);
+
+    let damageRawFull = primaryDamageRaw;
     if (!damageRawFull || damageRawFull.length === 0) {
-        damageRawFull = await getSheetData(invSSID, "'เสียหาย'!A:F");
+        damageRawFull = await getSheetData(invSSID, "'เสียหาย'!A:F").catch(() => []);
     }
-    
-    // 4. PO Logs (From Branch-specific Doc Sheet)
-    const poLogsFull = await getPOLogs(docSSID);
-    
-    // 5. Product Master (From Branch-specific Inventory Sheet)
-    const productMasterRaw = await getSheetData(invSSID, "'ชื่อสินค้า'!A:E");
 
     console.timeEnd('[Dashboard] Total Fetch Time');
     console.time('[Dashboard] Indexing & Processing Time');
@@ -701,7 +702,7 @@ export async function GET(req: Request) {
             });
 
             const usageHistory = Array.from(dayMap.values());
-            const burnRate = calculateBurnRate(usageHistory);
+            const burnRate = calculateBurnRate(usageHistory, 90);
             const prediction = predictStockout(item.stock, burnRate);
             
             return {

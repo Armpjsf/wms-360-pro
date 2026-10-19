@@ -73,10 +73,9 @@ export async function POST(request: Request) {
       // @ts-ignore
       const session = await getServerSession(authOptions);
 
-      // Parallelize rule checking
-      const productsRefresh = await getProducts();
+      // Parallelize rule checking using pre-transaction products snapshot
       await Promise.all(items.map(async (tx: any) => {
-          const product = productsRefresh.find(p => p.name === tx.sku);
+          const product = products.find(p => p.name === tx.sku);
           if (product) {
               const newStock = product.stock + Number(tx.qty);
               await checkStockRules(tx.sku, newStock);

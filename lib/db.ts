@@ -8,6 +8,7 @@ export interface LocalProduct {
   price: number;
   stock: number;
   image?: string;
+  location?: string;
   updatedAt: number; // For sync validity
 }
 

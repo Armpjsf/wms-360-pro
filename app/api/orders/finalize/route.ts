@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { 
     uploadPdfToDrive, 
     updateSheetData,
+    batchUpdateSheetData,
     clearSheetRange,
     findAllRowIndices,
     getSheetData,
@@ -188,14 +189,13 @@ export async function POST(req: Request) {
         const actualRowIndices = await findAllRowIndices(ssid, DATA_SHEET, 0, docNum!);
         const targetIndices = actualRowIndices.length > 0 ? actualRowIndices : rowIndices;
 
-        const updates = [];
-        for (const row of targetIndices) {
-            updates.push({ range: `'${DATA_SHEET}'!G${row}`, values: [['เสร็จสิ้น']] });
-            updates.push({ range: `'${DATA_SHEET}'!H${row}`, values: [[pdfLink]] });
-        }
+        const updates = targetIndices.map(row => ({
+            range: `'${DATA_SHEET}'!G${row}:H${row}`,
+            values: [['เสร็จสิ้น', pdfLink]]
+        }));
 
         if (updates.length > 0) {
-            await Promise.all(updates.map(u => updateSheetData(ssid, u.range, u.values)));
+            await batchUpdateSheetData(ssid, updates);
         }
 
         // Clear active job pointer

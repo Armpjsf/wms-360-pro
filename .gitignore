@@ -45,3 +45,9 @@ credentials.json
 token.json
 gmail_token.json
 android/app/google-services.json
+
+# Scratch, logs, and temporary backups
+scratch/
+*.log
+*.backup
+

@@ -439,6 +439,30 @@ export async function getSheetPdfBlob(
 // We'll leave the old 'exportSheetToPdf' signature commented out or removed if unused.
 // Replaced by getSheetPdfBlob for direct streaming.
 
+// Helper to invalidate all active and legacy inventory/transaction cache tags
+export function invalidateInventoryCache() {
+  const tags = [
+    "products",
+    "products-sheet-only-v3",
+    "transactions",
+    "transactions-v2",
+    "dashboard",
+  ];
+  for (const tag of tags) {
+    try {
+      // @ts-ignore
+      revalidateTag(tag, "max");
+    } catch {
+      try {
+        // @ts-ignore
+        revalidateTag(tag);
+      } catch {
+        // Ignore if called outside Next.js request context (e.g., standalone script)
+      }
+    }
+  }
+}
+
 // Helper to get all values from a spreadsheet
 export async function getSheetData(spreadsheetId: string, range: string) {
   const { googleSheets, auth } = await getGoogleSheets();
@@ -451,6 +475,22 @@ export async function getSheetData(spreadsheetId: string, range: string) {
   });
 
   return response.data.values || [];
+}
+
+// Helper to batch-get multiple ranges from a spreadsheet in a single HTTP request
+export async function batchGetSheetData(
+  spreadsheetId: string,
+  ranges: string[],
+): Promise<any[][][]> {
+  if (ranges.length === 0) return [];
+  const { googleSheets, auth } = await getGoogleSheets();
+  const response = await googleSheets.spreadsheets.values.batchGet({
+    auth: auth as any,
+    spreadsheetId,
+    ranges,
+  });
+  const valueRanges = response.data.valueRanges || [];
+  return ranges.map((_, idx) => valueRanges[idx]?.values || []);
 }
 
 // Helper to get raw formulas from a spreadsheet
@@ -490,13 +530,7 @@ export async function updateSheetData(
         values: values,
       },
     });
-    // Invalidate cache for relevant tags
-    // @ts-ignore
-    revalidateTag("products", "max");
-    // @ts-ignore
-    revalidateTag("transactions", "max");
-    // @ts-ignore
-    revalidateTag("dashboard", "max"); // Ensure dashboard updates too
+    invalidateInventoryCache();
   } catch (error) {
     console.error(`Error updating sheet range ${range}:`, error);
     throw error;
@@ -519,9 +553,7 @@ export async function batchUpdateSheetData(
     },
   });
 
-  revalidateTag("products", "max");
-  revalidateTag("transactions", "max");
-  revalidateTag("dashboard", "max");
+  invalidateInventoryCache();
 }
 
 export async function batchClearSheetRanges(
@@ -555,13 +587,7 @@ export async function appendSheetRow(
         values: [rowData],
       },
     });
-    // Invalidate cache immediately
-    // @ts-ignore
-    revalidateTag("products", "max");
-    // @ts-ignore
-    revalidateTag("transactions", "max");
-    // @ts-ignore
-    revalidateTag("dashboard", "max");
+    invalidateInventoryCache();
   } catch (error) {
     console.error(`Error appending to sheet ${range}:`, error);
     throw error;
@@ -588,13 +614,7 @@ export async function appendSheetData(
         values: values,
       },
     });
-    // Invalidate cache immediately
-    // @ts-ignore
-    revalidateTag("products", "max");
-    // @ts-ignore
-    revalidateTag("transactions", "max");
-    // @ts-ignore
-    revalidateTag("dashboard", "max");
+    invalidateInventoryCache();
   } catch (error) {
     console.error(`Error appending batch to sheet ${range}:`, error);
     throw error;
@@ -1316,12 +1336,7 @@ export async function addTransaction(type: "IN" | "OUT", data: any) {
   const sheetName = await resolveTransactionSheetName(type);
 
   // Invalidate cache immediately on write
-  // @ts-ignore
-  revalidateTag("transactions");
-  // @ts-ignore
-  revalidateTag("products");
-  // @ts-ignore
-  revalidateTag("dashboard");
+  invalidateInventoryCache();
 
   // Find next row for formula references
   const existingData = await getSheetData(SPREADSHEET_ID, `'${sheetName}'!A:A`);
@@ -1572,14 +1587,14 @@ export async function editProduct(
         conflictRow[9] || "", // J
       ];
 
-      await Promise.all([
-        updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]),
-        updateSheetData(SSID, `'${sheetName}'!A${conflictRowNum}:J${conflictRowNum}`, [swappedConflictRow]),
+      await batchUpdateSheetData(SSID, [
+        { range: `'${sheetName}'!A${rowNum}:J${rowNum}`, values: [row] },
+        { range: `'${sheetName}'!A${conflictRowNum}:J${conflictRowNum}`, values: [swappedConflictRow] },
       ]);
     } else {
       await updateSheetData(SSID, `'${sheetName}'!A${rowNum}:J${rowNum}`, [row]);
     }
-    revalidateTag("products-sheet-only-v3", "max");
+    invalidateInventoryCache();
     return true;
   } catch (error) {
     if (error instanceof ProductLocationConflictError) throw error;
@@ -2110,7 +2125,7 @@ export async function getPOLogs(spreadsheetId?: string): Promise<POLogItem[]> {
 }
 
 // ============================================================================
-// USER MANAGEMENT (REAL - USERS SHEET)
+// USER MANAGEMENT (DELEGATED TO lib/users.ts FOR SINGLE SOURCE OF TRUTH)
 // ============================================================================
 export interface User {
   id: string;
@@ -2118,51 +2133,23 @@ export interface User {
   role: string;
   status: string;
   lastLogin: string;
+  allowedBranches?: string[];
+  allowedOwners?: string[];
 }
 
 export async function getUsers(): Promise<User[]> {
-  try {
-    // Try getting 'Users' sheet. If not exists, might need creation or standard sheet
-    const raw = await getSheetData(SPREADSHEET_ID, "'Users'!A:E");
-    if (!raw || raw.length < 2) return [];
-
-    return raw.slice(1).map((r, i) => ({
-      id: r[0] || `U-${i}`,
-      username: r[1] || "Unknown",
-      role: r[2] || "User",
-      status: r[3] || "Active",
-      lastLogin: r[4] || "-",
-    }));
-  } catch (e) {
-    console.error("Fetch Users Error:", e);
-    return [];
-  }
+  const { getUsers: getUsersFromLib } = await import("./users");
+  return getUsersFromLib();
 }
 
 export async function addUser(user: any) {
-  const row = [
-    `U-${Date.now()}`,
-    user.username,
-    user.role,
-    "Active",
-    new Date().toISOString().split("T")[0],
-  ];
-  await appendSheetRow(SPREADSHEET_ID, "'Users'!A:E", row);
-  return true;
+  const { addUser: addUserFromLib } = await import("./users");
+  return addUserFromLib(user);
 }
 
 export async function updateUser(userId: string, data: any) {
-  const raw = await getSheetData(SPREADSHEET_ID, "'Users'!A:E");
-  if (!raw) return false;
-
-  const idx = raw.findIndex((r) => r[0] === userId);
-  if (idx === -1) return false;
-
-  const range = `'Users'!B${idx + 1}:D${idx + 1}`;
-  const values = [[data.username, data.role, data.status]];
-
-  await updateSheetData(SPREADSHEET_ID, range, values);
-  return true;
+  const { updateUser: updateUserFromLib } = await import("./users");
+  return updateUserFromLib(userId, data);
 }
 
 export async function uploadImageToDrive(

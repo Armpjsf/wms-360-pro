@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { db, PendingTransaction } from '@/lib/db';
+import { getApiUrl } from '@/lib/config';
 import { toast } from 'react-hot-toast';
 
 export function useOfflineSync() {
@@ -55,10 +56,14 @@ export function useOfflineSync() {
              let endpoint = '';
              if (item.type === 'INBOUND') endpoint = '/api/inbound';
              else if (item.type === 'OUTBOUND') endpoint = '/api/outbound';
-             
-             // TODO: Add other endpoints
+             else if (item.type === 'DAMAGE') endpoint = '/api/damage';
+             else if (item.type === 'ADJUST') endpoint = '/api/cycle-count';
 
-             const res = await fetch(endpoint, {
+             if (!endpoint) {
+                 throw new Error(`Unsupported offline transaction type: ${item.type}`);
+             }
+
+             const res = await fetch(getApiUrl(endpoint), {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify(item.data)
@@ -87,7 +92,7 @@ export function useOfflineSync() {
   const syncProducts = async () => {
       if (!navigator.onLine) return;
       try {
-          const res = await fetch('/api/products'); // Requires this endpoint
+          const res = await fetch(getApiUrl('/api/products'));
           const data = await res.json();
           if (Array.isArray(data)) {
               await db.products.bulkPut(data.map((p: any) => ({
@@ -97,6 +102,7 @@ export function useOfflineSync() {
                   price: p.price,
                   stock: p.stock,
                   image: p.image,
+                  location: p.location || '-',
                   updatedAt: Date.now()
               })));
               console.log("Offline Cache Updated");

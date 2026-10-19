@@ -44,8 +44,8 @@ const pageAuth = withAuth(
   }
 )
 
-// API guard (returns 401 JSON instead of redirecting). Closes the gap where
-// 57 of 66 /api routes were callable without a session.
+// API guard (returns 401/403 JSON instead of redirecting). Closes the gap where
+// /api routes were callable without a session or without role checks.
 // Public exceptions:
 //  - /api/auth/* — NextAuth's own endpoints (login must work logged-out)
 //  - /api/cron/* — protected by their own CRON_SECRET bearer check
@@ -64,6 +64,28 @@ export default async function proxy(req: NextRequest, event: any) {
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const role = (token.role as string) || 'User';
+    const isAdmin = role === 'Admin' || role === 'Super Admin';
+
+    // 1. Restrict debug endpoints & user management API to Admin / Super Admin
+    if (
+      pathname.startsWith('/api/debug') ||
+      pathname.startsWith('/api/admin/users')
+    ) {
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+      }
+    }
+
+    // 2. Restrict Viewer role from mutating data via POST/PUT/DELETE/PATCH
+    if (role === 'Viewer' && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+      // Allow read-only preview endpoints that use POST (e.g., FIFO preview)
+      if (!pathname.startsWith('/api/fifo/preview') && !pathname.startsWith('/api/user/config')) {
+        return NextResponse.json({ error: 'Forbidden: Viewer role is read-only' }, { status: 403 });
+      }
+    }
+
     return NextResponse.next();
   }
 
@@ -83,6 +105,11 @@ export const config = {
     "/admin/:path*",
     "/damage/:path*",
     "/analytics/:path*",
+    "/ai-reorder/:path*",
+    "/barcode/:path*",
+    "/email-parser/:path*",
+    "/hq/:path*",
+    "/integrations/:path*",
     "/api/:path*",
   ],
 }

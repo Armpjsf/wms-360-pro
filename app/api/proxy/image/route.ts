@@ -3,12 +3,35 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+function isAllowedImageUrl(rawUrl: string): boolean {
+    try {
+        const parsed = new URL(rawUrl);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+            return false;
+        }
+        const host = parsed.hostname.toLowerCase();
+        return (
+            host === 'drive.google.com' ||
+            host === 'docs.google.com' ||
+            host.endsWith('.googleusercontent.com') ||
+            host.endsWith('.ggpht.com') ||
+            host.endsWith('.google.com')
+        );
+    } catch {
+        return false;
+    }
+}
+
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const url = searchParams.get('url');
 
     if (!url) {
         return new NextResponse("Missing URL", { status: 400 });
+    }
+
+    if (!isAllowedImageUrl(url)) {
+        return new NextResponse("Forbidden image host", { status: 403 });
     }
 
     // Logic to extract ID and construct robust Google Drive URL
@@ -26,9 +49,13 @@ export async function GET(req: NextRequest) {
                 fileId = url.split('id=')[1].split('&')[0];
             }
 
-            if (fileId) {
+            if (fileId && /^[a-zA-Z0-9_-]+$/.test(fileId)) {
                 targetUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
             }
+        }
+
+        if (!isAllowedImageUrl(targetUrl)) {
+            return new NextResponse("Forbidden target URL", { status: 403 });
         }
 
         const response = await fetch(targetUrl, {
@@ -40,7 +67,7 @@ export async function GET(req: NextRequest) {
         if (!response.ok) {
             console.error(`Proxy Error fetching ${targetUrl}: ${response.status} ${response.statusText}`);
             // Fallback: If construction failed, try the original URL directly if we haven't already
-            if (targetUrl !== url) {
+            if (targetUrl !== url && isAllowedImageUrl(url)) {
                 const retryRes = await fetch(url);
                 if (retryRes.ok) {
                     const contentType = retryRes.headers.get('content-type') || 'image/png';

@@ -78,13 +78,15 @@ export function calculateSafetyStock(data: number[], leadTime: number = 7, servi
 
 /**
  * Calculates average daily usage (Burn Rate) over a period.
- * @param dailyUsage Array of usage numbers (newest first or chronological? usually chronological for simple sum)
+ * @param dailyUsage Array of usage numbers
+ * @param periodDays Optional total number of days in the observation window (e.g. 90)
  * @returns Average items per day
  */
-export function calculateBurnRate(dailyUsage: number[]): number {
+export function calculateBurnRate(dailyUsage: number[], periodDays?: number): number {
     if (dailyUsage.length === 0) return 0;
     const total = dailyUsage.reduce((a, b) => a + b, 0);
-    return total / dailyUsage.length;
+    const divisor = periodDays && periodDays > 0 ? periodDays : dailyUsage.length;
+    return total / divisor;
 }
 
 /**
