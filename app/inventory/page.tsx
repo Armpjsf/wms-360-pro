@@ -149,7 +149,8 @@ function InventoryContent() {
                         normalize(p.location).includes(term);
     const stockStatus = p.stock <= p.minStock ? 'LOW' : 'OK'; 
     const matchStatus = filterStatus === 'ALL' || 
-                        (filterStatus === 'LOW' && stockStatus === 'LOW') || 
+                        (filterStatus === 'LOW' && stockStatus === 'LOW') ||
+                        (filterStatus === 'OUT' && p.stock <= 0) ||
                         (filterStatus === 'OK' && stockStatus === 'OK') ||
                         (filterStatus === 'INACTIVE');
     
@@ -307,6 +308,7 @@ function InventoryContent() {
                 >
                     <option value="ALL">{t('filter_all_status')}</option>
                     <option value="LOW">{t('filter_low_stock')}</option>
+                    <option value="OUT">{t('filter_out_of_stock')}</option>
                     <option value="OK">{t('filter_in_stock')}</option>
                     <option value="INACTIVE">{t('filter_inactive')}</option>
                 </select>
