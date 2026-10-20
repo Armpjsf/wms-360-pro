@@ -7,6 +7,7 @@ import LocalNotificationManager from "@/components/LocalNotificationManager";
 import NotificationInitializer from "@/components/NotificationInitializer";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import SystemBarsInit from "@/components/SystemBarsInit";
 
 import Providers from "@/components/Providers";
 
@@ -35,6 +36,11 @@ export const metadata: Metadata = {
   },
 };
 export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // cover = วาดเต็มจอรวมใต้รอยบาก แล้วเว้นที่เองด้วย var(--sat)/var(--sab) (globals.css)
+  // + ทำให้ Capacitor ฉีดค่า safe-area ให้ฝั่ง Android
+  viewportFit: "cover",
   themeColor: "#0f172a",
 };
 
@@ -55,8 +61,11 @@ export default function RootLayout({
             <NotificationInitializer />
             <KeyboardShortcuts />
             <OfflineIndicator />
+            <SystemBarsInit />
+            {/* แถบกันใต้นาฬิกา/แบต/กล้องหน้า (มือถือ) — เนื้อหาที่เลื่อนขึ้นไปจะไม่ซ้อนกับแถบสถานะ */}
+            <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-[var(--sat)] bg-white/90 backdrop-blur-md md:hidden" />
             <Sidebar />
-            <main id="main-content" className="min-h-screen pt-20 transition-all duration-300 md:pl-72 md:pt-0">
+            <main id="main-content" className="min-h-screen pt-[calc(5rem+var(--sat))] transition-all duration-300 md:pl-72 md:pt-0">
             {children}
             </main>
         </Providers>

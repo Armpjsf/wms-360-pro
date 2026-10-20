@@ -123,13 +123,13 @@ export default function MobileOrdersPage() {
   const ptr = usePullToRefresh(fetchStatus);
 
   return (
-    <div className="relative min-h-screen pb-24 bg-slate-50/50" style={ptr.rootStyle} {...ptr.bind}>
+    <div className="relative min-h-screen pb-[calc(6rem+var(--sab))] bg-slate-50/50" style={ptr.rootStyle} {...ptr.bind}>
       <AmbientBackground />
       <PullIndicator pullDistance={ptr.pullDistance} refreshing={ptr.refreshing} />
       <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6" style={ptr.contentStyle}>
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-2 z-20">
+        <div className="flex justify-between items-center mb-6 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-[calc(0.5rem+var(--sat))] z-20">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">{t('menu_orders')}</h1>
             <div className="flex items-center gap-2 mt-1">

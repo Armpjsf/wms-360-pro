@@ -472,7 +472,7 @@ Order ${orderTextOf(activeJob)}`);
 
   return (
     <div
-      className="relative min-h-screen pb-24 bg-slate-50/50"
+      className="relative min-h-screen pb-[calc(6rem+var(--sab))] bg-slate-50/50"
       style={{ overscrollBehaviorY: 'contain' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -501,7 +501,7 @@ Order ${orderTextOf(activeJob)}`);
         }}
       >
 
-        <div className="flex justify-between items-center mb-8 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-2 z-20">
+        <div className="flex justify-between items-center mb-8 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-[calc(0.5rem+var(--sat))] z-20">
             <div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                     {t('mobile_my_jobs')}

@@ -105,13 +105,13 @@ export default function MobileInventoryPage() {
   const ptr = usePullToRefresh(fetchProducts);
 
   return (
-    <div className="relative min-h-screen pb-24 bg-slate-50/50" style={ptr.rootStyle} {...ptr.bind}>
+    <div className="relative min-h-screen pb-[calc(6rem+var(--sab))] bg-slate-50/50" style={ptr.rootStyle} {...ptr.bind}>
       <AmbientBackground />
       <PullIndicator pullDistance={ptr.pullDistance} refreshing={ptr.refreshing} />
       <div className="relative z-10 max-w-lg mx-auto p-4 md:p-6" style={ptr.contentStyle}>
 
         {/* Header */}
-        <div className="mb-4 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-2 z-20">
+        <div className="mb-4 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-sm sticky top-[calc(0.5rem+var(--sat))] z-20">
           <div className="flex justify-between items-center mb-3">
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">{t('menu_inventory')}</h1>
@@ -186,7 +186,7 @@ export default function MobileInventoryPage() {
 
       {/* Product detail bottom-sheet */}
       {selected && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 backdrop-blur-sm" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 backdrop-blur-sm pb-[var(--sab)]" onClick={() => setSelected(null)}>
           <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
@@ -224,7 +224,7 @@ export default function MobileInventoryPage() {
 
       {/* Barcode scanner overlay */}
       {scanning && (
-        <div className="fixed inset-0 z-[70] bg-slate-950 flex flex-col">
+        <div className="fixed inset-0 z-[70] bg-slate-950 flex flex-col pt-[var(--sat)] pb-[var(--sab)]">
           <div className="flex justify-between items-center p-4 text-white">
             <span className="font-bold flex items-center gap-2"><ScanLine className="w-5 h-5" /> สแกนบาร์โค้ด</span>
             <button onClick={stopScan} className="p-2 text-white/70 hover:text-white"><X className="w-7 h-7" /></button>

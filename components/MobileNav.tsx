@@ -22,7 +22,7 @@ export default function MobileNav() {
     <>
     {/* App-styled alert/confirm host for all mobile pages */}
     <MobileDialogHost />
-    <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-50 pb-[var(--sab)]">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const Icon = item.icon;

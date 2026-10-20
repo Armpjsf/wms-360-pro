@@ -289,7 +289,7 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[9999] bg-slate-950 flex items-center justify-center overflow-hidden"
+            className="fixed inset-0 z-[9999] bg-slate-950 flex items-center justify-center overflow-hidden pt-[var(--sat)] pb-[var(--sab)]"
             onClick={(e) => e.stopPropagation()}
         >
             {portrait ? portraitLayout : landscapeLayout}

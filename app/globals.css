@@ -80,3 +80,11 @@ textarea {
     padding-left: 5rem !important;
   }
 }
+
+/* SAFE AREA (notch / Dynamic Island / status bar): Capacitor injects
+   --safe-area-inset-* (old Android WebView reports env() as 0); iOS/PWA uses env().
+   Use var(--sat) / var(--sab) instead of env(). */
+:root {
+  --sat: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+  --sab: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+}

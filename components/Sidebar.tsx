@@ -257,7 +257,7 @@ export default function Sidebar() {
 
       <button
         type="button"
-        className="fixed left-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-lg shadow-slate-900/10 transition-colors hover:bg-slate-50 md:hidden"
+        className="fixed left-4 top-[calc(1rem+var(--sat))] z-50 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-lg shadow-slate-900/10 transition-colors hover:bg-slate-50 md:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="Open navigation"
       >
@@ -278,7 +278,7 @@ export default function Sidebar() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_48%,#eef6f4_100%)] shadow-2xl shadow-slate-950/5 backdrop-blur-xl transition-[width,transform] duration-300',
+          'fixed inset-y-0 left-0 z-50 flex flex-col pt-[var(--sat)] pb-[var(--sab)] border-r border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_48%,#eef6f4_100%)] shadow-2xl shadow-slate-950/5 backdrop-blur-xl transition-[width,transform] duration-300',
           collapsed ? 'w-20' : 'w-72',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}

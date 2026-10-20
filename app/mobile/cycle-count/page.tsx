@@ -185,12 +185,12 @@ export default function CycleCountPage() {
   };
 
   return (
-    <div className="relative min-h-screen pb-24 bg-slate-50/50">
+    <div className="relative min-h-screen pb-[calc(6rem+var(--sab))] bg-slate-50/50">
       <AmbientBackground />
 
       <div className="relative z-10 max-w-md mx-auto">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-xl p-6 border-b border-white/50 shadow-sm sticky top-0 z-20">
+      <div className="bg-white/80 backdrop-blur-xl p-6 border-b border-white/50 shadow-sm sticky top-[var(--sat)] z-20">
         <div className="h-1 bg-gradient-to-r from-indigo-600 via-teal-500 to-amber-500 -mx-6 -mt-6 mb-5" />
         <div className="flex items-center justify-between gap-3 mb-2">
            <div className="flex items-center gap-3">
@@ -223,7 +223,7 @@ export default function CycleCountPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-[120px] z-10">
+      <div className="flex border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-[calc(120px+var(--sat))] z-10">
         <button
           onClick={() => setActiveTab('count')}
           className={cn(
