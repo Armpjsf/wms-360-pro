@@ -169,7 +169,8 @@ function WarehouseMapContent() {
     try {
       const [prodRes, transRes, layoutRes, extrasRes] = await Promise.all([
         fetch(getApiUrl(`/api/products?${q}`)).catch(() => null),
-        fetch(getApiUrl(`/api/transactions?limit=500&${q}`)).catch(() => null),
+        // outbound history for ABC (WMS 360 only has the /recent endpoint)
+        fetch(getApiUrl(`/api/transactions/recent?type=OUT&limit=5000&${q}`)).catch(() => null),
         fetch(getApiUrl(`/api/warehouse/layout?${q}`)).catch(() => null),
         fetch(getApiUrl(`/api/products/extra-locations?${q}`)).catch(() => null),
       ]);
@@ -189,8 +190,8 @@ function WarehouseMapContent() {
 
       if (transRes?.ok) {
         const data = await transRes.json();
-        if (Array.isArray(data?.transactions)) setTransactions(data.transactions);
-        else if (Array.isArray(data)) setTransactions(data);
+        const rows = Array.isArray(data?.transactions) ? data.transactions : Array.isArray(data) ? data : [];
+        setTransactions(rows.map((t: any) => ({ ...t, type: 'OUT' })));
       }
 
       if (layoutRes?.ok) {
