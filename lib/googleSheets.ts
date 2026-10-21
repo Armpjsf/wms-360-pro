@@ -1119,7 +1119,7 @@ export async function getProductsUncached(
     try {
         const dynamicSheetName = await getProductSheetName(); // Resolves via GID
         if (dynamicSheetName) {
-             rawData = await getSheetData(targetSheetId, `'${dynamicSheetName}'!A1:Z2000`);
+             rawData = await getSheetData(targetSheetId, `'${dynamicSheetName}'!A1:Z`);
         }
     } catch (e) {
         console.warn("Dynamic sheet name resolution failed:", e);
@@ -1130,7 +1130,7 @@ export async function getProductsUncached(
         try {
             rawData = await getSheetData(
             targetSheetId,
-            "'📊 รายงานสินค้าคงเหลือ'!A1:Z1000",
+            "'📊 รายงานสินค้าคงเหลือ'!A1:Z",
             );
         } catch (e) {
             console.warn("Primary hardcoded sheet '📊 รายงานสินค้าคงเหลือ' not found, attempting next fallback...", e);
@@ -1143,7 +1143,7 @@ export async function getProductsUncached(
         "Primary strategies failed, trying 'ชื่อสินค้า'...",
       );
       try {
-        rawData = await getSheetData(targetSheetId, "'ชื่อสินค้า'!A1:Z1000");
+        rawData = await getSheetData(targetSheetId, "'ชื่อสินค้า'!A1:Z");
       } catch (e) {
         console.warn("Fallback sheet 'ชื่อสินค้า' not found.", e);
       }
@@ -1818,7 +1818,7 @@ export async function getTransactionsUncached(
   console.log(`[getTransactions] Fetching ${type} from sheet: ${sheetName}`);
 
   // Try primary name (with emojis)
-  let data = await getSheetData(targetSheetId, `'${sheetName}'!A1:Z2000`);
+  let data = await getSheetData(targetSheetId, `'${sheetName}'!A1:Z`);
 
   // Fallback: If failed, try without emojis (clean names)
   if (!data) {
@@ -1827,7 +1827,7 @@ export async function getTransactionsUncached(
     console.log(
       `[getTransactions] Primary name failed, trying fallback: ${cleanName}`,
     );
-    data = await getSheetData(targetSheetId, `'${cleanName}'!A1:Z2000`);
+    data = await getSheetData(targetSheetId, `'${cleanName}'!A1:Z`);
   }
 
   if (!data || data.length < 2) {
@@ -2309,7 +2309,7 @@ export interface DamageRecord {
 
 export async function getDamageRecords() {
   // "Damage" Sheet - A to K range
-  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A1:K1000`);
+  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A1:K`);
   if (!data || data.length < 2) return [];
 
   const rows = data.slice(1);
@@ -2391,7 +2391,7 @@ export interface CycleCountRecord {
 }
 
 export async function getCycleCountLogs() {
-  const data = await getSheetData(SPREADSHEET_ID, `'CycleCount_Log'!A1:J1000`);
+  const data = await getSheetData(SPREADSHEET_ID, `'CycleCount_Log'!A1:J`);
   if (!data || data.length < 2) return [];
 
   const rows = data.slice(1);
