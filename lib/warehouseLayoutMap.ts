@@ -105,6 +105,54 @@ export function stockRowsFromProducts(products: any[] = []): BinStockRow[] {
     .map(p => ({ sku: String(p.sku || p.id || p.name), binCode: normalizeBinCode(p.location), quantity: Number(p.stock || 0) }));
 }
 
+/** A product kept in an extra bin besides its own location (Config_ProductLocations). */
+export interface ExtraLocation {
+  product: string; // product name
+  location: string;
+  qty: number;
+}
+
+export interface ExtraLocationIssue {
+  name: string;
+  total: number;
+  extra: number;
+}
+
+/**
+ * Per-bin stock when some products sit in more than one bin. The extra bins
+ * carry the quantities typed in; the product's own (main) location gets the
+ * rest: total stock − extras. If the extras add up to more than the total
+ * (stock went out and nobody updated them), the main bin shows 0 and the
+ * product is reported in `issues` so it can be corrected.
+ */
+export function stockRowsWithExtraLocations(
+  products: any[] = [],
+  extras: ExtraLocation[] = [],
+): { rows: BinStockRow[]; issues: ExtraLocationIssue[] } {
+  const byName = new Map<string, ExtraLocation[]>();
+  extras.forEach(e => {
+    const key = String(e.product || '').trim();
+    if (!key) return;
+    byName.set(key, [...(byName.get(key) || []), e]);
+  });
+
+  const rows: BinStockRow[] = [];
+  const issues: ExtraLocationIssue[] = [];
+  products.forEach(p => {
+    const sku = String(p.sku || p.id || p.name);
+    const total = Number(p.stock || 0);
+    const mine = byName.get(String(p.name || '').trim()) || [];
+    const extra = mine.reduce((s, e) => s + Number(e.qty || 0), 0);
+    if (extra > total) issues.push({ name: String(p.name), total, extra });
+    const main = Math.max(0, total - extra);
+    if (main > 0) rows.push({ sku, binCode: normalizeBinCode(p.location), quantity: main });
+    mine.forEach(e => {
+      if (Number(e.qty) > 0) rows.push({ sku, binCode: normalizeBinCode(e.location), quantity: Number(e.qty) });
+    });
+  });
+  return { rows, issues };
+}
+
 export function buildWarehouseMap(
   racks: RackConfig[] = [],
   stockRows: BinStockRow[] = [],

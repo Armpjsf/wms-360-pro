@@ -28,10 +28,12 @@ import { getApiUrl } from '@/lib/config';
 import { db } from '@/lib/db';
 import {
   buildWarehouseMap,
-  stockRowsFromProducts,
+  stockRowsWithExtraLocations,
+  ExtraLocation,
   MapBin,
   LooseStock,
 } from '@/lib/warehouseLayoutMap';
+import ExtraLocationsModal from '@/components/warehouse/ExtraLocationsModal';
 import {
   WarehouseLayout,
   listLayoutBins,
@@ -87,6 +89,9 @@ function WarehouseMapContent() {
   const branchId = useMapBranch();
 
   const [products, setProducts] = useState<any[]>([]);
+  // products kept in more than one bin (Config_ProductLocations)
+  const [extras, setExtras] = useState<ExtraLocation[]>([]);
+  const [extraFor, setExtraFor] = useState<any | null>(null); // product being split
   const [transactions, setTransactions] = useState<any[]>([]);
   const [layout, setLayout] = useState<LayoutState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -162,11 +167,17 @@ function WarehouseMapContent() {
     };
     const q = `branchId=${encodeURIComponent(branchId)}`;
     try {
-      const [prodRes, transRes, layoutRes] = await Promise.all([
+      const [prodRes, transRes, layoutRes, extrasRes] = await Promise.all([
         fetch(getApiUrl(`/api/products?${q}`)).catch(() => null),
         fetch(getApiUrl(`/api/transactions?limit=500&${q}`)).catch(() => null),
         fetch(getApiUrl(`/api/warehouse/layout?${q}`)).catch(() => null),
+        fetch(getApiUrl(`/api/products/extra-locations?${q}`)).catch(() => null),
       ]);
+
+      if (extrasRes?.ok) {
+        const data = await extrasRes.json().catch(() => null);
+        if (data?.success && Array.isArray(data.rows)) setExtras(data.rows);
+      }
 
       let prods: any[] = [];
       if (prodRes?.ok) {
@@ -204,8 +215,12 @@ function WarehouseMapContent() {
     fetchData();
   }, [fetchData]);
 
-  // Stock per bin = each product's location in this branch's product sheet
-  const effectiveStockRows = useMemo(() => stockRowsFromProducts(products), [products]);
+  // Stock per bin = each product's location in this branch's product sheet,
+  // with any extra bins split off (main bin keeps total − extras)
+  const { rows: effectiveStockRows, issues: extraIssues } = useMemo(
+    () => stockRowsWithExtraLocations(products, extras),
+    [products, extras],
+  );
 
   const map = useMemo(
     () => buildWarehouseMap(layout?.racks || [], effectiveStockRows, products, transactions),
@@ -443,6 +458,17 @@ function WarehouseMapContent() {
             </div>
           </div>
         </div>
+
+        {extraIssues.length > 0 && (
+          <div className="rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-xs text-rose-800 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              ยอดโลเคชันเสริมมากกว่ายอดสต็อก (มีการเบิกออกจากโลเคชันเสริม) — แก้ยอดที่ปุ่ม &quot;แบ่งโลเคชัน&quot; ของสินค้า:{' '}
+              {extraIssues.slice(0, 5).map(i => `${i.name} (สต็อก ${i.total} / เสริม ${i.extra})`).join(', ')}
+              {extraIssues.length > 5 && ` และอีก ${extraIssues.length - 5} รายการ`}
+            </span>
+          </div>
+        )}
 
         {/* Stock the layout doesn't cover */}
         {showOrphans && (orphans.length > 0 || unassigned) && (
@@ -749,6 +775,13 @@ function WarehouseMapContent() {
                               รวมทุกช่อง {p.totalStock.toLocaleString()} • Min {p.minStock}
                             </span>
                           </div>
+                          <button
+                            onClick={() => setExtraFor(products.find(x => String(x.id) === p.id || x.name === p.name) || null)}
+                            className="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-700 hover:bg-teal-50 text-[10px] font-bold whitespace-nowrap"
+                            title="สินค้านี้เก็บหลายโลเคชัน"
+                          >
+                            แบ่งโลเคชัน
+                          </button>
                         </div>
                       </div>
                     ))
@@ -781,6 +814,20 @@ function WarehouseMapContent() {
           branchName={layout?.name || 'คลังสินค้าหลัก'}
           onApplyLayout={handleApplyWizard}
         />
+
+        {extraFor && (
+          <ExtraLocationsModal
+            product={{ name: extraFor.name, stock: Number(extraFor.stock || 0), location: extraFor.location, unit: extraFor.unit }}
+            extras={extras.filter(e => e.product === extraFor.name)}
+            binOptions={allBinsList}
+            branchId={branchId}
+            onClose={() => setExtraFor(null)}
+            onSaved={rows => {
+              setExtras(rows);
+              setSelectedBin(null);
+            }}
+          />
+        )}
 
         <WarehouseBatchLabelModal
           isOpen={isLabelModalOpen}
