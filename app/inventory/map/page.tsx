@@ -8,6 +8,7 @@ import {
   Search,
   RefreshCw,
   Box,
+  Boxes,
   Layers,
   Sparkles,
   AlertTriangle,
@@ -370,6 +371,13 @@ function WarehouseMapContent() {
               >
                 <Sparkles className="w-4 h-4 text-indigo-600" />
                 ABC Slotting
+              </Link>
+              <Link
+                href="/inventory/process-3d"
+                className="px-3.5 py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+              >
+                <Boxes className="w-4 h-4 text-amber-400" />
+                3D Process Simulator
               </Link>
               <button
                 onClick={fetchData}

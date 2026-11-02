@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import PickLocationSelect, { useExtraLocations } from '@/components/warehouse/PickLocationSelect';
 
 interface DamageRecord {
   date: string;
@@ -34,8 +35,10 @@ export default function DamagePage() {
       quantity: 0,
       unit: '',
       reason: 'Production Defect', // Default internal value
-      notes: ''
+      notes: '',
+      location: '', // '' = main location; else an extra bin to reduce on approval
   });
+  const extraLocations = useExtraLocations();
 
   const fetchRecords = async () => {
       setLoading(true);
@@ -77,7 +80,7 @@ export default function DamagePage() {
               alert(t('success_inbound') || "Recorded"); // Reuse success message or generic
               setShowForm(false);
               fetchRecords();
-              setFormData({ ...formData, product_name: '', quantity: 0, notes: '' });
+              setFormData({ ...formData, product_name: '', quantity: 0, notes: '', location: '' });
           } else {
               alert("Error: " + res.statusText);
           }
@@ -205,7 +208,7 @@ export default function DamagePage() {
                         value={formData.product_name}
                         onChange={e => {
                             const p = products.find(prod => prod.name === e.target.value);
-                            setFormData({...formData, product_name: e.target.value, unit: p?.unit || 'pcs'});
+                            setFormData({...formData, product_name: e.target.value, unit: p?.unit || 'pcs', location: ''});
                         }}
                         className="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-900 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
                       >
@@ -215,6 +218,12 @@ export default function DamagePage() {
                           ))}
                       </select>
                   </div>
+                  <PickLocationSelect
+                    product={products.find(prod => prod.name === formData.product_name)}
+                    extras={extraLocations}
+                    value={formData.location}
+                    onChange={location => setFormData({ ...formData, location })}
+                  />
                   <div>
                       <label className="block text-slate-400 mb-2">{t('qty')}</label>
                       <input 

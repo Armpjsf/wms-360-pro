@@ -1,6 +1,18 @@
 
 import { NextResponse } from 'next/server';
-import { getDamageRecords, addDamageRecord, updateDamageStatusByRow, type DamageRecord } from '@/lib/googleSheets';
+import {
+  getDamageRecords,
+  addDamageRecord,
+  updateDamageStatusByRow,
+  getDamageRecordByRow,
+  setDamageExtraTaken,
+  SPREADSHEET_ID,
+  type DamageRecord,
+} from '@/lib/googleSheets';
+import { consumeExtraLocation, restoreExtraLocation } from '@/lib/extraLocations';
+
+// The stock formula subtracts damage rows whose status is exactly this.
+const APPROVED = 'อนุมัติแล้ว';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +28,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { date, product_name, quantity, unit, reason, notes, reported_by } = body;
+    const { date, product_name, quantity, unit, reason, notes, reported_by, location } = body;
 
     // Validation
     if (!product_name || !quantity || !reason) {
@@ -33,7 +45,8 @@ export async function POST(req: Request) {
         reported_by: reported_by || 'System',
         status: 'รอดำเนินการ',
         approved_by: '',
-        approved_date: ''
+        approved_date: '',
+        location: location ? String(location).trim().toUpperCase() : '',
     };
 
     const success = await addDamageRecord(newRecord);
@@ -65,7 +78,10 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { rowIndex, status, approver, sent_to_hq } = body;
+        const { rowIndex, approver, sent_to_hq } = body;
+        // The stock formula only subtracts rows whose status is exactly "อนุมัติแล้ว";
+        // the /damage page used to send "Approved", which never reduced stock.
+        const status = body.status === 'Approved' ? APPROVED : body.status;
 
         // Note: rowIndex is 0-based array index from frontend
         if (rowIndex === undefined) {
@@ -83,9 +99,31 @@ export async function PUT(req: Request) {
                 return NextResponse.json({ error: 'Failed to update HQ status' }, { status: 500 });
             }
         } else if (status) {
+            const before = await getDamageRecordByRow(sheetRow);
             const success = await updateDamageStatusByRow(sheetRow, status, approver || 'Admin');
             if (success) {
-                return NextResponse.json({ message: 'Status updated' });
+                // Extra locations: approved damage taken from an extra bin reduces that bin;
+                // un-approving puts back exactly what was taken. Main-bin damage needs nothing.
+                let extraNote = '';
+                try {
+                    const wasApproved = before?.status === APPROVED;
+                    const nowApproved = status === APPROVED;
+                    if (before && before.location && nowApproved && !wasApproved) {
+                        const { taken, isExtra } = await consumeExtraLocation(SPREADSHEET_ID, before.product_name, before.location, before.quantity, approver || 'Admin');
+                        if (isExtra) {
+                            await setDamageExtraTaken(sheetRow, taken);
+                            extraNote = ` • ตัดโลเคชัน ${before.location} ${taken}`;
+                        }
+                    } else if (before && before.location && wasApproved && !nowApproved && (before.extra_taken || 0) > 0) {
+                        await restoreExtraLocation(SPREADSHEET_ID, before.product_name, before.location, before.extra_taken || 0, approver || 'Admin');
+                        await setDamageExtraTaken(sheetRow, 0);
+                        extraNote = ` • คืนยอดโลเคชัน ${before.location} ${before.extra_taken}`;
+                    }
+                } catch (e) {
+                    console.error('[Damage] extra-location update failed:', e);
+                    extraNote = ' • อัปเดตยอดโลเคชันเสริมไม่สำเร็จ ตรวจที่หน้าผังคลัง';
+                }
+                return NextResponse.json({ message: `Status updated${extraNote}` });
             } else {
                  return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
             }

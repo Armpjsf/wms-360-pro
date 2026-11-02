@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { writeTransactionData } from '@/lib/transactionUtils';
+import { resolveSpreadsheetId } from '@/lib/googleSheets';
+import { consumeExtraLocation, normLoc } from '@/lib/extraLocations';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +19,8 @@ export async function POST(request: Request) {
             sku: body.sku,
             qty: body.qty,
             docRef: body.docRef,
-            salePrice: body.salePrice
+            salePrice: body.salePrice,
+            location: body.location
         });
     }
 
@@ -30,10 +33,30 @@ export async function POST(request: Request) {
         itemCode: i.sku,
         quantity: Number(i.qty),
         orderNumber: i.docRef || '',
-        price: i.salePrice ? Number(i.salePrice) : undefined
+        price: i.salePrice ? Number(i.salePrice) : undefined,
+        location: i.location ? normLoc(i.location) : undefined,
     }));
 
     await writeTransactionData(transactionItems);
+
+    // Extra locations: stock picked from an extra bin reduces that bin
+    // (the main bin is total − extras, so it follows on its own).
+    const extraWarnings: string[] = [];
+    const picked = transactionItems.filter((t: { location?: string }) => t.location);
+    if (picked.length > 0) {
+      const ssid = await resolveSpreadsheetId(body.branchId || null, 'inventory');
+      for (const t of picked) {
+        try {
+          const { taken, isExtra } = await consumeExtraLocation(ssid, t.itemCode, t.location!, t.quantity, 'Outbound');
+          if (isExtra && taken < t.quantity) {
+            extraWarnings.push(`${t.itemCode}: ${t.location} มีไม่พอ ตัดได้ ${taken}/${t.quantity}`);
+          }
+        } catch (e) {
+          console.error('[Outbound] extra-location update failed:', e);
+          extraWarnings.push(`${t.itemCode}: อัปเดตยอด ${t.location} ไม่สำเร็จ`);
+        }
+      }
+    }
 
     // Automation & Audit
     try {
@@ -70,7 +93,7 @@ export async function POST(request: Request) {
       console.warn("Automation/Audit Failed:", err);
     }
 
-    return NextResponse.json({ success: true, message: `Captured ${items.length} items` });
+    return NextResponse.json({ success: true, message: `Captured ${items.length} items`, warnings: extraWarnings });
 
   } catch (error: any) {
     console.error("Outbound API Error:", error);

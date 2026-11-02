@@ -2305,11 +2305,13 @@ export interface DamageRecord {
   approved_by: string;
   approved_date: string;
   sent_to_hq?: string; // Track if item was sent to Head Office
+  location?: string;   // L: bin the damaged goods were taken from (blank = main location)
+  extra_taken?: number; // M: qty taken off that extra bin on approval (to undo exactly)
 }
 
 export async function getDamageRecords() {
   // "Damage" Sheet - A to K range
-  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A1:K`);
+  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A1:M`);
   if (!data || data.length < 2) return [];
 
   const rows = data.slice(1);
@@ -2327,6 +2329,8 @@ export async function getDamageRecords() {
     approved_by: r[8],
     approved_date: r[9],
     sent_to_hq: r[10] || "ยังไม่ส่ง", // Parse column K
+    location: r[11] || "",
+    extra_taken: parseFloat(String(r[12] ?? "").replace(/,/g, "")) || 0,
   }));
 }
 
@@ -2344,9 +2348,53 @@ export async function addDamageRecord(data: DamageRecord) {
     data.approved_by,
     data.approved_date,
     data.sent_to_hq || "ยังไม่ส่ง",
+    data.location ? `'${String(data.location).trim().toUpperCase()}` : "",
   ];
-  await appendSheetRow(SPREADSHEET_ID, "'Damage'!A:K", row);
+  await ensureDamageLocationHeaders();
+  await appendSheetRow(SPREADSHEET_ID, "'Damage'!A:L", row);
   return true;
+}
+
+// Columns L/M were added for extra locations; label them once. The stock
+// formula only reads B, C and H, so these columns can't affect totals.
+async function ensureDamageLocationHeaders() {
+  try {
+    const head = await getSheetData(SPREADSHEET_ID, `'Damage'!L1:M1`);
+    if (!head?.[0]?.[0] || !head?.[0]?.[1]) {
+      await updateSheetData(SPREADSHEET_ID, `'Damage'!L1:M1`, [["Location", "Extra_Taken"]]);
+    }
+  } catch (e) {
+    console.warn("[Damage] could not label L/M headers", e);
+  }
+}
+
+/** One damage row by sheet row number (for status changes). */
+export async function getDamageRecordByRow(rowNumber: number): Promise<DamageRecord | null> {
+  if (rowNumber < 2) return null;
+  const data = await getSheetData(SPREADSHEET_ID, `'Damage'!A${rowNumber}:M${rowNumber}`);
+  const r = data?.[0];
+  if (!r) return null;
+  return {
+    rowIndex: rowNumber,
+    date: r[0],
+    product_name: r[1],
+    quantity: parseFloat(String(r[2] ?? "").replace(/,/g, "")) || 0,
+    unit: r[3],
+    reason: r[4],
+    notes: r[5],
+    reported_by: r[6],
+    status: r[7] || "",
+    approved_by: r[8],
+    approved_date: r[9],
+    sent_to_hq: r[10],
+    location: r[11] || "",
+    extra_taken: parseFloat(String(r[12] ?? "").replace(/,/g, "")) || 0,
+  };
+}
+
+export async function setDamageExtraTaken(rowNumber: number, taken: number) {
+  if (rowNumber < 2) return;
+  await updateSheetData(SPREADSHEET_ID, `'Damage'!M${rowNumber}:M${rowNumber}`, [[taken || ""]]);
 }
 
 export async function updateDamageStatusByRow(

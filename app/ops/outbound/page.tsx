@@ -15,6 +15,7 @@ import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { db } from '@/lib/db';
 import { toast } from 'react-hot-toast';
 import { ImportTransactionsModal } from '@/components/ImportTransactionsModal';
+import PickLocationSelect, { useExtraLocations } from '@/components/warehouse/PickLocationSelect';
 
 export default function OutboundPage() {
   const { t } = useLanguage();
@@ -32,6 +33,9 @@ export default function OutboundPage() {
   const [currentSku, setCurrentSku] = useState('');
   const [currentQty, setCurrentQty] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
+  // '' = main location; an extra bin's code = reduce that bin on issue
+  const [currentLocation, setCurrentLocation] = useState('');
+  const extraLocations = useExtraLocations();
   const [docRef, setDocRef] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -96,12 +100,13 @@ export default function OutboundPage() {
      if (!currentSku || !currentQty) return;
      setItems(prev => [
         ...prev, 
-        { sku: currentSku, qty: currentQty, salePrice: currentPrice }
+        { sku: currentSku, qty: currentQty, salePrice: currentPrice, location: currentLocation || undefined }
      ]);
      // Clear inputs
      setCurrentSku('');
      setCurrentQty('');
      setCurrentPrice('');
+     setCurrentLocation('');
   };
 
   const removeItem = (idx: number) => {
@@ -152,8 +157,10 @@ export default function OutboundPage() {
       });
       
       if (!res.ok) throw new Error(await res.text());
-      
+      const result = await res.json().catch(() => null);
+
       toast.success(t('success_outbound'));
+      (result?.warnings || []).forEach((w: string) => toast(w, { icon: '⚠️', duration: 8000 }));
       setItems([]);
       setDocRef('');
     } catch (error: any) {
@@ -278,11 +285,18 @@ export default function OutboundPage() {
                                     subLabel: `Stock: ${p.stock}`
                                 }))}
                                 value={currentSku}
-                                onChange={setCurrentSku}
+                                onChange={v => { setCurrentSku(v); setCurrentLocation(''); }}
                                 placeholder="-- Select Product --"
                                 disabled={loading}
                             />
                         </div>
+
+                        <PickLocationSelect
+                            product={products.find(prod => prod.name === currentSku)}
+                            extras={extraLocations}
+                            value={currentLocation}
+                            onChange={setCurrentLocation}
+                        />
 
                         {currentSku && (() => {
                             const p = products.find(prod => prod.name === currentSku);
@@ -430,7 +444,12 @@ export default function OutboundPage() {
                                             exit={{ opacity: 0, scale: 0.95 }}
                                             className="group hover:bg-slate-50 transition-colors"
                                         >
-                                            <td className="p-4 font-bold text-slate-800 text-base">{item.sku}</td>
+                                            <td className="p-4 font-bold text-slate-800 text-base">
+                                                {item.sku}
+                                                {item.location && (
+                                                    <span className="ml-2 px-1.5 py-0.5 rounded bg-teal-50 border border-teal-200 text-teal-700 text-[10px] font-mono">{item.location}</span>
+                                                )}
+                                            </td>
                                             <td className="p-4 text-right font-mono text-rose-600 font-bold text-lg">{parseInt(item.qty).toLocaleString()}</td>
                                             <td className="p-4 text-right font-mono text-slate-500">{item.salePrice ? `฿${item.salePrice}` : '-'}</td>
                                             <td className="p-4 text-center">

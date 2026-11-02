@@ -12,6 +12,7 @@ interface TransactionItem {
     quantity: number;
     orderNumber: string;
     price?: number; // Optional override
+    location?: string; // Bin it was picked from; written to K instead of the main-location lookup
 }
 
 /**
@@ -55,7 +56,7 @@ export async function writeTransactionData(items: TransactionItem[], spreadsheet
                 formulaH,             // H: กำไรขั้นต้น
                 formulaI,             // I: %กำไรขั้นต้น
                 formulaJ,             // J: กลุ่มสินค้า
-                formulaK,             // K: หมายเหตุ
+                item.location ? `'${item.location}` : formulaK, // K: หมายเหตุ (picked bin, else main location)
                 item.orderNumber      // L: Order
             ]);
         }
