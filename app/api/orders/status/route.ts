@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSheetData, getSheetFormula, PO_SPREADSHEET_ID, SPREADSHEET_ID, getGoogleSheets, lookupCustomerName } from '@/lib/googleSheets';
 import { getThaiDateString } from '@/lib/dateUtils';
 import { getActiveJobDocNum } from '@/lib/orderUtils';
+import { getCachedStatus, setCachedStatus, invalidateStatusCache } from '@/lib/orderStatusCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,8 +18,8 @@ const ROLL_TAG_2 = "Roll Tag2";
 
 // Short in-memory cache (per spreadsheet/branch) for rapid double-clicks / page transitions.
 // ห้ามใช้ตัวแปรเดียวรวมทุกสาขา และห้ามคืนข้อมูลเก่าแทนผลว่าง — ทำให้หน้าจอค้างงานที่ปิดไปแล้ว
-const STATUS_CACHE_MS = 4000;
-const statusCache = new Map<string, { response: any; time: number }>();
+// Status cache managed via @/lib/orderStatusCache
+
 
 // Global Sheet Titles Cache to avoid redundant slow Sheets API calls (1 hour TTL)
 const sheetTitlesCache = new Map<string, { titles: string[], timestamp: number }>();
@@ -34,9 +35,13 @@ export async function GET(req: Request) {
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
 
     // 0. High Performance: Intercept with a 4-second in-memory cache to solve rapid double-clicks or mobile page transition latency
-    const cached = statusCache.get(ssid);
-    if (!bypassCache && cached && Date.now() - cached.time < STATUS_CACHE_MS) {
-        return NextResponse.json(cached.response, { headers: corsHeaders });
+    if (bypassCache) {
+        invalidateStatusCache(ssid);
+    } else {
+        const cached = getCachedStatus(ssid);
+        if (cached) {
+            return NextResponse.json(cached, { headers: corsHeaders });
+        }
     }
 
     console.log(`[Status] Fetching Roll Tags and Data Sheet for Branch: ${branchId || 'HQ'} (SSID: ${ssid})...`);
@@ -357,9 +362,7 @@ export async function GET(req: Request) {
         recent: recentPendingPdf
     };
 
-    if (!bypassCache) {
-        statusCache.set(ssid, { response, time: Date.now() });
-    }
+    setCachedStatus(ssid, response);
     return NextResponse.json(response, { headers: corsHeaders });
 
   } catch (error: any) {

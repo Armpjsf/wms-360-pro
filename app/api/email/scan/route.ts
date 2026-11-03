@@ -5,6 +5,7 @@ import { extractRollTagData } from '@/lib/emailParser';
 import { PO_SPREADSHEET_ID, getSheetData, appendSheetData } from '@/lib/googleSheets';
 import { getThaiDateString } from '@/lib/dateUtils';
 import { STATUS_PENDING_ROLLTAG } from '@/lib/orderUtils';
+import { invalidateStatusCache } from '@/lib/orderStatusCache';
 
 export const dynamic = 'force-dynamic';
 
@@ -197,9 +198,15 @@ export async function POST() {
         results.unshift({ status: "info", logs: debugLogs });
     }
 
+    const actualProcessed = results.filter((r: any) => r.status === 'success').length;
+    if (actualProcessed > 0) {
+        invalidateStatusCache();
+    }
+
     return NextResponse.json({ 
         success: true, 
-        processed: results.length,
+        processed: actualProcessed,
+        processedCount: actualProcessed,
         results: results // UI expects 'results'
     });
 

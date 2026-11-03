@@ -134,10 +134,17 @@ function OrderManagement() {
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const statusRequestInFlight = useRef(false);
+  const pendingFetchRef = useRef<{ isManual: boolean; bypassCache: boolean } | null>(null);
 
-  // Fetch status from API
-  const fetchStatus = useCallback(async (isManual = false) => {
-    if (statusRequestInFlight.current) return;
+  // Fetch status from API with bypassCache support and queuing for concurrent triggers
+  const fetchStatus = useCallback(async (isManual = false, bypassCache = false) => {
+    if (statusRequestInFlight.current) {
+      pendingFetchRef.current = {
+        isManual: isManual || !!pendingFetchRef.current?.isManual,
+        bypassCache: bypassCache || !!pendingFetchRef.current?.bypassCache
+      };
+      return;
+    }
     statusRequestInFlight.current = true;
     if (isManual) setLoadingAction('refresh');
 
@@ -145,7 +152,8 @@ function OrderManagement() {
       const params = new URLSearchParams(window.location.search);
       const branchId = params.get('branchId') || 'hq';
 
-      const res = await fetch(getApiUrl(`/api/orders/status?branchId=${branchId}&t=${Date.now()}`), {
+      const cacheBust = bypassCache ? '&noCache=1' : '';
+      const res = await fetch(getApiUrl(`/api/orders/status?branchId=${branchId}&t=${Date.now()}${cacheBust}`), {
         cache: 'no-store'
       });
       
@@ -181,6 +189,12 @@ function OrderManagement() {
       statusRequestInFlight.current = false;
       setLoading(false);
       if (isManual) setLoadingAction(null);
+
+      if (pendingFetchRef.current) {
+        const next = pendingFetchRef.current;
+        pendingFetchRef.current = null;
+        fetchStatus(next.isManual, next.bypassCache);
+      }
     }
   }, [t]);
 
@@ -222,7 +236,7 @@ function OrderManagement() {
       });
 
       if (res.ok) {
-        await fetchStatus(); // Refresh immediately
+        await fetchStatus(false, true); // Refresh immediately bypassing cache
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || `Error processing (${res.status})`);
@@ -275,7 +289,7 @@ function OrderManagement() {
 
       if (res.ok) {
         alert(t('success_inbound') || 'Success'); // Generic success
-        await fetchStatus();
+        await fetchStatus(false, true);
       } else {
         const err = await res.json();
         alert('Error: ' + (err.error || 'Unknown'));
@@ -306,7 +320,7 @@ function OrderManagement() {
       if (res.ok) {
         alert(t('clear_btn') + ' ' + (t('success_inbound') || 'Success'));
         setSignatureData(null);
-        await fetchStatus();
+        await fetchStatus(false, true);
       } else {
         const err = await res.json();
         alert('Error: ' + (err.error || 'Unknown'));
@@ -332,7 +346,7 @@ function OrderManagement() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Email Automation */}
-      <EmailScanCard onComplete={fetchStatus} />
+      <EmailScanCard onComplete={(force) => fetchStatus(false, force ?? true)} />
 
       {/* Pending Orders */}
       <PendingOrdersCard 
@@ -349,7 +363,7 @@ function OrderManagement() {
         onCopyLine={handleCopyLineMsg}
         onClear={handleClear}
         loadingAction={loadingAction}
-        onRefresh={() => fetchStatus(true)}
+        onRefresh={() => fetchStatus(true, true)}
       />
 
       {/* Waiting for Loading */}
@@ -377,7 +391,7 @@ function OrderManagement() {
             onClose={async () => {
                 setPdfUrl(null);
                 setSignatureData(null);
-                await fetchStatus();
+                await fetchStatus(false, true);
             }} 
         />
       )}
@@ -451,7 +465,7 @@ function LinePreviewModal({ message, onClose }: { message: string; onClose: () =
 // EMAIL SCAN CARD
 // ============================================================================
 
-function EmailScanCard({ onComplete }: { onComplete: () => void }) {
+function EmailScanCard({ onComplete }: { onComplete: (force?: boolean) => void | Promise<void> }) {
   const { t } = useLanguage();
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState('');
@@ -474,8 +488,9 @@ function EmailScanCard({ onComplete }: { onComplete: () => void }) {
       const data = await res.json();
 
       if (data.success) {
-        setMessage(`Success! Processed ${data.processed || 0}`);
-        onComplete?.();
+        const count = data.processedCount ?? data.processed ?? 0;
+        setMessage(`Success! Processed ${count}`);
+        await onComplete?.(true);
       } else {
         setMessage(`Error: ${data.error || 'Unknown Error'}`);
       }

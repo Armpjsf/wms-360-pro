@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSheetData, batchUpdateSheetData, batchClearSheetRanges, appendSheetData, lookupCustomerName } from '@/lib/googleSheets';
 import { generateNewDocNumber } from '@/lib/docUtils';
 import { getThaiDateString } from '@/lib/dateUtils';
+import { invalidateStatusCache } from '@/lib/orderStatusCache';
 import { withFormLock, lockErrorStatus, STATUS_IN_PROGRESS, setActiveJobDocNum } from '@/lib/orderUtils';
 
 const ROLL_TAG_1 = "Roll Tag1";
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
     console.log(`[Process] Starting for Tag: ${tagId}, Branch: ${branchId || 'HQ'}, SS_ID: ${ssId}`);
 
     // 0. ฟอร์ม (G3) มีได้ทีละงาน — ใช้ lock กลางร่วมกับ recall/restore/archive/finalize
+    invalidateStatusCache(ssId);
     return await withFormLock(ssId, async () => {
     // 1. Check if tagId exists in คลังข้อมูล with status "รอจัด RollTag"
     const archiveData = await getSheetData(ssId, `'${DATA_SHEET}'!A:I`).catch(() => []);

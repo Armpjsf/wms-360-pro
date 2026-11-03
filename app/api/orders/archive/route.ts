@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveSpreadsheetId } from '@/lib/googleSheets';
+import { invalidateStatusCache } from '@/lib/orderStatusCache';
 import {
     withFormLock,
     setDocsStatus,
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
       .filter(Boolean);
 
     const ssid = await resolveSpreadsheetId(branchId, 'doc');
+    invalidateStatusCache(ssid);
 
     const result = await withFormLock(ssid, async () => {
       const active = await getActiveJobDocNum(ssid);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveSpreadsheetId } from '@/lib/googleSheets';
+import { invalidateStatusCache } from '@/lib/orderStatusCache';
 import { withFormLock, restoreOrderToForm, lockErrorStatus } from '@/lib/orderUtils';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
       if (!docNum) return NextResponse.json({ error: "Missing DocNum" }, { status: 400, headers: corsHeaders });
 
       const ssid = await resolveSpreadsheetId(branchId, 'doc');
+      invalidateStatusCache(ssid);
       const result = await withFormLock(ssid, () => restoreOrderToForm(docNum, ssid));
 
       return NextResponse.json(result, { headers: corsHeaders });
