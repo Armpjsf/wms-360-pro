@@ -1010,8 +1010,11 @@ export default function WarehouseProcessSimulator3D({
       fetch(getApiUrl(`/api/orders/status?branchId=${bParam}`))
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null),
+      fetch(getApiUrl('/api/orders?limit=20'))
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
     ])
-      .then(([layoutRes, prodsRes, extraRes, txRes, orderStatusRes]) => {
+      .then(([layoutRes, prodsRes, extraRes, txRes, orderStatusRes, dbOrdersRes]) => {
         const prodsList: any[] = Array.isArray(prodsRes) ? prodsRes : [];
         const extrasList: ExtraLocation[] =
           extraRes?.success && Array.isArray(extraRes.rows) ? extraRes.rows : [];
@@ -1163,6 +1166,24 @@ export default function WarehouseProcessSimulator3D({
               p.items,
               'รอจัด Roll Tag',
               'STANDARD'
+            );
+          }
+        });
+
+        // Also check direct database orders from /api/orders (NEXUS-WMS)
+        const rawDbOrders = Array.isArray(dbOrdersRes?.orders)
+          ? dbOrdersRes.orders
+          : Array.isArray(dbOrdersRes)
+          ? dbOrdersRes
+          : [];
+        rawDbOrders.forEach((o: any) => {
+          if (Array.isArray(o.items) && o.items.length > 0) {
+            pushJobAsOrder(
+              String(o.orderNo || o.id || 'SO'),
+              String(o.customerName || o.shipAddress || 'ลูกค้าคลังสินค้า'),
+              o.items,
+              String(o.status || 'Active'),
+              o.priority === 'URGENT' ? 'URGENT' : o.priority === 'EXPRESS' ? 'EXPRESS' : 'STANDARD'
             );
           }
         });

@@ -162,9 +162,10 @@ export function buildWarehouseMap(
   // Product master + ABC class, keyed by SKU.
   // Sales history names products, while product ids here are sheet row numbers
   // ("P-23"), so rank by NAME and map the class back onto each product's key.
-  const abc = performABCAnalysis(products.map(p => ({ ...p, id: p.name })), transactions);
+  const abc: any = performABCAnalysis(products.map(p => ({ ...p, id: p.name })), transactions);
   const classByName = new Map<string, VelocityClass>();
-  abc.forEach(i => classByName.set(String(i.productId), i.class as VelocityClass));
+  const abcList: any[] = Array.isArray(abc) ? abc : (abc?.recommendations || []);
+  abcList.forEach((i: any) => classByName.set(String(i.productId), i.class as VelocityClass));
   const classBySku = new Map<string, VelocityClass>();
   products.forEach(p => {
     const c = classByName.get(String(p.name));
