@@ -83,6 +83,65 @@ export async function writeTransactionData(items: TransactionItem[], spreadsheet
     }
 }
 
+
+/**
+ * Write reversal transaction data to 💰 Transaction sheet (Negative quantity restores stock)
+ */
+export async function writeReversalTransaction(
+    items: { itemCode: string; quantity: number; orderNumber: string; docNumber?: string }[],
+    spreadsheetId?: string,
+    reason?: string
+): Promise<void> {
+    try {
+        const ssid = spreadsheetId || TRANSACTION_SPREADSHEET_ID;
+        console.log(`[Transaction] Starting reversal for ${items?.length || 0} items...`);
+        if (!items || items.length === 0) return;
+
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
+        const rows = [];
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const price = `=IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'${PRODUCT_SHEET_NAME}'!B:D,3,FALSE),0)`;
+            const formulaF = `=IF(LEN(INDIRECT("B"&ROW()))>0,INDIRECT("C"&ROW())*INDIRECT("D"&ROW()),"")`;
+            const formulaG = `=IF(LEN(INDIRECT("B"&ROW()))>0,IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'📊 รายงานสินค้าคงเหลือ'!A:G,6,FALSE)*INDIRECT("C"&ROW()),0),0)`;
+            const formulaH = `=IF(LEN(INDIRECT("B"&ROW()))>0,INDIRECT("F"&ROW())-INDIRECT("G"&ROW()),0)`;
+            const formulaI = `=IF(LEN(INDIRECT("B"&ROW()))>0,IF(INDIRECT("F"&ROW())<>0,INDIRECT("H"&ROW())/INDIRECT("F"&ROW()),0),0)`;
+            const formulaJ = `=IFERROR(VLOOKUP(INDIRECT("B"&ROW()),'${PRODUCT_SHEET_NAME}'!B:G,6,FALSE),"")`;
+            const noteText = reason ? `'ยกเลิก Order: ${reason}` : `'ยกเลิก Order (${item.docNumber || item.orderNumber})`;
+
+            // Negative quantity to restore stock in SUMIF
+            const negQty = -Math.abs(Number(item.quantity) || 0);
+
+            rows.push([
+                dateStr,              // A: วันที่
+                item.itemCode,        // B: ชื่อสินค้า (Item Code)
+                negQty,               // C: จำนวนที่ขาย (Negative qty restores stock)
+                price,                // D: ราคา
+                'แผ่น',               // E: หน่วยนับ
+                formulaF,             // F: มูลค่ารวม
+                formulaG,             // G: ต้นทุนเฉลี่ยรวม
+                formulaH,             // H: กำไรขั้นต้น
+                formulaI,             // I: %กำไรขั้นต้น
+                formulaJ,             // J: กลุ่มสินค้า
+                noteText,             // K: หมายเหตุ
+                item.orderNumber      // L: Order
+            ]);
+        }
+
+        try {
+            await appendSheetData(ssid, `${TRANSACTION_SHEET_NAME}!A:L`, rows);
+        } catch {
+            await appendSheetData(ssid, `Transaction จ่าย!A:L`, rows);
+        }
+        console.log(`[Transaction] ✅ Successfully wrote ${rows.length} reversal rows to Transaction sheet`);
+    } catch (error) {
+        console.error('Error writing reversal transaction:', error);
+        throw error;
+    }
+}
+
 /**
  * Lookup Cost Price Map from ชื่อสินค้า sheet in a single read
  * Item Code is in Column B, Cost is in Column C

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2 } from 'lucide-react';
+import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2, Trash2 } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
@@ -333,6 +333,71 @@ function OrderManagement() {
     }
   };
 
+  const handleCancelRollTag = async (tagId: string) => {
+    if (!confirm(`ต้องการยกเลิก Roll Tag [${tagId}] ใช่หรือไม่?\n(กรณีลูกค้าส่งออเดอร์มาผิด หรือมีอีเมลฉบับใหม่มาแทน)`)) return;
+
+    setLoadingAction(`cancel-${tagId}`);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
+      const res = await fetch(getApiUrl('/api/orders/cancel-tag'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagId, branchId })
+      });
+
+      if (res.ok) {
+        alert(`ยกเลิก Roll Tag [${tagId}] เรียบร้อยแล้ว`);
+        await fetchStatus(false, true);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to cancel Roll Tag');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Network Error');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleVoidOrder = async (docNum: string) => {
+    const reason = prompt(
+      `กรุณาระบุเหตุผลในการยกเลิกออเดอร์ [${docNum}]:\n(ระบบจะคืนสต็อกและแจ้งเตือนพนักงานคลังสินค้าให้หยุดจัด)`,
+      'ลูกค้าแจ้งแก้ไข/ส่งออเดอร์ใหม่มาแทน'
+    );
+    if (reason === null) return;
+
+    if (!confirm(`ยืนยันการยกเลิกออเดอร์ [${docNum}] ใช่หรือไม่?\n⚠️ การยกเลิกจะมีผลทันที: ปลดล็อคฟอร์ม, คืนยอดสต็อก และส่งสัญญาณเตือนไปที่แอปพนักงาน`)) return;
+
+    setLoadingAction(`void-${docNum}`);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
+      const res = await fetch(getApiUrl('/api/orders/void'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docNum, branchId, reason: reason.trim() })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(data.message || `ยกเลิกออเดอร์ [${docNum}] สำเร็จ และคืนสต็อกเรียบร้อยแล้ว ✅`);
+        setSignatureData(null);
+        await fetchStatus(false, true);
+      } else {
+        alert(data.error || 'Failed to void order');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Network Error');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   // ========== RENDER ==========
 
   if (loading) {
@@ -353,6 +418,7 @@ function OrderManagement() {
         tasks={status.pending}
         onProcess={handleProcessRollTag}
         onPrint={handlePrint}
+        onCancel={handleCancelRollTag}
         processing={!!loadingAction}
       />
 
@@ -362,6 +428,7 @@ function OrderManagement() {
         signatureData={signatureData}
         onCopyLine={handleCopyLineMsg}
         onClear={handleClear}
+        onVoid={handleVoidOrder}
         loadingAction={loadingAction}
         onRefresh={() => fetchStatus(true, true)}
       />
@@ -371,6 +438,7 @@ function OrderManagement() {
         jobs={status.waiting}
         onRecall={handleRecall}
         onCopyLine={handleCopyLineForJob}
+        onVoid={handleVoidOrder}
       />
 
       {/* Completed Jobs */}
@@ -542,11 +610,13 @@ function PendingOrdersCard({
   tasks, 
   onProcess, 
   onPrint,
+  onCancel,
   processing 
 }: { 
   tasks: RollTag[];
   onProcess: (id: string) => void;
   onPrint: (id: string) => void;
+  onCancel: (id: string) => void;
   processing: boolean;
 }) {
   const { t } = useLanguage();
@@ -574,27 +644,36 @@ function PendingOrdersCard({
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-slate-800 font-semibold">{task.customer}</p>
-                  <p className="text-slate-500 text-sm">{task.itemCount} Items</p>
+                  <p className="text-slate-500 text-sm">{task.itemCount} Items ({task.id})</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <a
                   href={getApiUrl(`/api/print/roll-tag?tagId=${task.id}&branchId=${new URLSearchParams(window.location.search).get('branchId') || 'hq'}`)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                  className="bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <Printer className="w-3 h-3" />
+                  <Printer className="w-3.5 h-3.5" />
                   {t('print_btn')}
                 </a>
                 <button
                   onClick={() => onProcess(task.id)}
                   disabled={processing}
-                  className="bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
                 >
-                  {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                  {processing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
                   {processing ? t('processing') : t('process_btn')}
+                </button>
+                <button
+                  onClick={() => onCancel(task.id)}
+                  disabled={processing}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                  title="ยกเลิก Roll Tag นี้ (กรณีส่งมาผิด)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  ยกเลิก
                 </button>
               </div>
             </div>
@@ -614,6 +693,7 @@ function ActiveJobCard({
   signatureData,
   onCopyLine,
   onClear,
+  onVoid,
   loadingAction,
   onRefresh
 }: {
@@ -621,11 +701,13 @@ function ActiveJobCard({
   signatureData: string | null;
   onCopyLine: () => void;
   onClear: () => void;
+  onVoid: (docNum: string) => void;
   loadingAction: string | null;
   onRefresh: () => void;
 }) {
   const { t } = useLanguage();
   const isClearing = loadingAction === 'clear';
+  const isVoiding = !!loadingAction && loadingAction.startsWith('void-');
   const isLoading = !!loadingAction;
 
   return (
@@ -709,6 +791,17 @@ function ActiveJobCard({
               {isClearing ? t('processing') : t('clear_btn')}
             </button>
           </div>
+
+          {/* Void / Cancel Order Button */}
+          <button
+            onClick={() => onVoid(activeForm.docNum)}
+            disabled={isLoading}
+            className="w-full mt-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+            title="ยกเลิกออเดอร์นี้ (Void และคืนสต็อก)"
+          >
+            {isVoiding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            {isVoiding ? 'กำลังยกเลิก...' : 'ยกเลิกออเดอร์นี้ (Void / คืนสต็อก)'}
+          </button>
         </div>
       )}
     </div>
@@ -722,11 +815,13 @@ function ActiveJobCard({
 function WaitingJobsCard({
   jobs,
   onRecall,
-  onCopyLine
+  onCopyLine,
+  onVoid
 }: {
   jobs: WaitingJob[];
   onRecall: (docNum: string) => void;
   onCopyLine: (job: WaitingJob) => void;
+  onVoid: (docNum: string) => void;
 }) {
   const { t } = useLanguage();
   return (
@@ -749,35 +844,46 @@ function WaitingJobsCard({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map((job) => (
-            <div key={job.docNum} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-slate-900 font-black text-lg">{job.orderNo || job.docNum}</p>
-                <p className="text-slate-500 text-sm">{job.date}</p>
-              </div>
-              <p className="text-slate-400 text-[10px] font-mono mb-2">{t('doc_no')}: {job.docNum}</p>
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <p className="text-slate-600 text-sm truncate">{job.customer}</p>
-                {job.status === 'รอลูกค้า' ? (
-                  <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">จัดเสร็จแล้ว</span>
-                ) : (
-                  <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">กำลังจัด</span>
+            <div key={job.docNum} className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-slate-900 font-black text-lg">{job.orderNo || job.docNum}</p>
+                  <p className="text-slate-500 text-sm">{job.date}</p>
+                </div>
+                <p className="text-slate-400 text-[10px] font-mono mb-2">{t('doc_no')}: {job.docNum}</p>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <p className="text-slate-600 text-sm truncate">{job.customer}</p>
+                  {job.status === 'รอลูกค้า' ? (
+                    <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">จัดเสร็จแล้ว</span>
+                  ) : (
+                    <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">กำลังจัด</span>
+                  )}
+                </div>
+                {job.items && job.items.length > 0 && (
+                  <p className="text-slate-400 text-xs mb-3">{job.items.length} รายการ</p>
                 )}
               </div>
-              {job.items && job.items.length > 0 && (
-                <p className="text-slate-400 text-xs mb-3">{job.items.length} รายการ</p>
-              )}
-              <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => onCopyLine(job)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-sm font-bold"
+                  >
+                    {t('copy_line')}
+                  </button>
+                  <button
+                    onClick={() => onRecall(job.docNum)}
+                    className="bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm"
+                  >
+                    {t('recall_btn')}
+                  </button>
+                </div>
                 <button
-                  onClick={() => onCopyLine(job)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-sm font-bold"
+                  onClick={() => onVoid(job.docNum)}
+                  className="w-full mt-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 py-1.5 rounded-lg text-xs font-semibold border border-rose-200 transition-colors flex items-center justify-center gap-1"
                 >
-                  {t('copy_line')}
-                </button>
-                <button
-                  onClick={() => onRecall(job.docNum)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm"
-                >
-                  {t('recall_btn')}
+                  <Trash2 className="w-3 h-3" />
+                  ยกเลิกออเดอร์นี้ (Void)
                 </button>
               </div>
             </div>

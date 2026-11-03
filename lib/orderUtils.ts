@@ -21,6 +21,7 @@ export const STATUS_IN_PROGRESS = "กำลังดำเนินการ"; 
 export const STATUS_PREPARED = "รอลูกค้า";          // พนักงานจัดสินค้าเสร็จ รอลูกค้ามารับ/เซ็น
 export const STATUS_DONE = "เสร็จสิ้น";              // เซ็นรับแล้ว มี PDF
 export const STATUS_LEGACY_EDITING = "กำลังแก้ไข";  // สถานะเก่าจากการ recall — ไม่เขียนใหม่แล้ว
+export const STATUS_CANCELLED = "ยกเลิก";           // งานที่ถูกยกเลิก/Void
 
 // คลังข้อมูล: [DocNum(A), CustName(B), Seq(C), OrderNo(D), Item(E), Qty(F), Status(G), Link(H), Date(I)]
 export type ArchiveRow = any[];
