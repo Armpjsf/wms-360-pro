@@ -294,8 +294,9 @@ export async function generateDeliveryNotePdf(data: DeliveryNoteData): Promise<U
         width: finalW,
         height: finalH,
       });
-    } catch (sigErr) {
+    } catch (sigErr: any) {
       console.error("[generateDeliveryNotePdf] Failed to overlay signature:", sigErr);
+      throw new Error(`ไม่สามารถแนบลายเซ็นลงในเอกสารได้: ${sigErr?.message || String(sigErr)}`);
     }
   }
 

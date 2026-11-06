@@ -115,9 +115,25 @@ export function rowNumbersOf(data: ArchiveRow[], docNum: string): number[] {
     const target = String(docNum).trim();
     const out: number[] = [];
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i]?.[0] ?? "").trim() === target) out.push(i + 1);
+        if (String(data[i]?.[0] ?? "").trim() === target || String(data[i]?.[3] ?? "").trim() === target) {
+            out.push(i + 1);
+        }
     }
     return out;
+}
+
+export async function reopenOrderForSignature(ssid: string, docNumOrOrderNo: string) {
+    const data = await readArchive(ssid);
+    const rows = rowNumbersOf(data, docNumOrOrderNo);
+    if (rows.length === 0) {
+        throw new Error(`Order ${docNumOrOrderNo} not found in Archive`);
+    }
+    const updates = rows.map((r) => ({
+        range: `'${DATA_SHEET}'!G${r}:H${r}`,
+        values: [[STATUS_PREPARED, ""]]
+    }));
+    await batchUpdateSheetData(ssid, updates);
+    return { success: true, rowsUpdated: rows.length };
 }
 
 /**

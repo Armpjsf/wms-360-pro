@@ -398,6 +398,35 @@ function OrderManagement() {
     }
   };
 
+  const handleReopenOrder = async (docNum: string) => {
+    if (!confirm(`ต้องการดึงบิล [${docNum}] กลับมาแก้ไขลายเซ็นใช่หรือไม่?\n(ระบบจะเปลี่ยนสถานะเป็น 'รอลูกค้า' เพื่อให้สามารถลงนามใหม่ได้ ปลอดภัยไม่ตัดสต็อกซ้ำ)`)) return;
+
+    setLoadingAction(`reopen-${docNum}`);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const branchId = params.get('branchId') || 'hq';
+
+      const res = await fetch(getApiUrl('/api/orders/reopen'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchId, docNum })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || `ดึงบิล [${docNum}] กลับมาสำเร็จ พร้อมให้เซ็นรับใหม่แล้ว`);
+        await fetchStatus(false, true);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to reopen order'));
+      }
+    } catch (error: any) {
+      console.error(error);
+      alert('Network Error: ' + error.message);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   // ========== RENDER ==========
 
   if (loading) {
@@ -442,7 +471,7 @@ function OrderManagement() {
       />
 
       {/* Completed Jobs */}
-      <CompletedJobsCard jobs={status.completed} />
+      <CompletedJobsCard jobs={status.completed} onReopen={handleReopenOrder} loadingAction={loadingAction} />
 
       {/* LINE Preview Modal */}
       {previewMessage && (
@@ -898,7 +927,15 @@ function WaitingJobsCard({
 // COMPLETED JOBS CARD
 // ============================================================================
 
-function CompletedJobsCard({ jobs }: { jobs: CompletedJob[] }) {
+function CompletedJobsCard({ 
+  jobs, 
+  onReopen, 
+  loadingAction 
+}: { 
+  jobs: CompletedJob[]; 
+  onReopen?: (docNum: string) => void; 
+  loadingAction?: string | null; 
+}) {
   const { t } = useLanguage();
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm lg:col-span-3">
@@ -927,9 +964,23 @@ function CompletedJobsCard({ jobs }: { jobs: CompletedJob[] }) {
                              <p className="text-slate-900 font-bold">{job.docNum}</p>
                              <p className="text-slate-500 text-xs">{job.date}</p>
                         </div>
-                        <a href={job.pdfLink} target="_blank" className="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-slate-700 font-bold transition-colors">
-                            PDF
-                        </a>
+                        <div className="flex items-center gap-1.5">
+                            {job.pdfLink && (
+                                <a href={job.pdfLink} target="_blank" className="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-slate-700 font-bold transition-colors">
+                                    PDF
+                                </a>
+                            )}
+                            {onReopen && (
+                                <button
+                                    onClick={() => onReopen(job.docNum)}
+                                    disabled={loadingAction === `reopen-${job.docNum}`}
+                                    className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-1 rounded font-bold transition-colors flex items-center gap-1 disabled:opacity-50"
+                                    title="ดึงกลับมาแก้ไขลายเซ็น"
+                                >
+                                    ✍️ แก้ไขลายเซ็น
+                                </button>
+                            )}
+                        </div>
                     </div>
                     {job.orderNo && (
                         <div className="mb-2">

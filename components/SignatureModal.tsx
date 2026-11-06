@@ -56,6 +56,9 @@ function rotateCCW(source: HTMLCanvasElement): HTMLCanvasElement {
     out.height = source.width;
     const ctx = out.getContext('2d');
     if (!ctx) return source;
+    // เติมพื้นหลังสีขาวเพื่อไม่ให้มี Transparent pixel ที่จะกลายเป็นสีดำเวลาแปลงภาพ
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
     ctx.translate(0, source.width);
     ctx.rotate(-Math.PI / 2);
     ctx.drawImage(source, 0, 0);
@@ -81,16 +84,26 @@ function useIsPortrait() {
 const MemoizedSignaturePad = memo(({ sigRef, onClear, portrait }: { sigRef: any, onClear: () => void, portrait: boolean }) => {
     const { t } = useLanguage();
 
-    // Effect to handle canvas resolution for high-DPI screens
+    // Effect to handle canvas resolution for high-DPI screens without wiping drawn signatures
     useEffect(() => {
         const resizeCanvas = () => {
             const canvas = sigRef.current?.getCanvas();
-            if (canvas) {
+            if (canvas && canvas.offsetWidth > 0 && canvas.offsetHeight > 0) {
                 const ratio = Math.max(window.devicePixelRatio || 1, 2);
-                canvas.width = canvas.offsetWidth * ratio;
-                canvas.height = canvas.offsetHeight * ratio;
-                canvas.getContext("2d")?.scale(ratio, ratio);
-                sigRef.current?.clear(); // Need to clear after resize to fix scaling
+                const targetW = canvas.offsetWidth * ratio;
+                const targetH = canvas.offsetHeight * ratio;
+
+                if (canvas.width !== targetW || canvas.height !== targetH) {
+                    const data = sigRef.current?.toData ? sigRef.current.toData() : null;
+                    canvas.width = targetW;
+                    canvas.height = targetH;
+                    canvas.getContext("2d")?.scale(ratio, ratio);
+                    if (data && data.length > 0) {
+                        sigRef.current?.fromData(data);
+                    } else {
+                        sigRef.current?.clear();
+                    }
+                }
             }
         };
 
@@ -102,7 +115,7 @@ const MemoizedSignaturePad = memo(({ sigRef, onClear, portrait }: { sigRef: any,
             window.removeEventListener("resize", resizeCanvas);
             clearTimeout(timer);
         };
-    }, [sigRef, portrait]);
+    }, [sigRef]);
 
     return (
         <div className="flex-1 bg-white relative shadow-inner touch-none overflow-hidden">
@@ -179,23 +192,44 @@ export default function SignatureModal({ isOpen, onClose, onSave, docNum }: Sign
 
     const handleConfirm = async () => {
         if (!sigCanvasRef.current || sigCanvasRef.current.isEmpty()) {
-            appAlert(t('sign_instruction'));
+            appAlert(t('sign_instruction') || 'กรุณาเซ็นชื่อก่อนกดยืนยัน');
             return;
         }
 
         setSaving(true);
         try {
             const canvas: HTMLCanvasElement = sigCanvasRef.current.getCanvas();
+            // ตรวจสอบพิกเซลหมึกจริง ป้องกันการส่งแคนวาสเปล่า
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                let hasInk = false;
+                for (let i = 0; i < px.length; i += 4) {
+                    if (px[i + 3] > 0 && (px[i] < 200 || px[i + 1] < 200 || px[i + 2] < 200)) {
+                        hasInk = true;
+                        break;
+                    }
+                }
+                if (!hasInk) {
+                    appAlert('ไม่พบลายเซ็น กรุณาเซ็นชื่อก่อนกดยืนยัน');
+                    setSaving(false);
+                    return;
+                }
+            }
+
             // ตัดสินจากรูปทรงผืนผ้าใบจริงตอนเซ็น (สูงกว่ากว้าง = จอแนวตั้ง -> UI ตะแคง)
             const signedSideways = canvas.height > canvas.width;
             const cropped = cropToInk(canvas);
             const upright = signedSideways ? rotateCCW(cropped) : cropped;
-            const dataUrl = upright.toDataURL('image/jpeg', 0.85);
+            const dataUrl = upright.toDataURL('image/png');
+            if (!dataUrl || dataUrl.length < 500) {
+                throw new Error('ภาพลายเซ็นไม่สมบูรณ์ กรุณาลองใหม่อีกครั้ง');
+            }
             await onSave(dataUrl);
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Signature Save Failed", error);
-            appAlert('บันทึกลายเซ็นไม่สำเร็จ กรุณาลองใหม่');
+            appAlert(error.message || 'บันทึกลายเซ็นไม่สำเร็จ กรุณาลองใหม่');
         } finally {
             setSaving(false);
         }
