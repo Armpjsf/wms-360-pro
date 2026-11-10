@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2, Trash2 } from 'lucide-react';
+import { FileText, Printer, CheckCircle, Mail, RefreshCw, Truck, X, Loader2, Clock, CheckCircle2, Trash2, Pencil } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
