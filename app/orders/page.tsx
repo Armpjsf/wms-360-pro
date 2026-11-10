@@ -133,6 +133,15 @@ function OrderManagement() {
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [editingJob, setEditingJob] = useState<{ docNum: string; customer: string; items: JobItem[] } | null>(null);
+
+  const handleOpenEdit = (docNum: string, customer: string, items?: JobItem[]) => {
+    setEditingJob({
+      docNum,
+      customer,
+      items: items && items.length > 0 ? items.map(it => ({ ...it })) : [{ itemCode: '', qty: 1, orderNo: docNum }],
+    });
+  };
   const statusRequestInFlight = useRef(false);
   const pendingFetchRef = useRef<{ isManual: boolean; bypassCache: boolean } | null>(null);
 
@@ -1018,4 +1027,178 @@ function PdfReadyModal({ url, onClose }: { url: string, onClose: () => void }) {
              </div>
         </div>
     )
+}
+
+// ============================================================================
+// EDIT ORDER ITEMS MODAL
+// ============================================================================
+
+function EditOrderItemsModal({
+  job,
+  onClose,
+  onSuccess,
+}: {
+  job: { docNum: string; customer: string; items: JobItem[] };
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [items, setItems] = useState<JobItem[]>(() =>
+    job.items.map(it => ({
+      itemCode: it.itemCode || '',
+      qty: it.qty ?? 1,
+      orderNo: it.orderNo || job.docNum,
+    }))
+  );
+  const [saving, setSaving] = useState(false);
+
+  const handleItemChange = (index: number, field: keyof JobItem, value: any) => {
+    setItems(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleAddLine = () => {
+    setItems(prev => [
+      ...prev,
+      { itemCode: '', qty: 1, orderNo: job.docNum },
+    ]);
+  };
+
+  const handleRemoveLine = (index: number) => {
+    if (items.length <= 1) {
+      alert('ต้องมีรายการสินค้าอย่างน้อย 1 รายการ');
+      return;
+    }
+    setItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    for (let i = 0; i < items.length; i++) {
+      if (!String(items[i].itemCode).trim()) {
+        alert(`กรุณาระบุรหัสสินค้าในรายการที่ ${i + 1}`);
+        return;
+      }
+      if (Number(items[i].qty) <= 0 || isNaN(Number(items[i].qty))) {
+        alert(`จำนวนสินค้าในรายการที่ ${i + 1} ต้องมากกว่า 0`);
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      const branchId = new URLSearchParams(window.location.search).get('branchId') || 'hq';
+      const res = await fetch(getApiUrl('/api/orders/edit-items'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          docNum: job.docNum,
+          branchId,
+          items: items.map(it => ({
+            itemCode: String(it.itemCode).trim().toUpperCase(),
+            qty: Number(it.qty) || 1,
+            orderNo: it.orderNo?.trim() || job.docNum,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'บันทึกไม่สำเร็จ');
+      alert('✅ แก้ไขรหัสสินค้าเรียบร้อยแล้ว');
+      onSuccess();
+    } catch (e: any) {
+      alert('❌ เกิดข้อผิดพลาด: ' + (e.message || String(e)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              ✏️ แก้ไขรหัสสินค้า ({job.docNum})
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">ลูกค้า: {job.customer}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-3 my-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+          💡 <b>แก้ไขรหัสสินค้าที่พิมพ์ผิด:</b> ระบบจะไปอัปเดตชีต <b>&quot;คลังข้อมูล&quot;</b> ให้อัตโนมัติ เพื่อให้หน้าเว็บและใบส่งสินค้า (PDF) แสดงรหัสที่ถูกต้องตรงกัน
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {items.map((it, idx) => (
+            <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-600">รายการที่ {idx + 1}</span>
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLine(idx)}
+                    className="text-rose-500 hover:text-rose-700 text-xs flex items-center gap-1 font-semibold"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> ลบ
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-12 gap-2">
+                <div className="col-span-7">
+                  <label className="text-[10px] text-slate-500 block mb-1">รหัสสินค้า (Item Code) *</label>
+                  <input
+                    type="text"
+                    value={it.itemCode}
+                    onChange={e => handleItemChange(idx, 'itemCode', e.target.value)}
+                    placeholder="เช่น 0909 หรือ A088..."
+                    className="w-full px-3 py-1.5 text-xs font-mono font-bold border border-slate-300 rounded-lg outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="col-span-5">
+                  <label className="text-[10px] text-slate-500 block mb-1">จำนวน *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={it.qty}
+                    onChange={e => handleItemChange(idx, 'qty', e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs font-bold border border-slate-300 rounded-lg text-right outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleAddLine}
+          className="my-3 w-full py-2 border border-dashed border-blue-300 rounded-xl text-blue-600 text-xs font-bold hover:bg-blue-50 transition-colors"
+        >
+          + เพิ่มรายการสินค้า
+        </button>
+
+        <div className="pt-3 border-t border-slate-100 flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            บันทึกการแก้ไข
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
