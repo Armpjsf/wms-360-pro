@@ -26,6 +26,7 @@ interface RollTag {
   id: string;
   customer: string;
   itemCount: number;
+  items?: JobItem[];
 }
 
 interface ActiveForm {
@@ -457,6 +458,7 @@ function OrderManagement() {
         onProcess={handleProcessRollTag}
         onPrint={handlePrint}
         onCancel={handleCancelRollTag}
+        onEdit={handleOpenEdit}
         processing={!!loadingAction}
       />
 
@@ -467,6 +469,7 @@ function OrderManagement() {
         onCopyLine={handleCopyLineMsg}
         onClear={handleClear}
         onVoid={handleVoidOrder}
+        onEdit={handleOpenEdit}
         loadingAction={loadingAction}
         onRefresh={() => fetchStatus(true, true)}
       />
@@ -477,6 +480,7 @@ function OrderManagement() {
         onRecall={handleRecall}
         onCopyLine={handleCopyLineForJob}
         onVoid={handleVoidOrder}
+        onEdit={handleOpenEdit}
       />
 
       {/* Completed Jobs */}
@@ -649,12 +653,14 @@ function PendingOrdersCard({
   onProcess, 
   onPrint,
   onCancel,
+  onEdit,
   processing 
 }: { 
   tasks: RollTag[];
   onProcess: (id: string) => void;
   onPrint: (id: string) => void;
   onCancel: (id: string) => void;
+  onEdit: (docNum: string, customer: string, items?: JobItem[]) => void;
   processing: boolean;
 }) {
   const { t } = useLanguage();
@@ -686,7 +692,16 @@ function PendingOrdersCard({
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  onClick={() => onEdit(task.id, task.customer, task.items)}
+                  disabled={processing}
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors shadow-sm"
+                  title="แก้ไขรหัสสินค้าที่ลูกค้าส่งมาผิด"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-amber-600" />
+                  แก้ไขรหัส
+                </button>
                 <a
                   href={getApiUrl(`/api/print/roll-tag?tagId=${task.id}&branchId=${new URLSearchParams(window.location.search).get('branchId') || 'hq'}`)}
                   target="_blank"
@@ -732,6 +747,7 @@ function ActiveJobCard({
   onCopyLine,
   onClear,
   onVoid,
+  onEdit,
   loadingAction,
   onRefresh
 }: {
@@ -740,6 +756,7 @@ function ActiveJobCard({
   onCopyLine: () => void;
   onClear: () => void;
   onVoid: (docNum: string) => void;
+  onEdit: (docNum: string, customer: string, items?: JobItem[]) => void;
   loadingAction: string | null;
   onRefresh: () => void;
 }) {
@@ -830,6 +847,17 @@ function ActiveJobCard({
             </button>
           </div>
 
+          {/* Edit Items Button */}
+          <button
+            onClick={() => onEdit(activeForm.docNum, activeForm.customer, activeForm.items)}
+            disabled={isLoading}
+            className="w-full mt-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+            title="แก้ไขรหัสสินค้า/จำนวน (อัปเดตชีตคลังข้อมูล)"
+          >
+            <Pencil className="w-4 h-4 text-amber-600" />
+            แก้ไขรหัสสินค้า / รายการ
+          </button>
+
           {/* Void / Cancel Order Button */}
           <button
             onClick={() => onVoid(activeForm.docNum)}
@@ -854,12 +882,14 @@ function WaitingJobsCard({
   jobs,
   onRecall,
   onCopyLine,
-  onVoid
+  onVoid,
+  onEdit
 }: {
   jobs: WaitingJob[];
   onRecall: (docNum: string) => void;
   onCopyLine: (job: WaitingJob) => void;
   onVoid: (docNum: string) => void;
+  onEdit: (docNum: string, customer: string, items?: JobItem[]) => void;
 }) {
   const { t } = useLanguage();
   return (
@@ -916,6 +946,14 @@ function WaitingJobsCard({
                     {t('recall_btn')}
                   </button>
                 </div>
+                <button
+                  onClick={() => onEdit(job.docNum, job.customer, job.items)}
+                  className="w-full mt-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  title="แก้ไขรหัสสินค้า/จำนวน (อัปเดตชีตคลังข้อมูล)"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-amber-600" />
+                  แก้ไขรหัสสินค้า
+                </button>
                 <button
                   onClick={() => onVoid(job.docNum)}
                   className="w-full mt-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 py-1.5 rounded-lg text-xs font-semibold border border-rose-200 transition-colors flex items-center justify-center gap-1"
