@@ -506,6 +506,18 @@ function OrderManagement() {
         />
       )}
 
+      {/* Edit Order Items Modal */}
+      {editingJob && (
+        <EditOrderItemsModal
+          job={editingJob}
+          onClose={() => setEditingJob(null)}
+          onSuccess={async () => {
+            setEditingJob(null);
+            await fetchStatus(false, true);
+          }}
+        />
+      )}
+
     </div>
   );
 }
