@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createPendingRollTags } from '@/lib/rollTagImporter';
+import { RETURN_OUT_PREFIX } from '@/lib/transactionUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { customer, orderNo, items, branchId } = body;
+    const { customer, orderNo, items, branchId, isReturnOut } = body;
 
     if (!customer || typeof customer !== 'string' || !customer.trim()) {
       return NextResponse.json({ error: 'กรุณาระบุชื่อลูกค้า (customer is required)' }, { status: 400 });
@@ -20,6 +21,11 @@ export async function POST(request: Request) {
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ (items is required)' }, { status: 400 });
     }
+
+    const rawOrder = String(orderNo || '').trim();
+    const finalOrderNo = isReturnOut
+      ? (rawOrder.startsWith(RETURN_OUT_PREFIX) ? rawOrder : (rawOrder ? `${RETURN_OUT_PREFIX} ${rawOrder}` : RETURN_OUT_PREFIX))
+      : rawOrder;
 
     const normalizedItems = [];
     for (let idx = 0; idx < items.length; idx++) {
@@ -37,7 +43,7 @@ export async function POST(request: Request) {
       }
 
       normalizedItems.push({
-        orderNo: String(orderNo || '').trim(),
+        orderNo: finalOrderNo,
         itemCode,
         quantity
       });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { extractRollTagData } from '@/lib/emailParser';
 import { createPendingRollTags } from '@/lib/rollTagImporter';
+import { RETURN_OUT_PREFIX } from '@/lib/transactionUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const branchId = formData.get('branchId') as string | null;
+    const isReturnOut = formData.get('isReturnOut') === 'true';
 
     if (!file || typeof file.arrayBuffer !== 'function') {
       return NextResponse.json({ error: 'กรุณาเลือกไฟล์ที่ต้องการอัปโหลด' }, { status: 400 });
@@ -35,7 +37,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const created = await createPendingRollTags(extractedCustomers, branchId);
+    const customersToImport = isReturnOut
+      ? extractedCustomers.map(cust => ({
+          ...cust,
+          items: cust.items.map(it => {
+            const rawOrder = String(it.orderNo || '').trim();
+            const finalOrderNo = rawOrder.startsWith(RETURN_OUT_PREFIX)
+              ? rawOrder
+              : (rawOrder ? `${RETURN_OUT_PREFIX} ${rawOrder}` : RETURN_OUT_PREFIX);
+            return {
+              ...it,
+              orderNo: finalOrderNo
+            };
+          })
+        }))
+      : extractedCustomers;
+
+    const created = await createPendingRollTags(customersToImport, branchId);
 
     return NextResponse.json({
       success: true,
