@@ -1,7 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Loader2, PackageMinus, Plus, Trash2, Calendar, FileText, Info, FileSpreadsheet } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { 
+  ArrowLeft, 
+  Send, 
+  Loader2, 
+  PackageMinus, 
+  Plus, 
+  Trash2, 
+  Calendar, 
+  FileText, 
+  Info, 
+  FileSpreadsheet,
+  UploadCloud,
+  CheckCircle2,
+  ArrowRight,
+  X
+} from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchableSelect } from '@/components/SearchableSelect';
@@ -25,7 +40,17 @@ export default function OutboundPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Outbound Mode: ROLLTAG (default) vs DIRECT
+  const [mode, setMode] = useState<'ROLLTAG' | 'DIRECT'>('ROLLTAG');
+  const [customer, setCustomer] = useState('');
+  const [customers, setCustomers] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Banner on success
+  const [bannerInfo, setBannerInfo] = useState<{ title: string; description: string } | null>(null);
+
   // Cart
   const [items, setItems] = useState<any[]>([]);
   
@@ -65,6 +90,24 @@ export default function OutboundPage() {
         }
     }
     loadProducts();
+  }, []);
+
+  // Fetch Customers for RollTag datalist
+  useEffect(() => {
+    async function loadCustomers() {
+      try {
+        const res = await fetch(getApiUrl('/api/customers'));
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.customers)) {
+            setCustomers(data.customers);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load customer list:", e);
+      }
+    }
+    loadCustomers();
   }, []);
 
   // FIFO Preview: Fetch when SKU/Qty changes
@@ -113,8 +156,89 @@ export default function OutboundPage() {
      setItems(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const handleUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    setIsUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(getApiUrl('/api/orders/upload-excel'), {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      const tags = (data.results || []).map((r: any) => r.tagId);
+      const tagStr = tags.join(', ');
+      toast.success(`ส่งเข้าคิวสำเร็จ (${tagStr || data.processed + ' แท็ก'})`);
+      setBannerInfo({
+        title: `ส่งเข้าคิวจัดการออเดอร์สำเร็จ (${tagStr})`,
+        description: `นำเข้าไฟล์ "${file.name}" สำเร็จ สร้าง ${data.processed} RollTag (${tagStr})`
+      });
+    } catch (err: any) {
+      console.error("Excel upload error:", err);
+      toast.error(err.message || 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์');
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (items.length === 0) return;
+
+    if (mode === 'ROLLTAG') {
+      if (!customer.trim()) {
+        toast.error('กรุณาระบุชื่อลูกค้า');
+        return;
+      }
+      if (!isOnline) {
+        toast.error('กรุณาเชื่อมต่ออินเทอร์เน็ตเพื่อส่งเข้าคิวจัดการออเดอร์');
+        return;
+      }
+      if (!confirm(`ยืนยันการส่ง ${items.length} รายการเข้าคิวจัดการออเดอร์ (RollTag)?`)) return;
+
+      setSubmitting(true);
+      try {
+        const res = await fetch(getApiUrl('/api/orders/manual-rolltag'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer: customer.trim(),
+            orderNo: docRef.trim(),
+            items
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to create RollTag');
+        }
+
+        const tagText = data.tagId || (data.results?.[0]?.tagId) || 'RollTag';
+        toast.success(`ส่งเข้าคิวจัดการออเดอร์สำเร็จ (${tagText})`);
+        setBannerInfo({
+          title: `ส่งเข้าคิวจัดการออเดอร์สำเร็จ (${tagText})`,
+          description: `สร้างแท็ก ${tagText} สำหรับลูกค้า "${customer.trim()}" จำนวน ${items.length} รายการเรียบร้อยแล้ว`
+        });
+        setItems([]);
+        setDocRef('');
+        setCustomer('');
+      } catch (err: any) {
+        console.error("Manual RollTag Error:", err);
+        toast.error(err.message || 'ส่งเข้าคิวจัดการออเดอร์ไม่สำเร็จ');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // DIRECT mode: existing logic
     if (!confirm(`${t('confirm_prompt')} ${items.length}?`)) return;
 
     setSubmitting(true);
@@ -215,15 +339,66 @@ export default function OutboundPage() {
                    </div>
                 </div>
                 
-                <button
-                    onClick={() => setIsImportOpen(true)}
-                    className="flex items-center gap-2 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-rose-200 px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
-                >
-                    <FileSpreadsheet className="w-5 h-5 text-rose-500" />
-                    <span>{t('import_excel')}</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleUploadExcel}
+                        accept=".xlsx,.xls,.csv"
+                        className="hidden"
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingFile}
+                        className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white px-5 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-md shadow-rose-600/20 disabled:opacity-50"
+                    >
+                        {isUploadingFile ? <Loader2 className="w-5 h-5 animate-spin" /> : <UploadCloud className="w-5 h-5" />}
+                        <span>{isUploadingFile ? 'กำลังส่งเข้าคิว...' : 'แนบไฟล์ส่งเข้าคิวออเดอร์ (.xlsx/.csv)'}</span>
+                    </button>
+                    <button
+                        onClick={() => setIsImportOpen(true)}
+                        className="flex items-center gap-2 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-rose-200 px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+                    >
+                        <FileSpreadsheet className="w-5 h-5 text-rose-500" />
+                        <span>{t('import_excel')}</span>
+                    </button>
+                </div>
             </div>
         </motion.div>
+
+        {/* Banner after successful RollTag or Excel upload */}
+        {bannerInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-bold text-emerald-950 text-sm">{bannerInfo.title}</p>
+                <p className="text-xs text-emerald-700 mt-0.5">{bannerInfo.description}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/orders"
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center gap-2 whitespace-nowrap active:scale-95"
+              >
+                <span>ไปที่หน้าจัดการออเดอร์</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={() => setBannerInfo(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Form */}
@@ -236,10 +411,67 @@ export default function OutboundPage() {
                     transition={{ delay: 0.1 }}
                     className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-xl"
                 >
-                    <h3 className="font-bold text-slate-800 mb-6 uppercase text-sm tracking-wider flex items-center gap-2">
+                    <h3 className="font-bold text-slate-800 mb-5 uppercase text-sm tracking-wider flex items-center gap-2">
                         <FileText className="w-4 h-4 text-rose-500" /> {t('document_info')}
                     </h3>
-                    <div className="space-y-5">
+
+                    {/* Mode Toggle */}
+                    <div className="mb-5">
+                        <label className="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider">
+                            รูปแบบการทำงาน (Outbound Mode)
+                        </label>
+                        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setMode('ROLLTAG')}
+                                className={cn(
+                                    "py-2.5 px-2 text-xs font-bold rounded-lg transition-all text-center leading-tight",
+                                    mode === 'ROLLTAG'
+                                        ? "bg-white text-rose-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-900"
+                                )}
+                            >
+                                ส่งเข้าคิวจัดการออเดอร์ (RollTag)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMode('DIRECT')}
+                                className={cn(
+                                    "py-2.5 px-2 text-xs font-bold rounded-lg transition-all text-center leading-tight",
+                                    mode === 'DIRECT'
+                                        ? "bg-white text-rose-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-900"
+                                )}
+                            >
+                                จ่ายออกทันที (Direct Issue)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {mode === 'ROLLTAG' && (
+                            <div className="group">
+                                <label className="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider group-focus-within:text-rose-600 transition-colors">
+                                    ลูกค้า / Customer <span className="text-rose-500">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    list="outbound-customers"
+                                    value={customer} 
+                                    onChange={e => setCustomer(e.target.value)} 
+                                    placeholder="พิมพ์ค้นหาหรือกรอกชื่อลูกค้าใหม่..." 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all font-medium" 
+                                />
+                                <datalist id="outbound-customers">
+                                    {customers.map((c, idx) => (
+                                        <option key={`${c.id}-${idx}`} value={c.name ? `${c.name} (${c.id})` : c.id}>
+                                            {c.name ? `${c.name} (${c.id})` : c.id}
+                                        </option>
+                                    ))}
+                                </datalist>
+                            </div>
+                        )}
+
                         <div className="group">
                              <label className="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider group-focus-within:text-rose-600 transition-colors">{t('date')}</label>
                              <div className="relative">
@@ -253,12 +485,14 @@ export default function OutboundPage() {
                              </div>
                         </div>
                         <div className="group">
-                             <label className="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider group-focus-within:text-rose-600 transition-colors">{t('reference_inv')}</label>
+                             <label className="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider group-focus-within:text-rose-600 transition-colors">
+                                 {mode === 'ROLLTAG' ? 'เลขที่คำสั่งซื้อ / Order No.' : t('reference_inv')}
+                             </label>
                              <input 
                                 type="text" 
                                 value={docRef} 
                                 onChange={e => setDocRef(e.target.value)} 
-                                placeholder="e.g. INV-2024-001" 
+                                placeholder={mode === 'ROLLTAG' ? "e.g. PO-2024-001 / SO-001" : "e.g. INV-2024-001"} 
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 outline-none focus:bg-white focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all font-medium" 
                              />
                         </div>
@@ -472,7 +706,9 @@ export default function OutboundPage() {
                             className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 rounded-2xl shadow-xl shadow-rose-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-lg"
                         >
                             {submitting ? <Loader2 className="animate-spin w-6 h-6" /> : <Send className="w-6 h-6" />}
-                            {t('confirm_outbound')} ({items.length})
+                            {mode === 'ROLLTAG' 
+                                ? `ส่งเข้าคิวจัดการออเดอร์ (${items.length})` 
+                                : `${t('confirm_outbound')} (${items.length})`}
                         </button>
                      </div>
                  </div>

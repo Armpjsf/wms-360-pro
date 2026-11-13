@@ -7,7 +7,8 @@
     "build": "next build",
     "build:mobile": "set NEXT_PUBLIC_MOBILE_BUILD=true && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

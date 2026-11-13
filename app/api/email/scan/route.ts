@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getGmailClient } from '@/lib/gmailClient';
-// force-rebuild
 import { extractRollTagData } from '@/lib/emailParser';
-import { PO_SPREADSHEET_ID, getSheetData, appendSheetData } from '@/lib/googleSheets';
-import { getThaiDateString } from '@/lib/dateUtils';
-import { STATUS_PENDING_ROLLTAG } from '@/lib/orderUtils';
+import { createPendingRollTags } from '@/lib/rollTagImporter';
 import { invalidateStatusCache } from '@/lib/orderStatusCache';
 
 export const dynamic = 'force-dynamic';
@@ -23,35 +20,7 @@ export async function POST() {
     const connectedEmail = profile.data.emailAddress;
     console.log(`Connected as: ${connectedEmail}`);
 
-    // Query existing pending Roll Tags in คลังข้อมูล to determine next available RT numbers
-    const archiveData = await getSheetData(PO_SPREADSHEET_ID, "'คลังข้อมูล'!A:I").catch(() => []);
-    const usedRtNums = new Set<number>();
-    if (archiveData && archiveData.length > 1) {
-        for (let r = 1; r < archiveData.length; r++) {
-            const row = archiveData[r];
-            const docNum = String(row?.[0] || '').trim();
-            const status = String(row?.[6] || '').trim();
-            if (status === STATUS_PENDING_ROLLTAG) {
-                const match = docNum.match(/^RT(\d+)$/i);
-                if (match) {
-                    usedRtNums.add(parseInt(match[1], 10));
-                }
-            }
-        }
-    }
-
-    let nextRtCounter = 1;
-    const allocateNextRtId = (): string => {
-        while (usedRtNums.has(nextRtCounter)) {
-            nextRtCounter++;
-        }
-        const id = `RT${nextRtCounter}`;
-        usedRtNums.add(nextRtCounter);
-        return id;
-    };
-
     // 1. List Emails (Detailed Search: Unread + Sender)
-    // Legacy: is:unread from:formica.com has:attachment
     const res = await gmail.users.messages.list({
         userId: 'me',
         q: 'is:unread from:formica.com has:attachment',
@@ -61,7 +30,6 @@ export async function POST() {
     const messages = res.data.messages || [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const results: any[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const debugLogs: string[] = [
         `Connected to: ${connectedEmail}`, 
         `Found ${messages.length} unread emails.`
@@ -128,37 +96,19 @@ export async function POST() {
                         
                         console.log(`[Scan] extractedCustomers: ${extractedCustomers.length} from "${fileName}"`);
                         if (extractedCustomers.length > 0) {
-                            for (const customerData of extractedCustomers) {
-                                const targetTagId = allocateNextRtId();
-                                const today = getThaiDateString();
-
-                                // Save directly into คลังข้อมูล (Single Source of Truth)
-                                // Col schema: [DocNum, CustName, Seq, OrderNo, ItemCode, Qty, Status, Link, Date]
-                                const rowsToAppend = customerData.items.map((item, idx) => [
-                                    targetTagId,
-                                    customerData.customerId,
-                                    idx + 1,
-                                    item.orderNo || "",
-                                    item.itemCode || "",
-                                    item.quantity ?? "",
-                                    STATUS_PENDING_ROLLTAG,
-                                    "",
-                                    today
-                                ]);
-
-                                await appendSheetData(PO_SPREADSHEET_ID, "'คลังข้อมูล'!A:I", rowsToAppend, 'INSERT_ROWS');
-                                
+                            const createdTags = await createPendingRollTags(extractedCustomers);
+                            for (const tag of createdTags) {
                                 const successMsg = { 
                                     msgId: msg.id, 
                                     file: fileName, 
-                                    customer: customerData.customerId,
-                                    sheet: targetTagId,
-                                    tagId: targetTagId,
-                                    itemCount: customerData.items.length,
+                                    customer: tag.customer,
+                                    sheet: tag.tagId,
+                                    tagId: tag.tagId,
+                                    itemCount: tag.itemCount,
                                     status: "success" 
                                 };
                                 results.push(successMsg);
-                                debugLogs.push(`✅ Success: ${fileName} -> ${targetTagId} (${customerData.customerId}, ${customerData.items.length} รายการ)`);
+                                debugLogs.push(`✅ Success: ${fileName} -> ${tag.tagId} (${tag.customer}, ${tag.itemCount} รายการ)`);
                                 emailProcessed = true;
                             }
                         } else {
