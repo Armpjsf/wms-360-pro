@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getTransactions, resolveSpreadsheetId } from '@/lib/googleSheets';
+import { isReturnOutOrder } from '@/lib/transactionUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export async function GET(request: Request) {
         const type = searchParams.get('type') as 'IN' | 'OUT';
         const limit = parseInt(searchParams.get('limit') || '5');
         const branchId = searchParams.get('branchId') || undefined;
+        const onlyReturnOut = searchParams.get('onlyReturnOut');
 
         if (!type || (type !== 'IN' && type !== 'OUT')) {
             return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -20,18 +22,14 @@ export async function GET(request: Request) {
         // branchId is a branch code ("fmc", "hq"); getTransactions wants the
         // branch's spreadsheet ID — passing the code read a non-existent file.
         const sheetId = await resolveSpreadsheetId(branchId || null, 'inventory');
-        const transactions = await getTransactions(type, sheetId);
+        const transactions = await getTransactions(type, sheetId, undefined, true);
 
-        // Sort by Date Descending
-        // Assuming transactions return with ISO date or sortable string
-        // If date is "DD/MM/YYYY", we might need parsing.
-        // But getTransactions typically returns raw or minimally processed.
-        
-        // Let's assume getTransactions returns objects with { date, ... }
-        // We will slice the LAST N items (since sheets append to bottom)
-        // OR if getTransactions already sorts? Usually it returns sheet order (oldest top).
-        
-        const recent = transactions
+        let list = transactions;
+        if (type === 'OUT' && onlyReturnOut === '1') {
+            list = list.filter(t => Boolean((t as any).isReturnOut) || isReturnOutOrder(t.docRef));
+        }
+
+        const recent = list
             .reverse() // Newest first
             .slice(0, limit);
 

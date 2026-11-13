@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         // Fetch Both IN and OUT (Using Uncached to avoid 'Invariant: incrementalCache missing')
         const [inbound, outbound] = await Promise.all([
             getTransactionsUncached('IN', targetSheetId),
-            getTransactionsUncached('OUT', targetSheetId)
+            getTransactionsUncached('OUT', targetSheetId, undefined, true)
         ]);
 
         // Tag them

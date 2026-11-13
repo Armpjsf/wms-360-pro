@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSheetData, batchGetSheetData, SPREADSHEET_ID, PRODUCT_SPREADSHEET_ID, DOC_SPREADSHEET_ID, getPOLogs, getGoogleSheets } from '@/lib/googleSheets';
 import { calculateFIFOLayers } from '@/lib/fifo';
+import { isReturnOutOrder } from '@/lib/transactionUtils';
 
 // Cache configuration
 export const dynamic = 'force-dynamic';
@@ -95,7 +96,8 @@ export async function GET(req: Request) {
     const receiveRaw = [receiveRawHeader, ...receiveRawRows];
 
     const issueRawHeader = issueRawFullData?.[0] || [];
-    const issueRawRows = issueRawFullData?.slice(1).filter(r => filterByDate(r, 0)) || [];
+    const issueSummaryRows = (issueRawFullData?.slice(1) || []).filter((r: any[]) => !isReturnOutOrder(r?.[11]) && !isReturnOutOrder(r?.[10]));
+    const issueRawRows = issueSummaryRows.filter(r => filterByDate(r, 0));
     const issueRaw = [issueRawHeader, ...issueRawRows];
 
     const damageRawHeader = damageRawFull?.[0] || [];
@@ -153,7 +155,7 @@ export async function GET(req: Request) {
     console.log(`[Dashboard] Inventory Columns: Name=${idxName}, Stock=${idxStock}, Movement=${idxMovement}`);
 
     const lastSoldMap = new Map<string, number>();
-    issueRawFullData?.slice(1).forEach((row: any[]) => {
+    issueSummaryRows.forEach((row: any[]) => {
         const dateStr = row[0];
         const name = row[1];
         if (dateStr && name) {
@@ -182,7 +184,7 @@ export async function GET(req: Request) {
     });
 
     const issueByProductMap = new Map<string, any[]>();
-    issueRawFullData?.slice(1).forEach((row: any[]) => {
+    issueSummaryRows.forEach((row: any[]) => {
         const name = row[1];
         if (name) {
             if (!issueByProductMap.has(name)) issueByProductMap.set(name, []);
@@ -570,7 +572,7 @@ export async function GET(req: Request) {
     }
     // Use Full Data for Trends
     aggMonth(receiveRawFullData, 'inbound');
-    aggMonth(issueRawFullData, 'outbound');
+    aggMonth([issueRawHeader, ...issueSummaryRows], 'outbound');
 
     const monthlyTrend = months.map(m => ({
         month: m,
@@ -594,7 +596,7 @@ export async function GET(req: Request) {
     }
 
     // Process Outbound
-    issueRawFullData?.slice(1).forEach((row: any[]) => {
+    issueSummaryRows.forEach((row: any[]) => {
        const dateStr = normalizeDate(row[0]);
        if (!dateStr) return;
        const date = new Date(dateStr);
@@ -646,7 +648,7 @@ export async function GET(req: Request) {
     const annualMap = new Map<string, { in: number, out: number }>();
     
     // Process Outbound
-    issueRawFullData?.slice(1).forEach((row: any[]) => {
+    issueSummaryRows.forEach((row: any[]) => {
        const dateStr = normalizeDate(row[0]);
        if (!dateStr) return;
        const date = new Date(dateStr);

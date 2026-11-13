@@ -1,6 +1,6 @@
 'use client';
 
-import { PackagePlus, PackageMinus, RefreshCw } from 'lucide-react';
+import { PackagePlus, PackageMinus, RefreshCw, Undo2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function OpsPage() {
@@ -51,14 +51,41 @@ export default function OpsPage() {
                </div>
            </Link>
 
-           {/* Cycle Count Card (Bonus Link) */}
-           <Link href="/mobile/cycle-count" className="col-span-1 md:col-span-2 group relative overflow-hidden bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex items-center gap-6 hover:bg-slate-800/80 transition-all hover:border-slate-700">
-               <div className="p-3 bg-blue-500/10 rounded-xl">
-                   <RefreshCw className="w-6 h-6 text-blue-400" />
+           {/* Return Out Card */}
+           <Link href="/ops/return-out" className="group relative overflow-hidden bg-slate-900/50 border border-slate-800 rounded-3xl p-8 hover:bg-slate-800/80 transition-all hover:scale-[1.01] hover:shadow-2xl hover:shadow-indigo-500/10">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+                    <Undo2 className="w-48 h-48" />
                </div>
-               <div>
-                   <h3 className="text-lg font-bold text-white">Cycle Count (ตรวจนับสต็อก)</h3>
-                   <p className="text-slate-400 text-sm">ตรวจสอบความถูกต้องของสินค้าจริงเทียบกับระบบ</p>
+               <div className="relative z-10 flex flex-col h-full justify-between">
+                   <div>
+                       <div className="p-4 bg-indigo-500/10 w-fit rounded-2xl mb-6 border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-colors">
+                           <Undo2 className="w-8 h-8 text-indigo-400" />
+                       </div>
+                       <h2 className="text-2xl font-bold text-white mb-2">ส่งกลับสินค้า (Return Out)</h2>
+                       <p className="text-slate-400">ตัดสต็อกสินค้าจริงตามปกติ (ส่งคืน Supplier / ส่งกลับสาขาใหญ่) โดยไม่นับรวมในยอดขายหรือสถิติจ่ายออก</p>
+                   </div>
+                   <div className="mt-8 flex items-center text-indigo-400 font-medium group-hover:translate-x-2 transition-transform">
+                       Start Return Out Process &rarr;
+                   </div>
+               </div>
+           </Link>
+
+           {/* Cycle Count Card */}
+           <Link href="/mobile/cycle-count" className="group relative overflow-hidden bg-slate-900/50 border border-slate-800 rounded-3xl p-8 hover:bg-slate-800/80 transition-all hover:scale-[1.01] hover:shadow-2xl hover:shadow-blue-500/10">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+                    <RefreshCw className="w-48 h-48" />
+               </div>
+               <div className="relative z-10 flex flex-col h-full justify-between">
+                   <div>
+                       <div className="p-4 bg-blue-500/10 w-fit rounded-2xl mb-6 border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
+                           <RefreshCw className="w-8 h-8 text-blue-400" />
+                       </div>
+                       <h2 className="text-2xl font-bold text-white mb-2">Cycle Count (ตรวจนับสต็อก)</h2>
+                       <p className="text-slate-400">ตรวจสอบความถูกต้องของสินค้าจริงเทียบกับระบบ</p>
+                   </div>
+                   <div className="mt-8 flex items-center text-blue-400 font-medium group-hover:translate-x-2 transition-transform">
+                       Start Cycle Count &rarr;
+                   </div>
                </div>
            </Link>
 

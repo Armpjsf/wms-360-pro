@@ -37,6 +37,7 @@ import {
   Sparkles,
   Store,
   Tags,
+  Undo2,
   Users,
 } from 'lucide-react';
 import { useLanguage } from './providers/LanguageProvider';
@@ -53,7 +54,7 @@ type NavItem = {
   label: string;
   href: string;
   icon: ElementType;
-  tone: 'blue' | 'teal' | 'emerald' | 'amber' | 'rose' | 'violet' | 'cyan' | 'steel';
+  tone: 'blue' | 'teal' | 'emerald' | 'amber' | 'rose' | 'violet' | 'cyan' | 'steel' | 'indigo';
   adminOnly?: boolean;
   viewerAllowed?: boolean;
 };
@@ -104,6 +105,11 @@ const toneStyles = {
     icon: 'text-slate-700',
     soft: 'bg-slate-100 ring-slate-200',
     active: 'from-slate-800 to-slate-600',
+  },
+  indigo: {
+    icon: 'text-indigo-700',
+    soft: 'bg-indigo-50 ring-indigo-200',
+    active: 'from-indigo-600 to-violet-600',
   },
 };
 
@@ -189,6 +195,7 @@ export default function Sidebar() {
         { label: 'Smart Wave Picking', href: '/ops/wave-picking', icon: Boxes, tone: 'amber' },
         { label: t('menu_inbound'), href: '/ops/inbound', icon: ArrowDownToLine, tone: 'emerald' },
         { label: t('menu_outbound'), href: '/ops/outbound', icon: ArrowUpFromLine, tone: 'amber' },
+        { label: t('menu_return_out'), href: '/ops/return-out', icon: Undo2, tone: 'indigo' },
         { label: t('menu_damage'), href: '/ops/damage', icon: ShieldAlert, tone: 'rose' },
         { label: t('menu_cycle_count'), href: '/ops/cycle-count', icon: PackageCheck, tone: 'teal' },
       ],

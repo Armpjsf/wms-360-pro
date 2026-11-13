@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // Note: getTransactions returns { date, sku, qty, docRef, ... }
     const [inbound, outbound] = await Promise.all([
         getTransactions('IN'),
-        getTransactions('OUT')
+        getTransactions('OUT', undefined, undefined, true)
     ]);
 
     // Filter and Standardize

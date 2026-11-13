@@ -4,6 +4,13 @@ import { getSheetData, appendSheetData } from './googleSheets';
 export const TRANSACTION_SPREADSHEET_ID = '1nIIVyTTtu4VAmDZgPh8lsnAyUEgqvp2EzmO9Y1MOQWM';
 export const TRANSACTION_SHEET_NAME = '💰 Transaction จ่าย';
 
+// Return Out Identifier Prefix
+export const RETURN_OUT_PREFIX = '[ส่งกลับ]';
+
+export function isReturnOutOrder(val: unknown): boolean {
+    return String(val || '').trim().startsWith(RETURN_OUT_PREFIX);
+}
+
 // Sheet for price lookup
 export const PRODUCT_SHEET_NAME = 'ชื่อสินค้า';
 

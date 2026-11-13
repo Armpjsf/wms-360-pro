@@ -4,6 +4,7 @@ import fs from "fs";
 import stream from "stream";
 import { getOAuth2Client } from "./oauthClient";
 import { unstable_cache, revalidateTag } from "next/cache";
+import { isReturnOutOrder } from "./transactionUtils";
 
 // Function to get the Sheets API client
 export async function getGoogleSheets() {
@@ -1611,6 +1612,7 @@ export interface Transaction {
   qty: number;
   price: number; // Cost for IN, Sale Price for OUT
   docRef?: string;
+  isReturnOut?: boolean;
   product?: string; // Legacy field match
   timestamp?: number; // Sorting helper
   // Enterprise Fields (Phase 14)
@@ -1811,6 +1813,7 @@ export async function getTransactionsUncached(
   type: "IN" | "OUT",
   targetSheetId: string = PRODUCT_SPREADSHEET_ID,
   allowedOwners?: string[],
+  includeReturnOut: boolean = false,
 ) {
   // Legacy Sheet Names often include emojis
   const sheetName =
@@ -1899,7 +1902,13 @@ export async function getTransactionsUncached(
 
       const price =
         idxPrice > -1 ? parseFloat(r[idxPrice]?.replace(/,/g, "") || "0") : 0;
-      const docRef = idxDoc > -1 ? r[idxDoc] : "";
+      const orderCol = String(r[11] || "").trim();
+      const docRefVal = idxDoc > -1 ? String(r[idxDoc] || "").trim() : orderCol;
+      const isReturnOut = isReturnOutOrder(orderCol) || isReturnOutOrder(docRefVal);
+
+      if (type === "OUT" && !includeReturnOut && isReturnOut) {
+        return null;
+      }
 
       return {
         date: parsedDate || dateStr,
@@ -1907,7 +1916,8 @@ export async function getTransactionsUncached(
         sku: r[idxName],
         qty: val,
         price: price,
-        docRef: docRef,
+        docRef: docRefVal || orderCol,
+        isReturnOut: isReturnOut,
         type: type,
         // Enterprise Fields (Phase 14) - Columns N, O, P = Index 13, 14, 15
         batch: r[13] || "",
@@ -1925,11 +1935,13 @@ export const getTransactions = unstable_cache(
     type: "IN" | "OUT",
     branchSheetId?: string,
     allowedOwners?: string[],
+    includeReturnOut: boolean = false,
   ) => {
     return getTransactionsUncached(
       type,
       branchSheetId || PRODUCT_SPREADSHEET_ID,
       allowedOwners,
+      includeReturnOut,
     );
   },
   ["transactions-data-v2"],
@@ -1944,7 +1956,7 @@ export async function getStockMovement(sku: string) {
   // 1. Fetch All Transactions AND Damage Records
   const [inbound, outbound, damage] = await Promise.all([
     getTransactions("IN"),
-    getTransactions("OUT"),
+    getTransactions("OUT", undefined, undefined, true),
     getDamageRecords(),
   ]);
 
@@ -1980,7 +1992,7 @@ export async function getStockMovement(sku: string) {
     ) {
       productMovs.push({
         date: t.date,
-        docRef: "Outbound",
+        docRef: t.docRef || "Outbound",
         type: "OUT",
         in: 0,
         out: t.qty,

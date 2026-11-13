@@ -2,32 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, ArrowUpRight, ArrowDownLeft, Loader2 } from 'lucide-react';
+import { Clock, ArrowUpRight, ArrowDownLeft, Undo2, Loader2 } from 'lucide-react';
 import { getApiUrl } from '@/lib/config';
 
 interface Transaction {
     date: string;
     product: string;
     qty: number;
+    docRef?: string;
 }
 
 interface RecentTransactionsProps {
     type: 'IN' | 'OUT';
     refreshTrigger?: number; // Increment to force refresh
+    onlyReturnOut?: boolean;
+    title?: string;
 }
 
-export function RecentTransactions({ type, refreshTrigger }: RecentTransactionsProps) {
+export function RecentTransactions({ type, refreshTrigger, onlyReturnOut, title }: RecentTransactionsProps) {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchData();
-    }, [type, refreshTrigger]);
+    }, [type, refreshTrigger, onlyReturnOut]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await fetch(getApiUrl(`/api/transactions/recent?type=${type}&limit=5`));
+            const query = new URLSearchParams({
+                type,
+                limit: '5',
+            });
+            if (onlyReturnOut) {
+                query.set('onlyReturnOut', '1');
+            }
+            const res = await fetch(getApiUrl(`/api/transactions/recent?${query.toString()}`));
             if (res.ok) {
                 const data = await res.json();
                 setTransactions(data);
@@ -57,12 +67,14 @@ export function RecentTransactions({ type, refreshTrigger }: RecentTransactionsP
         );
     }
 
+    const headerTitle = title || (onlyReturnOut ? 'Recent Return Out (ส่งกลับล่าสุด)' : `Recent ${type === 'IN' ? 'Inbound' : 'Outbound'}`);
+
     return (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <h4 className="font-bold text-slate-700 text-sm flex items-center gap-2 uppercase tracking-wide">
                     <Clock className="w-4 h-4 text-slate-400" />
-                    Recent {type === 'IN' ? 'Inbound' : 'Outbound'}
+                    {headerTitle}
                 </h4>
                 <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-400">
                     Last 5
@@ -80,16 +92,26 @@ export function RecentTransactions({ type, refreshTrigger }: RecentTransactionsP
                     >
                         <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${
-                                type === 'IN' ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-200' : 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-200'
+                                onlyReturnOut 
+                                    ? 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-200'
+                                    : type === 'IN' 
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-200' 
+                                        : 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-200'
                             }`}>
-                                {type === 'IN' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                                {onlyReturnOut ? (
+                                    <Undo2 className="w-5 h-5" />
+                                ) : type === 'IN' ? (
+                                    <ArrowDownLeft className="w-5 h-5" />
+                                ) : (
+                                    <ArrowUpRight className="w-5 h-5" />
+                                )}
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-slate-700 line-clamp-1 w-32 sm:w-48" title={t.product}>
                                     {t.product}
                                 </p>
                                 <p className="text-[10px] text-slate-400 font-medium">
-                                    {t.date}
+                                    {t.date} {t.docRef ? `• ${t.docRef}` : ''}
                                 </p>
                             </div>
                         </div>
