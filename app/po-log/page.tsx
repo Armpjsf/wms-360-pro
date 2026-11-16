@@ -41,6 +41,7 @@ export default function POLogPage() {
   const [endDate, setEndDate] = useState("");
   const [deliveryStartDate, setDeliveryStartDate] = useState("");
   const [deliveryEndDate, setDeliveryEndDate] = useState("");
+  const [deliveryLocationFilter, setDeliveryLocationFilter] = useState("ALL");
 
   // Manual Entry Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -68,6 +69,7 @@ export default function POLogPage() {
   const [summaryPage, setSummaryPage] = useState(1);
   const [showWaitingOnly, setShowWaitingOnly] = useState(false);
   const summaryItemsPerPage = 5;
+  const [justSentOrders, setJustSentOrders] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchLogs() {
@@ -82,7 +84,16 @@ export default function POLogPage() {
       }
     }
     fetchLogs();
+    fetchDeliveryLogs();
   }, []);
+
+  // Build set of Order Nos already sent to Delivery History
+  const sentOrderNos = new Set<string>([
+    ...deliveryLogs
+      .map((d) => String(d.orderNo || "").trim())
+      .filter(Boolean),
+    ...justSentOrders,
+  ]);
 
   const fetchDeliveryLogs = async () => {
     setDeliveryLoading(true);
@@ -97,18 +108,32 @@ export default function POLogPage() {
     }
   };
 
-  // Filter Delivery Logs
-  const filteredDeliveryLogs = deliveryLogs.filter(log => {
+  // Build list of all available provinces/locations from deliveryLogs (filtered only by date so user can switch provinces easily)
+  const dateFilteredDeliveryLogs = deliveryLogs.filter(log => {
     let match = true;
     if (deliveryStartDate && log.date) {
-        // Handle Thai date conversion if needed, but assuming ISO comparison for now
-        // If Google Sheets returns DD/MM/YYYY, we might need a parser
-        match = match && log.date >= deliveryStartDate;
+      match = match && log.date >= deliveryStartDate;
     }
     if (deliveryEndDate && log.date) {
-        match = match && log.date <= deliveryEndDate;
+      match = match && log.date <= deliveryEndDate;
     }
     return match;
+  });
+
+  const allLocationCounts = dateFilteredDeliveryLogs.reduce((acc, log) => {
+    const loc = log.location?.trim() || "N/A";
+    acc[loc] = (acc[loc] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const sortedProvinceOptions = (Object.entries(allLocationCounts) as [string, number][])
+    .sort(([, a], [, b]) => b - a);
+
+  // Filter Delivery Logs (by Date + Province/Location)
+  const filteredDeliveryLogs = dateFilteredDeliveryLogs.filter(log => {
+    if (deliveryLocationFilter === "ALL") return true;
+    const loc = log.location?.trim() || "N/A";
+    return loc === deliveryLocationFilter;
   });
 
   // Delivery Pagination Logic
@@ -144,7 +169,7 @@ export default function POLogPage() {
   // Reset page when filter changes
   useEffect(() => {
     setDeliveryCurrentPage(1);
-  }, [deliveryStartDate, deliveryEndDate]);
+  }, [deliveryStartDate, deliveryEndDate, deliveryLocationFilter]);
 
   // Calculate Location Summary from FILTERED logs
   const locationSummary = filteredDeliveryLogs.reduce((acc, log) => {
@@ -242,6 +267,8 @@ export default function POLogPage() {
         });
 
         if (res.ok) {
+            const deletedKey = String(log.orderNo || "").trim();
+            setJustSentOrders((prev) => prev.filter((k) => k !== deletedKey));
             fetchDeliveryLogs();
         } else {
             const err = await res.json();
@@ -711,58 +738,68 @@ export default function POLogPage() {
                             </div>
 
                             <div className="flex items-center gap-4 self-end md:self-auto">
-                              {/* NEW: Send to Delivery Button */}
-                              {/* NEW: Send to Delivery Button - Aggregated by Order */}
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    if (!log.pdfLink) {
-                                      if (!confirm("⚠️ รายการนี้ยังไม่มีลิงก์ไฟล์ PDF (อาจยังไม่ได้เซ็นรับ) คุณต้องการส่งไปยังประวัติงานส่งโดยไม่มีไฟล์แนบใช่หรือไม่?")) {
-                                        return;
+                              {/* Send to Delivery Button - Aggregated by Order (Hidden & replaced with ✓ ส่งแล้ว once sent) */}
+                              {sentOrderNos.has(String(log.poOrder || "").trim()) ||
+                              sentOrderNos.has(String(log.orderNo || "").trim()) ? (
+                                <span
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold border border-emerald-200 whitespace-nowrap select-none"
+                                  title={`Order ${log.poOrder || log.orderNo} ถูกรวบส่งไปยังประวัติงานส่งแล้ว`}
+                                >
+                                  <span>✓ ส่งแล้ว</span>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      if (!log.pdfLink) {
+                                        if (!confirm("⚠️ รายการนี้ยังไม่มีลิงก์ไฟล์ PDF (อาจยังไม่ได้เซ็นรับ) คุณต้องการส่งไปยังประวัติงานส่งโดยไม่มีไฟล์แนบใช่หรือไม่?")) {
+                                          return;
+                                        }
                                       }
+                                      // 1. Group items by OrderNo
+                                      const sameOrderItems = logs.filter(l => l.orderNo === log.orderNo);
+                                      
+                                      // 2. Aggregate Data
+                                      const totalQty = sameOrderItems.reduce((sum, item) => sum + (item.qty || 0), 0);
+                                      const combinedSKUs = Array.from(new Set(sameOrderItems.map(item => item.item))).join(", ");
+                                      const targetOrderKey = String(log.poOrder || log.orderNo || "").trim();
+
+                                      // 3. Prepare Single Row Payload
+                                      const payload = {
+                                        date: log.date,
+                                        customer: log.customer,
+                                        orderNo: targetOrderKey,
+                                        sku: combinedSKUs,
+                                        qty: totalQty,
+                                        packs: 0,
+                                        shippingCost: 0,
+                                        notes: "รอแอดมินลงข้อมูล",
+                                        pdfLink: log.pdfLink || ""
+                                      };
+
+                                      const res = await fetch(getApiUrl("/api/delivery-history"), {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(payload)
+                                      });
+
+                                      if (res.ok) {
+                                        setJustSentOrders((prev) => Array.from(new Set([...prev, targetOrderKey, String(log.orderNo || "").trim()])));
+                                        fetchDeliveryLogs();
+                                        alert(`รวบรวมข้อมูลเลขที่ ${targetOrderKey} จำนวน ${sameOrderItems.length} รายการ (รวม ${totalQty} ชิ้น) ไปยังประวัติงานส่งแล้ว`);
+                                      }
+                                    } catch (err) {
+                                      console.error(err);
+                                      alert("เกิดข้อผิดพลาดในการรวบรวมข้อมูล");
                                     }
-                                    // 1. Group items by OrderNo
-                                    const sameOrderItems = logs.filter(l => l.orderNo === log.orderNo);
-                                    
-                                    // 2. Aggregate Data
-                                    // - Total Qty
-                                    // - Combined SKU string (e.g. "SKU-A, SKU-B")
-                                    const totalQty = sameOrderItems.reduce((sum, item) => sum + (item.qty || 0), 0);
-                                    const combinedSKUs = Array.from(new Set(sameOrderItems.map(item => item.item))).join(", ");
-
-                                    // 3. Prepare Single Row Payload
-                                    const payload = {
-                                      date: log.date,
-                                      customer: log.customer,
-                                      orderNo: log.poOrder || log.orderNo, // Use 6-digit if available
-                                      sku: combinedSKUs, // All SKUs in one string
-                                      qty: totalQty,     // Sum of all quantities
-                                      packs: 0,
-                                      shippingCost: 0,
-                                      notes: "รอแอดมินลงข้อมูล",
-                                      pdfLink: log.pdfLink || ""
-                                    };
-
-                                    const res = await fetch(getApiUrl("/api/delivery-history"), {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify(payload)
-                                    });
-
-                                    if (res.ok) {
-                                      alert(`รวบรวมข้อมูลเลขที่ ${log.poOrder || log.orderNo} จำนวน ${sameOrderItems.length} รายการ (รวม ${totalQty} ชิ้น) ไปยังประวัติงานส่งแล้ว`);
-                                    }
-                                  } catch (err) {
-                                    console.error(err);
-                                    alert("เกิดข้อผิดพลาดในการรวบรวมข้อมูล");
-                                  }
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-amber-100 whitespace-nowrap"
-                                title={`รวบส่งทั้ง Order (${log.poOrder || log.orderNo})`}
-                              >
-                                <Truck className="w-4 h-4" />
-                                <span>{t('group_send_order')}</span>
-                              </button>
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-amber-100 whitespace-nowrap"
+                                  title={`รวบส่งทั้ง Order (${log.poOrder || log.orderNo})`}
+                                >
+                                  <Truck className="w-4 h-4" />
+                                  <span>{t('group_send_order')}</span>
+                                </button>
+                              )}
                               <div className="text-right min-w-[80px]">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase">
                                   Quantity
@@ -863,10 +900,10 @@ export default function POLogPage() {
             </div>
 
             {/* Delivery Filter Bar */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col md:flex-row gap-4 shadow-sm items-center">
-                <div className="flex-1 w-full flex gap-2">
-                    <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                        <span className="text-slate-400 text-xs font-bold uppercase">{t('date_start')}</span>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col lg:flex-row gap-4 shadow-sm items-center">
+                <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                        <span className="text-slate-400 text-xs font-bold uppercase whitespace-nowrap">{t('date_start')}</span>
                         <input
                             type="date"
                             value={deliveryStartDate}
@@ -874,8 +911,8 @@ export default function POLogPage() {
                             className="bg-transparent text-slate-900 outline-none text-sm font-medium w-full"
                         />
                     </div>
-                    <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                        <span className="text-slate-400 text-xs font-bold uppercase">{t('date_end')}</span>
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                        <span className="text-slate-400 text-xs font-bold uppercase whitespace-nowrap">{t('date_end')}</span>
                         <input
                             type="date"
                             value={deliveryEndDate}
@@ -883,34 +920,96 @@ export default function POLogPage() {
                             className="bg-transparent text-slate-900 outline-none text-sm font-medium w-full"
                         />
                     </div>
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                        <MapPin className="w-4 h-4 text-indigo-500 shrink-0" />
+                        <span className="text-slate-400 text-xs font-bold uppercase whitespace-nowrap">จังหวัด/พื้นที่:</span>
+                        <select
+                            value={deliveryLocationFilter}
+                            onChange={(e) => setDeliveryLocationFilter(e.target.value)}
+                            className="bg-transparent text-slate-900 outline-none text-sm font-bold w-full cursor-pointer"
+                        >
+                            <option value="ALL">ทั้งหมด ({dateFilteredDeliveryLogs.length})</option>
+                            {sortedProvinceOptions.map(([loc, count]) => (
+                                <option key={loc} value={loc}>
+                                    {loc === "N/A" ? "ยังไม่ระบุจังหวัด (N/A)" : loc} ({count} ครั้ง)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 <button
                     onClick={() => {
                         setDeliveryStartDate("");
                         setDeliveryEndDate("");
+                        setDeliveryLocationFilter("ALL");
                     }}
-                    className="px-4 py-2 text-slate-400 hover:text-slate-600 font-bold text-xs uppercase"
+                    className="px-4 py-2 text-slate-400 hover:text-slate-600 font-bold text-xs uppercase whitespace-nowrap"
                 >
                     {t('clear_filter')}
                 </button>
             </div>
 
-            {/* Location Summary */}
+            {/* Location Summary (Clickable Quick Province Filter) */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6">
-                <h3 className="font-black text-slate-800 text-lg mb-4 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-indigo-500" />
-                    {t('delivery_areas')}
-                </h3>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-indigo-500" />
+                        {t('delivery_areas')}
+                        <span className="text-xs font-medium text-slate-400">(คลิกที่จังหวัดเพื่อกรองข้อมูล)</span>
+                    </h3>
+                    {deliveryLocationFilter !== "ALL" && (
+                        <button
+                            onClick={() => setDeliveryLocationFilter("ALL")}
+                            className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-colors"
+                        >
+                            กำลังกรอง: {deliveryLocationFilter} ✕
+                        </button>
+                    )}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {(Object.entries(locationSummary) as [string, number][])
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([loc, count], idx) => (
-                        <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                            <p className="text-xs text-slate-400 font-bold uppercase truncate" title={loc}>{loc || "N/A"}</p>
-                            <p className="text-xl font-black text-indigo-600">{count} <span className="text-[10px] text-slate-400 font-medium">ครั้ง</span></p>
-                        </div>
-                    ))}
-                    {Object.keys(locationSummary).length === 0 && (
+                    {sortedProvinceOptions.map(([loc, count], idx) => {
+                        const isSelected = deliveryLocationFilter === loc;
+                        return (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setDeliveryLocationFilter(isSelected ? "ALL" : loc)}
+                                className={cn(
+                                    "text-left rounded-2xl p-4 border transition-all",
+                                    isSelected
+                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20 scale-[1.02]"
+                                        : "bg-slate-50 hover:bg-indigo-50/50 border-slate-100 hover:border-indigo-200"
+                                )}
+                            >
+                                <p
+                                    className={cn(
+                                        "text-xs font-bold uppercase truncate",
+                                        isSelected ? "text-indigo-100" : "text-slate-400"
+                                    )}
+                                    title={loc}
+                                >
+                                    {loc || "N/A"}
+                                </p>
+                                <p
+                                    className={cn(
+                                        "text-xl font-black",
+                                        isSelected ? "text-white" : "text-indigo-600"
+                                    )}
+                                >
+                                    {count}{" "}
+                                    <span
+                                        className={cn(
+                                            "text-[10px] font-medium",
+                                            isSelected ? "text-indigo-200" : "text-slate-400"
+                                        )}
+                                    >
+                                        ครั้ง
+                                    </span>
+                                </p>
+                            </button>
+                        );
+                    })}
+                    {sortedProvinceOptions.length === 0 && (
                         <p className="col-span-full text-center py-4 text-slate-400 text-sm">{t('no_logs')}</p>
                     )}
                 </div>
